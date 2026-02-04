@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import WeekNavigator from '../components/WeekNavigator';
 import TaskTable from '../components/TaskTable';
 import AddTaskModal from '../components/AddTaskModal';
+import TaskViewLayout from '../components/TaskViewLayout';
 
 const INITIAL_TASKS = [
   { id: 't1', title: 'Definir paleta de cores', is_completed: true, due_date: '2026-02-03', owner_id: 'auth0|1' },
@@ -45,7 +46,7 @@ const formatDate = (date: Date): string => {
   return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
-const WeekView = () => {
+const WeekViewPage = () => {
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(getMonday(new Date()));
   const [tasks, setTasks] = useState(INITIAL_TASKS);
   const [projectTasks] = useState(INITIAL_PROJECT_TASKS);
@@ -169,91 +170,6 @@ const WeekView = () => {
   };
   return (
     <>
-      {/* HEADER */}
-      <header className="border-b border-slate-200 px-6 bg-white shrink-0">
-        <div className="h-20 flex items-center justify-between">
-          <div className="flex flex-col">
-            <h1 className="text-xl font-bold text-slate-900 flex items-center gap-3">
-              Esta Semana
-            </h1>
-            <div className="flex items-center gap-3 mt-2">
-              <button
-                onClick={goToPreviousWeek}
-                className="p-1 hover:bg-slate-100 rounded-md transition-colors"
-                title="Semana anterior"
-              >
-                <ChevronLeft className="w-4 h-4 text-slate-600" />
-              </button>
-              <span className="text-sm text-slate-600 font-medium min-w-[200px] text-center">
-                {formatDate(currentWeekStart)} - {formatDate(currentWeekEnd)}
-              </span>
-              <button
-                onClick={goToNextWeek}
-                className="p-1 hover:bg-slate-100 rounded-md transition-colors"
-                title="Próxima semana"
-              >
-                <ChevronRight className="w-4 h-4 text-slate-600" />
-              </button>
-              <button
-                onClick={goToCurrentWeek}
-                className="ml-2 px-3 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
-              >
-                Hoje
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Calendar overview (week of month) */}
-        <div className="pb-4">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              {currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
-            </span>
-          </div>
-          <div className="mt-2 grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
-            {weeksInMonth.map((week, idx) => {
-              const isActive = currentWeekStart >= week.start && currentWeekStart <= week.end;
-              return (
-                <button
-                  key={`${week.start.toISOString()}-${idx}`}
-                  onClick={() => setCurrentWeekStart(getMonday(week.start))}
-                  className={`text-left p-2 rounded-md border text-xs transition-colors ${isActive
-                    ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
-                    : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
-                    }`}
-                >
-                  <div className="font-semibold">Semana {idx + 1}</div>
-                  <div className="text-[10px]">{formatDate(week.start)} - {formatDate(week.end)}</div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </header>
-
-      {/* TASK LIST */}
-      <div className="flex-1 overflow-auto bg-white">
-        <TaskTable
-          visibleTasks={weekTasks}
-          activeView="week"
-          activeCustomFields={[]}
-          getFieldValue={getFieldValue}
-          updateCustomValue={updateCustomValue}
-          toggleTaskCompletion={toggleTaskCompletion}
-          addTask={addTask}
-          projects={projects}
-          getTaskProjects={getTaskProjects}
-          addProjectToTask={addProjectToTask}
-          removeProjectFromTask={removeProjectFromTask}
-          updateTaskTitle={updateTaskTitle}
-          updateTaskDueDate={updateTaskDueDate}
-          onEditTask={handleEditTask}
-          onDeleteTask={handleDeleteTask}
-        />
-      </div>
-
-      {/* Edit Task Modal */}
       <AddTaskModal
         isOpen={showEditTaskModal}
         onClose={() => {
@@ -263,8 +179,56 @@ const WeekView = () => {
         onSave={handleSaveTask}
         task={taskToEdit}
       />
+      <TaskViewLayout
+        title={'Visão Semanal'}
+        description={'Visualize e gerencie suas tarefas desta semana.'}
+        canAddCustomField={false}
+      >
+        <WeekNavigator
+          currentWeekStart={currentWeekStart}
+          currentWeekEnd={currentWeekEnd}
+          onPrev={goToPreviousWeek}
+          onNext={goToNextWeek}
+          onToday={goToCurrentWeek}
+          formatDate={formatDate}
+          currentMonth={currentMonth}
+          weeksInMonth={weeksInMonth}
+          onSelectWeek={(start) => setCurrentWeekStart(getMonday(start))}
+        />
+        {/* TASK LIST AREA */}
+        <div className="flex-1 overflow-auto bg-white">
+          <TaskTable
+            visibleTasks={weekTasks}
+            activeView="week"
+            activeCustomFields={[]}
+            getFieldValue={getFieldValue}
+            updateCustomValue={updateCustomValue}
+            toggleTaskCompletion={toggleTaskCompletion}
+            addTask={addTask}
+            projects={projects}
+            getTaskProjects={getTaskProjects}
+            addProjectToTask={addProjectToTask}
+            removeProjectFromTask={removeProjectFromTask}
+            updateTaskTitle={updateTaskTitle}
+            updateTaskDueDate={updateTaskDueDate}
+            onEditTask={handleEditTask}
+            onDeleteTask={handleDeleteTask}
+          />
+        </div>
+
+        {/* Edit Task Modal */}
+        <AddTaskModal
+          isOpen={showEditTaskModal}
+          onClose={() => {
+            setShowEditTaskModal(false);
+            setTaskToEdit(null);
+          }}
+          onSave={handleSaveTask}
+          task={taskToEdit}
+        />
+      </TaskViewLayout>
     </>
   );
 };
 
-export default WeekView;
+export default WeekViewPage;

@@ -1,0 +1,58 @@
+import { LogOut } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
+const Navbar = () => {
+  const navigate = useNavigate();
+
+  return (
+    <>
+      {/* GLOBAL TOP BAR */}
+      <nav className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-4 shrink-0 z-20 shadow-sm">
+
+        {/* Left: Logo */}
+        <button
+          onClick={() => navigate('/')}
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+        >
+          <div className="p-1.5 rounded-lg">
+            {/* <Home className="w-5 h-5 text-white" /> */}
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10" viewBox="0 0 191 191">
+              <g>
+                <path d="M 75.00 29.77 L 75.00 160.00 L 71.75 159.90 C60.29,159.54 49.27,152.47 43.84,142.00 C41.51,137.53 41.50,137.27 41.22,96.10 L 41.21 95.49 C40.97,59.07 40.91,50.73 44.72,44.93 C45.88,43.17 47.38,41.65 49.35,39.65 C55.74,33.15 60.71,30.73 68.75,30.19 Z" fill="rgb(102,172,203)" />
+                <path d="M 127.25 77.27 C116.94,87.28 103.44,100.40 97.25,106.43 L 86.00 117.39 L 86.00 71.41 L 97.00 61.50 C107.43,52.10 108.00,51.38 108.00,47.68 C108.00,42.45 111.39,36.71 116.00,34.12 C119.31,32.26 121.38,32.00 132.89,32.00 L 146.00 32.00 L 146.00 59.08 ZM 125.81 156.60 C122.88,158.08 118.30,159.33 114.45,159.69 L 108.00 160.29 L 108.00 131.56 L 102.75 126.25 L 97.50 120.93 L 106.02 112.72 C110.71,108.20 116.40,102.77 118.65,100.66 L 122.76 96.83 L 129.88 103.95 C133.80,107.87 138.19,113.41 139.63,116.27 C143.10,123.11 143.85,131.92 141.56,138.83 C139.41,145.28 132.30,153.31 125.81,156.60 Z" fill="rgb(238,128,91)" />
+                <path d="M 0.00 95.50 L 0.00 0.00 L 95.50 0.00 L 191.00 0.00 L 191.00 95.50 L 191.00 191.00 L 95.50 191.00 L 0.00 191.00 L 0.00 95.50 ZM 75.00 94.88 L 75.00 29.77 L 68.75 30.19 C60.71,30.73 55.74,33.15 49.35,39.65 C40.86,48.28 40.89,48.04 41.22,96.10 C41.50,137.27 41.51,137.53 43.84,142.00 C49.27,152.47 60.29,159.54 71.75,159.90 L 75.00 160.00 L 75.00 94.88 ZM 125.81 156.60 C132.30,153.31 139.41,145.28 141.56,138.83 C143.85,131.92 143.10,123.11 139.63,116.27 C138.19,113.41 133.80,107.87 129.88,103.95 L 122.76 96.83 L 118.65 100.66 C116.40,102.77 110.71,108.20 106.02,112.72 L 97.50 120.93 L 102.75 126.25 L 108.00 131.56 L 108.00 145.93 L 108.00 160.29 L 114.45 159.69 C118.30,159.33 122.88,158.08 125.81,156.60 ZM 127.25 77.27 L 146.00 59.08 L 146.00 45.54 L 146.00 32.00 L 132.89 32.00 C121.38,32.00 119.31,32.26 116.00,34.12 C111.39,36.71 108.00,42.45 108.00,47.68 C108.00,51.38 107.43,52.10 97.00,61.50 L 86.00 71.41 L 86.00 94.40 L 86.00 117.39 L 97.25 106.43 C103.44,100.40 116.94,87.28 127.25,77.27 Z" fill="rgba(254, 254, 253, 0)" />
+              </g>
+            </svg>
+          </div>
+          <span className="font-bold text-slate-800 text-lg tracking-tight">Klip</span>
+        </button>
+
+        {/* Right: User Profile (Auth0 Mock) */}
+        <div className="flex items-center gap-4">
+
+          <div className="h-6 w-px bg-slate-200 mx-1"></div>
+
+          <div className="flex items-center gap-3 pl-1">
+            <div className="text-right hidden sm:block">
+              <div className="text-sm font-semibold text-slate-700 leading-none">email@email.com</div>
+              <div className="text-xs text-slate-400 mt-1 leading-none">email@email.com</div>
+            </div>
+            {/* <div className="relative group cursor-pointer">
+              <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-600 border border-indigo-200 flex items-center justify-center text-sm font-bold">
+                EE
+              </div>
+            </div> */}
+
+            <div className="h-6 w-px bg-slate-200 mx-1"></div>
+
+            <button className="w-full text-left py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </nav>
+    </>
+  );
+};
+
+export default Navbar;

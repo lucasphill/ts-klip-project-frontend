@@ -46,7 +46,7 @@ const INITIAL_FIELD_VALUES = [
 
 // --- COMPONENTES ---
 
-const HomePage = () => {
+const ProjectsPage = () => {
   // --- ROUTING ---
   const { projectId } = useParams();
   const activeView = projectId || 'all'; // Se tem projectId na URL, usa ele; senão, é 'all'
@@ -65,7 +65,7 @@ const HomePage = () => {
 
   // --- DERIVED STATE ---
 
-  const currentProject = projects.find(p => p.id === activeView);
+  const currentProject = projects.find(p => p.id === activeView) || null;
 
   // Filtrar tarefas baseadas na view atual
   const visibleTasks = useMemo(() => {
@@ -227,9 +227,10 @@ const HomePage = () => {
   return (
     <>
       <TaskViewLayout
-        title={'Todas as Tarefas'}
-        description={'Visualize e gerencie todas as suas tarefas aqui.'}
-        canAddCustomField={false}
+        title={currentProject ? currentProject.name : 'Todas as Tarefas'}
+        description={currentProject ? currentProject.description : 'Visualize e gerencie todas as suas tarefas aqui.'}
+        color={currentProject ? currentProject.color : 'bg-slate-500'}
+        canAddCustomField={!!currentProject}
       >
         {/* TASK LIST AREA */}
         <div className="flex-1 overflow-auto bg-white">
@@ -267,4 +268,4 @@ const HomePage = () => {
   );
 }
 
-export default HomePage;
+export default ProjectsPage;

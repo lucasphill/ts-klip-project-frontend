@@ -1,5 +1,5 @@
 export interface Project {
-  id: string; // Guid no C#
+  id: string;
   name: string;
   description?: string;
   color?: string;
@@ -8,14 +8,14 @@ export interface Project {
 }
 
 export interface Task {
-  id: string; // Guid no C#
+  id: string;
   title: string;
   notes?: string;
   dueDate?: string;
   isCompleted: boolean;
   ownerAuth0Id: string;
   parentTaskId?: string;
-  projectId?: string; // Relacionamento via ProjectsTasks
+  projectId?: string;
 }
 
 export interface NavItemProps {
@@ -23,7 +23,12 @@ export interface NavItemProps {
   label: string;
   active?: boolean;
   isOpen: boolean;
-  onClick?: () => void;
   badge?: number;
   color?: string;
+  onClick?: () => void;
 }
+
+export interface HealthStatus {
+    status?: string;
+    version?: string;
+};
