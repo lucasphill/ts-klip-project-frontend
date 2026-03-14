@@ -1,8 +1,11 @@
 import { LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const { logout, user } = useAuth();
+
 
   return (
     <>
@@ -34,8 +37,8 @@ const Navbar = () => {
 
           <div className="flex items-center gap-3 pl-1">
             <div className="text-right hidden sm:block">
-              <div className="text-sm font-semibold text-slate-700 leading-none">email@email.com</div>
-              <div className="text-xs text-slate-400 mt-1 leading-none">email@email.com</div>
+              <div className="text-sm font-semibold text-slate-700 leading-none">{user?.name?.split(' ').slice(0, 2).join(' ') || user?.name}</div>
+              <div className="text-xs text-slate-400 mt-1 leading-none">{user?.email}</div>
             </div>
             {/* <div className="relative group cursor-pointer">
               <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-600 border border-indigo-200 flex items-center justify-center text-sm font-bold">
@@ -45,7 +48,7 @@ const Navbar = () => {
 
             <div className="h-6 w-px bg-slate-200 mx-1"></div>
 
-            <button className="w-full text-left py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+            <button onClick={logout} className="w-full text-left py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
               <LogOut className="w-4 h-4" />
             </button>
           </div>

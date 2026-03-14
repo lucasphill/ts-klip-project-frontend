@@ -5,6 +5,11 @@ export interface ResponseModelDto<T> {
   status: boolean;
   timestamp: string;
 }
+
+export interface HealthResponseDto {
+  status: string;
+  version: string;
+}
 //#endregion
 
 //#region Create Models

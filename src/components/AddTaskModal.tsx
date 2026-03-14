@@ -1,43 +1,39 @@
 import { useState, useEffect, type FC } from 'react';
 import { X, Calendar } from 'lucide-react';
-
-interface Task {
-  id?: string;
-  title: string;
-  is_completed: boolean;
-  due_date: string;
-  owner_id: string;
-}
+import type { CreateTaskDto } from '../types/apiTypes';
 
 interface AddTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (task: Task) => void;
-  task?: Task | null;
+  onSave: (task: CreateTaskDto & { id?: string }) => void;
+  task?: (CreateTaskDto & { id?: string }) | null;
 }
 
 const AddTaskModal: FC<AddTaskModalProps> = ({ isOpen, onClose, onSave, task }) => {
-  const [formData, setFormData] = useState<Task>({
+  const [formData, setFormData] = useState<CreateTaskDto>({
     title: '',
-    is_completed: false,
-    due_date: new Date().toISOString().split('T')[0],
-    owner_id: 'auth0|1', // Default current user
+    isCompleted: false,
+    dueDate: new Date().toISOString().split('T')[0],
+    notes: '',
+    parentTaskId: '',
   });
 
   useEffect(() => {
     if (task) {
       setFormData({
         title: task.title,
-        is_completed: task.is_completed,
-        due_date: task.due_date,
-        owner_id: task.owner_id,
+        isCompleted: task.isCompleted ?? false,
+        dueDate: task.dueDate ?? new Date().toISOString().split('T')[0],
+        notes: task.notes ?? '',
+        parentTaskId: task.parentTaskId ?? '',
       });
     } else {
       setFormData({
         title: '',
-        is_completed: false,
-        due_date: new Date().toISOString().split('T')[0],
-        owner_id: 'auth0|1',
+        isCompleted: false,
+        dueDate: new Date().toISOString().split('T')[0],
+        notes: '',
+        parentTaskId: '',
       });
     }
   }, [task, isOpen]);
@@ -46,8 +42,16 @@ const AddTaskModal: FC<AddTaskModalProps> = ({ isOpen, onClose, onSave, task }) 
     e.preventDefault();
     if (!formData.title.trim()) return;
 
-    onSave({
+    const normalizedTask = {
       ...formData,
+      title: formData.title.trim(),
+      dueDate: formData.dueDate?.trim() || undefined,
+      notes: formData.notes?.trim() || undefined,
+      parentTaskId: formData.parentTaskId?.trim() || undefined,
+    };
+
+    onSave({
+      ...normalizedTask,
       id: task?.id,
     });
     onClose();
@@ -96,8 +100,8 @@ const AddTaskModal: FC<AddTaskModalProps> = ({ isOpen, onClose, onSave, task }) 
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input
                 type="date"
-                value={formData.due_date}
-                onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                value={formData.dueDate ?? ''}
+                onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
                 className="w-full pl-11 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
             </div>
@@ -107,13 +111,25 @@ const AddTaskModal: FC<AddTaskModalProps> = ({ isOpen, onClose, onSave, task }) 
             <input
               type="checkbox"
               id="is_completed"
-              checked={formData.is_completed}
-              onChange={(e) => setFormData({ ...formData, is_completed: e.target.checked })}
+              checked={formData.isCompleted ?? false}
+              onChange={(e) => setFormData({ ...formData, isCompleted: e.target.checked })}
               className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
             />
             <label htmlFor="is_completed" className="text-sm font-medium text-slate-700">
               Marcar como concluída
             </label>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Notas
+            </label>
+            <textarea
+              value={formData.notes ?? ''}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              placeholder="Detalhes da tarefa (opcional)"
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent min-h-[96px]"
+            />
           </div>
 
           {/* Actions */}

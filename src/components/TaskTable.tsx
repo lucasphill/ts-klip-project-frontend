@@ -1,15 +1,48 @@
 import { useMemo, useState } from 'react';
-import { CheckCircle2, Circle, Plus, Calendar, Hash, Type, List, X, Pencil, Trash2, Filter, ArrowUpDown, XCircle } from 'lucide-react';
+import {
+  CheckCircle2,
+  Circle,
+  Plus,
+  Calendar,
+  Hash,
+  Type,
+  List,
+  X,
+  Pencil,
+  Trash2,
+  Filter,
+  ArrowUpDown,
+  XCircle
+} from 'lucide-react';
+import type { GetCustomFieldDefinitionDto, GetProjectsDto, GetTasksDto } from '../types/apiTypes';
+
+interface TaskTableProps {
+  activeView: string; // mostra todos ou só de um projeto específico, recebe o id do projeto ou "all"
+  visibleTasks: GetTasksDto[];
+  activeCustomFields?: GetCustomFieldDefinitionDto[];
+  projects: GetProjectsDto[];
+  getFieldValue?: (taskId: string, fieldId: string) => any;
+  updateCustomValue?: (taskId: string, fieldId: string, value: any) => void;
+  toggleTaskCompletion: (taskId: string) => void;
+  addTask: () => void;
+  getTaskProjects: (taskId: string) => GetProjectsDto[];
+  addProjectToTask: (taskId: string, projectId: string) => void;
+  removeProjectFromTask: (taskId: string, projectId: string) => void;
+  updateTaskTitle: (taskId: string, title: string) => void;
+  updateTaskDueDate: (taskId: string, dueDate: string) => void;
+  onEditTask?: (task: GetTasksDto) => void;
+  onDeleteTask?: (taskId: string) => void;
+}
 
 const TaskTable = ({
-  visibleTasks,
   activeView,
+  visibleTasks,
   activeCustomFields,
+  projects,
   getFieldValue,
   updateCustomValue,
   toggleTaskCompletion,
   addTask,
-  projects,
   getTaskProjects,
   addProjectToTask,
   removeProjectFromTask,
@@ -17,29 +50,36 @@ const TaskTable = ({
   updateTaskDueDate,
   onEditTask,
   onDeleteTask
-}: any) => {
+}: TaskTableProps) => {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [draftById, setDraftById] = useState<Record<string, { title?: string; due_date?: string }>>({});
+
+  const [draftById, setDraftById] = useState<Record<string, { title?: string; dueDate?: string }>>({});
+
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'pending'>('all');
   const [sortBy, setSortBy] = useState<'due_date' | 'title' | 'created'>('due_date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  const getIsCompleted = (t: GetTasksDto) => (t?.isCompleted ?? false);
+  const getDueDate = (t: GetTasksDto) => (t?.dueDate ?? '');
+  const getTitle = (t: GetTasksDto) => (t?.title ?? '');
+  const safeCustomFields = Array.isArray(activeCustomFields) ? activeCustomFields : [];
 
   const filteredTasks = useMemo(() => {
     let list = [...visibleTasks];
 
     if (statusFilter === 'completed') {
-      list = list.filter(t => t.is_completed);
+      list = list.filter(t => getIsCompleted(t));
     } else if (statusFilter === 'pending') {
-      list = list.filter(t => !t.is_completed);
+      list = list.filter(t => !getIsCompleted(t));
     }
 
     list.sort((a, b) => {
       const dir = sortDir === 'asc' ? 1 : -1;
       if (sortBy === 'title') {
-        return String(a.title || '').localeCompare(String(b.title || '')) * dir;
+        return String(getTitle(a)).localeCompare(String(getTitle(b))) * dir;
       }
       if (sortBy === 'due_date') {
-        return String(a.due_date || '').localeCompare(String(b.due_date || '')) * dir;
+        return String(getDueDate(a)).localeCompare(String(getDueDate(b))) * dir;
       }
       return String(a.id || '').localeCompare(String(b.id || '')) * dir;
     });
@@ -47,13 +87,13 @@ const TaskTable = ({
     return list;
   }, [visibleTasks, statusFilter, sortBy, sortDir]);
 
-  const startEdit = (task: any) => {
+  const startEdit = (task: GetTasksDto) => {
     setEditingTaskId(task.id);
     setDraftById(prev => ({
       ...prev,
       [task.id]: {
         title: task.title ?? '',
-        due_date: task.due_date ?? ''
+        dueDate: task.dueDate ?? ''
       }
     }));
   };
@@ -73,8 +113,8 @@ const TaskTable = ({
     if (updateTaskTitle && draft.title !== undefined) {
       updateTaskTitle(taskId, draft.title);
     }
-    if (updateTaskDueDate && draft.due_date !== undefined) {
-      updateTaskDueDate(taskId, draft.due_date);
+    if (updateTaskDueDate && draft.dueDate !== undefined) {
+      updateTaskDueDate(taskId, draft.dueDate);
     }
     cancelEdit(taskId);
   };
@@ -163,7 +203,7 @@ const TaskTable = ({
           <div className="w-40 px-4 py-3 border-r border-slate-100">Prazo</div>
 
           {/* Dynamic Headers for Custom Fields */}
-          {activeCustomFields.map((field: any) => (
+          {safeCustomFields.map((field: any) => (
             <div key={field.id} className="w-48 px-4 py-3 border-r border-slate-100 flex items-center gap-2">
               {field.type === 'number' && <Hash className="w-3 h-3" />}
               {field.type === 'text' && <Type className="w-3 h-3" />}
@@ -191,7 +231,7 @@ const TaskTable = ({
                 {/* Checkbox Column */}
                 <div className="w-10 px-4 py-2 flex justify-center shrink-0">
                   <button onClick={() => toggleTaskCompletion(task.id)} className="text-slate-400 hover:text-green-600 transition-colors">
-                    {task.is_completed ? <CheckCircle2 className="w-5 h-5 text-green-600" /> : <Circle className="w-5 h-5" />}
+                    {getIsCompleted(task) ? <CheckCircle2 className="w-5 h-5 text-green-600" /> : <Circle className="w-5 h-5" />}
                   </button>
                 </div>
 
@@ -199,7 +239,7 @@ const TaskTable = ({
                 <div className="flex-1 px-4 py-2 border-r border-slate-100 shrink-0 min-w-[200px]">
                   <input
                     type="text"
-                    value={isEditing ? (draft.title ?? '') : task.title}
+                    value={isEditing ? (draft.title ?? '') : getTitle(task)}
                     placeholder="Escreva uma tarefa..."
                     onChange={(e) => {
                       const val = e.target.value;
@@ -210,7 +250,23 @@ const TaskTable = ({
                       }));
                     }}
                     onFocus={() => !isEditing && startEdit(task)}
-                    className={`w-full bg-transparent border-none focus:ring-0 p-0 text-sm ${task.is_completed ? 'text-slate-400 line-through' : 'text-slate-800'}`}
+                    onBlur={() => {
+                      if (isEditing) {
+                        confirmEdit(task.id);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (isEditing) confirmEdit(task.id);
+                        e.currentTarget.blur();
+                      } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        cancelEdit(task.id);
+                        e.currentTarget.blur();
+                      }
+                    }}
+                    className={`w-full bg-transparent border-none focus:ring-0 p-0 text-sm ${getIsCompleted(task) ? 'text-slate-400 line-through' : 'text-slate-800'}`}
                   />
                 </div>
 
@@ -260,29 +316,45 @@ const TaskTable = ({
                     <Calendar className="w-3.5 h-3.5 text-slate-400" />
                     <input
                       type="date"
-                      value={isEditing ? (draft.due_date ?? '') : (task.due_date || '')}
+                      value={isEditing ? (draft.dueDate ?? '') : getDueDate(task)}
                       onChange={(e) => {
                         const val = e.target.value;
                         if (!isEditing) startEdit(task);
                         setDraftById(prev => ({
                           ...prev,
-                          [task.id]: { ...prev[task.id], due_date: val }
+                          [task.id]: { ...prev[task.id], dueDate: val }
                         }));
                       }}
                       onFocus={() => !isEditing && startEdit(task)}
+                      onBlur={() => {
+                        if (isEditing) {
+                          confirmEdit(task.id);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (isEditing) confirmEdit(task.id);
+                          e.currentTarget.blur();
+                        } else if (e.key === 'Escape') {
+                          e.preventDefault();
+                          cancelEdit(task.id);
+                          e.currentTarget.blur();
+                        }
+                      }}
                       className="bg-transparent border-none focus:ring-0 p-0 text-sm text-slate-700 cursor-pointer hover:text-slate-900"
                     />
                   </div>
                 </div>
 
                 {/* Dynamic Custom Field Columns */}
-                {activeCustomFields.map((field: any) => (
+                {safeCustomFields.map((field: any) => (
                   <div key={field.id} className="w-48 px-4 py-2 border-r border-slate-100 shrink-0">
                     {field.type === 'enum' ? (
                       <select
                         className="w-full bg-transparent text-sm border-none focus:ring-0 p-0 text-slate-700 cursor-pointer"
-                        value={getFieldValue(task.id, field.id)}
-                        onChange={(e) => updateCustomValue(task.id, field.id, e.target.value)}
+                        value={getFieldValue ? getFieldValue(task.id, field.id) : ''}
+                        onChange={(e) => updateCustomValue && updateCustomValue(task.id, field.id, e.target.value)}
                       >
                         <option value="">-</option>
                         {field.options && field.options.map((opt: any) => (
@@ -292,8 +364,8 @@ const TaskTable = ({
                     ) : (
                       <input
                         type={field.type === 'number' ? 'number' : 'text'}
-                        value={getFieldValue(task.id, field.id)}
-                        onChange={(e) => updateCustomValue(task.id, field.id, field.type === 'number' ? parseFloat(e.target.value) : e.target.value)}
+                        value={getFieldValue ? getFieldValue(task.id, field.id) : ''}
+                        onChange={(e) => updateCustomValue && updateCustomValue(task.id, field.id, field.type === 'number' ? parseFloat(e.target.value) : e.target.value)}
                         placeholder="-"
                         className="w-full bg-transparent text-sm border-none focus:ring-0 p-0 text-slate-700 placeholder:text-slate-300"
                       />

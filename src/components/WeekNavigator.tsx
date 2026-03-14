@@ -16,10 +16,10 @@ type Props = {
 const WeekNavigator: FC<Props> = ({ currentWeekStart, currentWeekEnd, onPrev, onNext, onToday, formatDate, currentMonth, weeksInMonth, onSelectWeek }) => {
   return (
     <>
-      <div className="flex items-center gap-3 mt-2">
+      <div className="p-4 flex items-center gap-3">
         <button
           onClick={onPrev}
-          className="p-1 hover:bg-slate-100 rounded-md transition-colors"
+          className="hover:bg-slate-100 rounded-md transition-colors"
           title="Semana anterior"
         >
           <ChevronLeft className="w-4 h-4 text-slate-600" />
@@ -29,7 +29,7 @@ const WeekNavigator: FC<Props> = ({ currentWeekStart, currentWeekEnd, onPrev, on
         </span>
         <button
           onClick={onNext}
-          className="p-1 hover:bg-slate-100 rounded-md transition-colors"
+          className="hover:bg-slate-100 rounded-md transition-colors"
           title="Próxima semana"
         >
           <ChevronRight className="w-4 h-4 text-slate-600" />
@@ -42,7 +42,7 @@ const WeekNavigator: FC<Props> = ({ currentWeekStart, currentWeekEnd, onPrev, on
         </button>
       </div>
 
-      <div className="pb-4">
+      <div className="p-4">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
             {currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}

@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from 'react-toastify';
 import type { CreateProjectDto, CreateTaskDto, GetProjectsDto } from "../types/apiTypes";
+import { projectsApi, tasksApi } from "../services/api";
 import {
   Calendar,
   ChevronLeft,
@@ -28,12 +29,20 @@ const Sidebar = () => {
   const [projectSearch, setProjectSearch] = useState('');
   const [projectToEdit, setProjectToEdit] = useState<GetProjectsDto | null>(null);
 
-  const [projects, setProjects] = useState<GetProjectsDto[]>([
-    { id: 'p1', name: 'Design System', description: 'Componentes e tokens', color: '#6366f1', createdAt: new Date().toISOString() },
-    { id: 'p4', name: 'Design', description: 'Componentes e tokens', color: '#0400ff', createdAt: new Date().toISOString() },
-    { id: 'p2', name: 'Backend API', description: 'Endpoints e autenticação', color: '#10b981', createdAt: new Date().toISOString() },
-    { id: 'p3', name: 'Marketing Q1', description: 'Campanhas e ativos', color: '#ec4899', createdAt: new Date().toISOString() },
-  ]);
+  const [projects, setProjects] = useState<GetProjectsDto[]>([]);
+
+  const fetchProjects = async () => {
+    try {
+      const response = await projectsApi.getAll();
+      setProjects(response.data ?? []);
+    } catch (error: any) {
+      toast.error(error?.message ?? 'Erro ao buscar projetos');
+    }
+  };
+
+  useEffect(() => {
+    fetchProjects();
+  }, []);
 
   const filteredProjects = useMemo(() =>
     projects.filter(p => p.name.toLowerCase().includes(projectSearch.toLowerCase())),
@@ -43,20 +52,44 @@ const Sidebar = () => {
 
   //#region Handlers
   const handleSaveTask = async (task: CreateTaskDto) => {
-    toast.success('Tarefa salva com sucesso (simulação)! ' + task.title);
+    try {
+      await tasksApi.create(task);
+      toast.success('Tarefa criada com sucesso! ' + task.title);
+    } catch (error: any) {
+      toast.error(error?.message ?? 'Erro ao criar tarefa');
+    }
   };
 
-  const handleSaveProject = async (project: CreateProjectDto) => {
-    toast.success('Projeto salvo com sucesso (simulação)! ' + project.name);
+  const handleSaveProject = async (project: CreateProjectDto & { id?: string }) => {
+    try {
+      if (project.id) {
+        const { id, ...payload } = project;
+        await projectsApi.update(id, payload);
+        toast.success('Projeto atualizado com sucesso! ' + project.name);
+      } else {
+        await projectsApi.create(project);
+        toast.success('Projeto salvo com sucesso! ' + project.name);
+      }
+      await fetchProjects();
+      setProjectToEdit(null);
+    } catch (error: any) {
+      toast.error(error?.message ?? 'Erro ao salvar projeto');
+    }
   };
 
   const handleEditProject = (project: GetProjectsDto) => {
-    toast.info('Editar projeto (simulação)! ' + project.name);
+    setProjectToEdit(project);
+    setShowNewProjectModal(true);
   };
 
-  const handleDeleteProject = (projectId: string) => {
-    if (confirm('Tem certeza que deseja excluir este projeto?')) {
-      toast.success('Projeto excluído com sucesso (simulação)! ID: ' + projectId);
+  const handleDeleteProject = async (projectId: string) => {
+    if (!confirm('Tem certeza que deseja excluir este projeto?')) return;
+    try {
+      await projectsApi.remove(projectId);
+      await fetchProjects();
+      toast.success('Projeto excluído com sucesso!');
+    } catch (error: any) {
+      toast.error(error?.message ?? 'Erro ao excluir projeto');
     }
   };
   //#endregion
@@ -101,9 +134,9 @@ const Sidebar = () => {
             isOpen={isSidebarOpen}
           />
 
-          <div className="pt-6 px-2 mb-2">
+          <div className="pt-6 mb-2">
             {isSidebarOpen && (
-              <div className="flex items-center justify-between px-1 mb-2">
+              <div className="flex items-center justify-between px-3 mb-2">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Projetos</p>
                 <button
                   onClick={() => setShowNewProjectModal(true)}
@@ -127,37 +160,50 @@ const Sidebar = () => {
               </div>
             )}
 
-            <div className="space-y-0.5">
-              {filteredProjects.map(project => (
-                <div key={project.id} className="group flex items-center gap-1 px-1">
-                  <button
-                    onClick={() => navigate(`/${project.id}`)}
-                    className={`group flex items-center justify-between flex-1 px-3 py-2 rounded-xl transition-all
+            {filteredProjects.map(project => (
+              <div key={project.id} className="group flex items-center">
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(`/${project.id}`)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      navigate(`/${project.id}`);
+                    }
+                  }}
+                  className={`flex items-center w-full px-3 py-2 rounded-xl transition-all
+                        ${isSidebarOpen ? 'justify-between' : 'justify-center'}
                         ${activeTab === project.id
-                        ? 'bg-indigo-50 text-indigo-700 font-semibold'
-                        : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
-                  >
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <span
-                        className={`transition-colors ${activeTab === project.id ? 'text-indigo-600' : 'group-hover:text-slate-700'}`}
-                        style={{ color: activeTab === project.id ? undefined : project.color }}
-                      >
-                        <Hash size={18} />
-                      </span>
-                      {isSidebarOpen && <span className="text-sm truncate">{project.name}</span>}
-                    </div>
-                  </button>
+                      ? 'bg-indigo-50 text-indigo-700 font-semibold'
+                      : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
+                >
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <span
+                      className={`transition-colors ${activeTab === project.id ? 'text-indigo-600' : 'group-hover:text-slate-700'}`}
+                      style={{ color: activeTab === project.id ? undefined : project.color }}
+                    >
+                      <Hash size={18} />
+                    </span>
+                    {isSidebarOpen && <span className="text-sm truncate">{project.name}</span>}
+                  </div>
                   {isSidebarOpen && (
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
-                        onClick={() => handleEditProject(project)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditProject(project);
+                        }}
                         className="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"
                         title="Editar projeto"
                       >
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => handleDeleteProject(project.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteProject(project.id);
+                        }}
                         className="p-1 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50"
                         title="Excluir projeto"
                       >
@@ -166,8 +212,8 @@ const Sidebar = () => {
                     </div>
                   )}
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         </nav>
       </aside>

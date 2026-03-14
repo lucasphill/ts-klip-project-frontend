@@ -1,17 +1,33 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
 import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
 import ProjectsPage from './pages/ProjectsPage';
 import WeekViewPage from './pages/WeekViewPage';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+
+import { useLoading } from './contexts/LoadingContext';
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
-  return (
-    <>
-      {children}
-    </>
-  );
+  const { isAuthenticated, loading, login } = useAuth();
+  const { setLoading } = useLoading();
+
+  useEffect(() => {
+    setLoading(loading);
+  }, [loading, setLoading]);
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      login();
+    }
+  }, [loading, isAuthenticated, login]);
+
+  if (!isAuthenticated) {
+    return null; // vai redirecionar via login()
+  }
+
+  return <>{children}</>;
 };
 
 const AppRoutes = () => {
@@ -65,11 +81,11 @@ const AppRoutes = () => {
 
 const App = () => {
   return (
-    // <AuthProvider>
-    <Router>
-      <AppRoutes />
-    </Router>
-    // </AuthProvider>
+    <AuthProvider>
+      <Router>
+        <AppRoutes />
+      </Router>
+    </AuthProvider>
   )
 }
 

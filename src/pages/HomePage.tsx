@@ -1,164 +1,135 @@
-import { useState, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import TaskTable from '../components/TaskTable';
 import AddTaskModal from '../components/AddTaskModal';
 import TaskViewLayout from '../components/TaskViewLayout';
-
-const INITIAL_PROJECTS = [
-  { id: 'p1', name: 'Lançamento Website', description: 'Redesign e launch', color: 'bg-blue-500', owner_id: 'auth0|1' },
-  { id: 'p2', name: 'Roadmap Q3', description: 'Planejamento trimestral', color: 'bg-emerald-500', owner_id: 'auth0|1' },
-  { id: 'p3', name: 'Marketing Social', description: 'Campanhas redes sociais', color: 'bg-purple-500', owner_id: 'auth0|2' }
-];
-
-const INITIAL_TASKS = [
-  { id: 't1', title: 'Definir paleta de cores', is_completed: true, due_date: '2023-11-10', owner_id: 'u1' },
-  { id: 't2', title: 'Desenvolver Homepage', is_completed: false, due_date: '2023-11-15', owner_id: 'u2' },
-  { id: 't3', title: 'Revisar métricas Q2', is_completed: false, due_date: '2023-11-20', owner_id: 'u1' },
-];
-
-// Tabela project_tasks (Many-to-Many)
-const INITIAL_PROJECT_TASKS = [
-  { project_id: 'p1', task_id: 't1' },
-  { project_id: 'p1', task_id: 't2' },
-  { project_id: 'p2', task_id: 't3' }
-];
-
-// Tabela custom_field_definitions
-const INITIAL_FIELD_DEFS = [
-  { id: 'cf1', name: 'Prioridade', type: 'enum', options: ['Alta', 'Média', 'Baixa'] },
-  { id: 'cf2', name: 'Estimativa (Horas)', type: 'number', options: null },
-  { id: 'cf3', name: 'Link Figma', type: 'text', options: null }
-];
-
-// Tabela project_custom_fields (Quais campos pertencem a quais projetos)
-const INITIAL_PROJECT_FIELDS = [
-  { project_id: 'p1', custom_field_id: 'cf1' }, // Website tem Prioridade
-  { project_id: 'p1', custom_field_id: 'cf3' }, // Website tem Link Figma
-  { project_id: 'p2', custom_field_id: 'cf2' }, // Roadmap tem Estimativa
-];
-
-// Tabela custom_field_values (Valores reais)
-const INITIAL_FIELD_VALUES = [
-  { id: 'v1', task_id: 't1', custom_field_id: 'cf1', value_text: 'Alta' },
-  { id: 'v2', task_id: 't2', custom_field_id: 'cf3', value_text: 'figma.com/file/xyz' },
-  { id: 'v3', task_id: 't3', custom_field_id: 'cf2', value_number: 4 },
-];
-
-// --- COMPONENTES ---
+import { ToastContainer, toast } from 'react-toastify';
+import { projectsApi, tasksApi, projectsTasksApi } from '../services/api';
+import type { GetProjectsDto, GetTasksDto, CreateTaskDto } from '../types/apiTypes';
 
 const HomePage = () => {
-  // --- ROUTING ---
-  const { projectId } = useParams();
-  const activeView = projectId || 'all'; // Se tem projectId na URL, usa ele; senão, é 'all'
-
-  // --- STATE ---
-  const [tasks, setTasks] = useState(INITIAL_TASKS);
-  const [projectTasks, setProjectTasks] = useState(INITIAL_PROJECT_TASKS);
-  const [customFields, setCustomFields] = useState(INITIAL_FIELD_DEFS);
-  const [projectFields, setProjectFields] = useState(INITIAL_PROJECT_FIELDS);
-  const [fieldValues, setFieldValues] = useState(INITIAL_FIELD_VALUES);
-  const [projects] = useState(INITIAL_PROJECTS);
+  const [projects, setProjects] = useState<GetProjectsDto[]>([]);
+  const [tasks, setTasks] = useState<GetTasksDto[]>([]);
+  const [projectTasks, setProjectTasks] = useState<any[]>([]);
   const [showEditTaskModal, setShowEditTaskModal] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<any>(null);
-  const [isCreatingField, setIsCreatingField] = useState(false);
-  const [newField, setNewField] = useState({ name: '', type: 'text', optionsString: '' });
 
-  // --- DERIVED STATE ---
+  const fetchProjects = async () => {
+    try {
+      const response = await projectsApi.getAll();
+      const projs = response.data ?? [];
+      setProjects(projs);
 
-  const currentProject = projects.find(p => p.id === activeView);
-
-  // Filtrar tarefas baseadas na view atual
-  const visibleTasks = useMemo(() => {
-    if (activeView === 'all') return tasks;
-
-    // Join logic: tasks -> project_tasks -> project
-    const taskIdsInProject = projectTasks
-      .filter(pt => pt.project_id === activeView)
-      .map(pt => pt.task_id);
-
-    return tasks.filter(t => taskIdsInProject.includes(t.id));
-  }, [activeView, tasks, projectTasks]);
-
-  // Obter campos customizados do projeto ativo
-  const activeCustomFields = useMemo(() => {
-    if (activeView === 'all') return [];
-
-    const fieldIds = projectFields
-      .filter(pf => pf.project_id === activeView)
-      .map(pf => pf.custom_field_id);
-
-    return customFields.filter(cf => fieldIds.includes(cf.id));
-  }, [activeView, projectFields, customFields]);
-
-  // --- ACTIONS ---
-
-  const toggleTaskCompletion = (taskId) => {
-    setTasks(prev => prev.map(t =>
-      t.id === taskId ? { ...t, is_completed: !t.is_completed } : t
-    ));
+      // Carrega vínculos projeto->tarefa para manter estado após reload
+      try {
+        const promises = projs.map(p => projectsTasksApi.getByProject(p.id));
+        const results = await Promise.all(promises);
+        const assignments: { project_id: string; task_id: string }[] = [];
+        results.forEach((res, idx) => {
+          const projectId = projs[idx].id;
+          const tasksForProject = res?.data ?? [];
+          tasksForProject.forEach((t: any) => {
+            if (t?.id) assignments.push({ project_id: projectId, task_id: t.id });
+          });
+        });
+        setProjectTasks(assignments);
+      } catch (err) {
+        console.error('Erro ao carregar vínculos projeto-tarefa', err);
+      }
+    } catch (error: any) {
+      toast.error(error?.message ?? 'Erro ao buscar projetos');
+    }
   };
 
-  const updateCustomValue = (taskId, fieldId, value) => {
-    setFieldValues(prev => {
-      // Verifica se já existe valor
-      const existingIndex = prev.findIndex(v => v.task_id === taskId && v.custom_field_id === fieldId);
+  const fetchTasks = async () => {
+    try {
+      const response = await tasksApi.getAll();
+      setTasks(response.data ?? []);
+    } catch (error: any) {
+      toast.error(error?.message ?? 'Erro ao buscar projetos');
+    }
+  };
 
-      const newValue = {
-        id: existingIndex >= 0 ? prev[existingIndex].id : `v-${Date.now()}`,
-        task_id: taskId,
-        custom_field_id: fieldId,
-        value_text: typeof value === 'string' ? value : null,
-        value_number: typeof value === 'number' ? value : null
-      };
+  useEffect(() => {
+    fetchProjects();
+    fetchTasks();
+  }, []);
 
-      if (existingIndex >= 0) {
-        const newArr = [...prev];
-        newArr[existingIndex] = newValue;
-        return newArr;
-      } else {
-        return [...prev, newValue];
-      }
+  const toggleTaskCompletion = (taskId: string) => {
+    setTasks(prev => {
+      const next = prev.map(t => t.id === taskId ? { ...t, isCompleted: !t.isCompleted } : t);
+      const toggled = next.find(t => t.id === taskId);
+      if (!toggled) return next;
+
+      (async () => {
+        const payload: CreateTaskDto = {
+          title: toggled.title ?? '',
+          dueDate: (toggled as any).dueDate ?? (toggled as any).due_date,
+          isCompleted: toggled.isCompleted ?? (toggled as any).is_completed ?? false,
+          notes: (toggled as any).notes,
+          parentTaskId: (toggled as any).parentTaskId ?? (toggled as any).parent_task_id
+        };
+        try {
+          await tasksApi.update(toggled.id, payload);
+          toast.success('Status da tarefa atualizado');
+        } catch (error: any) {
+          toast.error(error?.message ?? 'Erro ao atualizar status');
+          // rollback
+          setTasks(prev2 => prev2.map(pt => pt.id === taskId ? { ...pt, isCompleted: !(pt.isCompleted ?? (pt as any).is_completed) } : pt));
+        }
+      })();
+
+      return next;
     });
   };
 
   const addTask = () => {
-    const newTask = {
-      id: `t-${Date.now()}`,
+    const draft = {
       title: '',
-      is_completed: false,
-      due_date: new Date().toISOString().split('T')[0],
-      owner_id: 'u1' // Default current user
-    };
-
-    setTasks(prev => [...prev, newTask]);
-
-    // Se estiver num projeto, cria o vínculo project_tasks
-    if (activeView !== 'all') {
-      setProjectTasks(prev => [...prev, { project_id: activeView, task_id: newTask.id }]);
-    }
+      isCompleted: false,
+      dueDate: new Date().toISOString().split('T')[0],
+      notes: '',
+      parentTaskId: ''
+    } as any;
+    setTaskToEdit(draft);
+    setShowEditTaskModal(true);
   };
 
-  const addProjectToTask = (taskId, projectId) => {
+  const addProjectToTask = (taskId: string, projectId: string) => {
     // Evita duplicatas
     const exists = projectTasks.some(pt => pt.task_id === taskId && pt.project_id === projectId);
     if (!exists && projectId) {
+      // Optimistic UI
       setProjectTasks(prev => [...prev, { project_id: projectId, task_id: taskId }]);
+      (async () => {
+        try {
+          await projectsTasksApi.assign(projectId, taskId);
+          toast.success('Projeto vinculado à tarefa');
+        } catch (error: any) {
+          toast.error(error?.message ?? 'Erro ao vincular projeto');
+          setProjectTasks(prev => prev.filter(pt => !(pt.task_id === taskId && pt.project_id === projectId)));
+        }
+      })();
     }
   };
 
-  const removeProjectFromTask = (taskId, projectId) => {
+  const removeProjectFromTask = (taskId: string, projectId: string) => {
+    // Optimistic UI: remove locally then call API
+    const existed = projectTasks.some(pt => pt.task_id === taskId && pt.project_id === projectId);
+    if (!existed) return;
     setProjectTasks(prev => prev.filter(pt => !(pt.task_id === taskId && pt.project_id === projectId)));
+    (async () => {
+      try {
+        await projectsTasksApi.unassign(projectId, taskId);
+        toast.success('Projeto desvinculado da tarefa');
+      } catch (error: any) {
+        toast.error(error?.message ?? 'Erro ao desvincular projeto');
+        // rollback
+        setProjectTasks(prev => [...prev, { project_id: projectId, task_id: taskId }]);
+      }
+    })();
   };
 
-  // Helper para pegar valor de campo customizado de forma segura
-  const getFieldValue = (taskId, fieldId) => {
-    const record = fieldValues.find(v => v.task_id === taskId && v.custom_field_id === fieldId);
-    if (!record) return '';
-    return record.value_text || record.value_number || '';
-  };
-
-  // Helper para pegar projetos de uma tarefa
-  const getTaskProjects = (taskId) => {
+  const getTaskProjects = (taskId: string) => {
     const projectIds = projectTasks
       .filter(pt => pt.task_id === taskId)
       .map(pt => pt.project_id);
@@ -169,31 +140,10 @@ const HomePage = () => {
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, title } : t));
   };
 
-  const updateTaskDueDate = (taskId: string, due_date: string) => {
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, due_date } : t));
+  const updateTaskDueDate = (taskId: string, dueDate: string) => {
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, dueDate } : t));
   };
 
-  const addCustomFieldToProject = () => {
-    if (!currentProject || !newField.name.trim()) return;
-
-    const newFieldId = `cf-${Date.now()}`;
-    const options = newField.type === 'enum' && newField.optionsString
-      ? newField.optionsString.split(',').map(s => s.trim()).filter(Boolean)
-      : null;
-
-    setCustomFields(prev => ([
-      ...prev,
-      { id: newFieldId, name: newField.name.trim(), type: newField.type, options }
-    ]));
-
-    setProjectFields(prev => ([
-      ...prev,
-      { project_id: currentProject.id, custom_field_id: newFieldId }
-    ]));
-
-    setNewField({ name: '', type: 'text', optionsString: '' });
-    setIsCreatingField(false);
-  };
 
   const handleEditTask = (task: any) => {
     setTaskToEdit(task);
@@ -201,24 +151,88 @@ const HomePage = () => {
   };
 
   const handleDeleteTask = (taskId: string) => {
-    if (confirm('Tem certeza que deseja excluir esta tarefa?')) {
-      setTasks(prev => prev.filter(t => t.id !== taskId));
-      setProjectTasks(prev => prev.filter(pt => pt.task_id !== taskId));
-      setFieldValues(prev => prev.filter(fv => fv.task_id !== taskId));
-    }
+    if (!confirm('Tem certeza que deseja excluir esta tarefa?')) return;
+    (async () => {
+      try {
+        await tasksApi.remove(taskId);
+        setTasks(prev => prev.filter(t => t.id !== taskId));
+        toast.success('Tarefa excluída');
+      } catch (error: any) {
+        toast.error(error?.message ?? 'Erro ao excluir tarefa');
+      }
+    })();
   };
 
   const handleSaveTask = (task: any) => {
-    if (task.id) {
-      // Edit existing
+    const isTemp = typeof task.id === 'string' && task.id.startsWith('t-');
+
+    if (isTemp) {
+      // Create on API and replace temporary task with server response
+      (async () => {
+        try {
+          const payload = {
+            title: task.title ?? '',
+            dueDate: task.dueDate ?? task.due_date,
+            isCompleted: task.isCompleted ?? task.is_completed ?? false,
+            notes: task.notes,
+            parentTaskId: task.parentTaskId ?? task.parentTaskId
+          } as any;
+
+          const response = await tasksApi.create(payload);
+          const created: GetTasksDto = response.data;
+          setTasks(prev => prev.map(t => t.id === task.id ? created : t));
+          toast.success('Tarefa criada com sucesso');
+        } catch (error: any) {
+          toast.error(error?.message ?? 'Erro ao criar tarefa');
+        } finally {
+          setShowEditTaskModal(false);
+          setTaskToEdit(null);
+        }
+      })();
+    } else if (task.id) {
+      // Edit existing: update locally and try to persist
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...task } : t));
+      (async () => {
+        try {
+          const payload = {
+            title: task.title ?? '',
+            dueDate: task.dueDate ?? task.due_date,
+            isCompleted: task.isCompleted ?? task.is_completed ?? false,
+            notes: task.notes,
+            parentTaskId: task.parentTaskId ?? task.parentTaskId
+          } as any;
+          await tasksApi.update(task.id, payload);
+          toast.success('Tarefa atualizada');
+        } catch (error: any) {
+          toast.error(error?.message ?? 'Erro ao atualizar tarefa');
+        } finally {
+          setShowEditTaskModal(false);
+          setTaskToEdit(null);
+        }
+      })();
     } else {
-      // Add new (not used here, but keeping for consistency)
-      const newTask = { ...task, id: `t-${Date.now()}` };
-      setTasks(prev => [...prev, newTask]);
-      if (activeView !== 'all') {
-        setProjectTasks(prev => [...prev, { project_id: activeView, task_id: newTask.id }]);
-      }
+      // No id → create on API and append to list
+      (async () => {
+        try {
+          const payload = {
+            title: task.title ?? '',
+            dueDate: task.dueDate ?? task.due_date,
+            isCompleted: task.isCompleted ?? task.is_completed ?? false,
+            notes: task.notes,
+            parentTaskId: task.parentTaskId ?? task.parentTaskId
+          } as any;
+
+          const response = await tasksApi.create(payload);
+          const created: GetTasksDto = response.data;
+          setTasks(prev => [...prev, created]);
+          toast.success('Tarefa criada com sucesso');
+        } catch (error: any) {
+          toast.error(error?.message ?? 'Erro ao criar tarefa');
+        } finally {
+          setShowEditTaskModal(false);
+          setTaskToEdit(null);
+        }
+      })();
     }
   };
 
@@ -226,6 +240,7 @@ const HomePage = () => {
 
   return (
     <>
+      <ToastContainer hideProgressBar closeOnClick closeButton position="top-center" />
       <TaskViewLayout
         title={'Todas as Tarefas'}
         description={'Visualize e gerencie todas as suas tarefas aqui.'}
@@ -234,11 +249,8 @@ const HomePage = () => {
         {/* TASK LIST AREA */}
         <div className="flex-1 overflow-auto bg-white">
           <TaskTable
-            visibleTasks={visibleTasks}
-            activeView={activeView}
-            activeCustomFields={activeCustomFields}
-            getFieldValue={getFieldValue}
-            updateCustomValue={updateCustomValue}
+            visibleTasks={tasks}
+            activeView={'all'}
             toggleTaskCompletion={toggleTaskCompletion}
             addTask={addTask}
             projects={projects}
