@@ -3,19 +3,20 @@ import WeekNavigator from '../components/WeekNavigator';
 import TaskTable from '../components/TaskTable';
 import AddTaskModal from '../components/AddTaskModal';
 import TaskViewLayout from '../components/TaskViewLayout';
+import type { CreateTaskDto, GetProjectsDto, GetTasksDto } from '../types/apiTypes';
 
-const INITIAL_TASKS = [
-  { id: 't1', title: 'Definir paleta de cores', is_completed: true, due_date: '2026-02-03', owner_id: 'auth0|1' },
-  { id: 't2', title: 'Desenvolver Homepage', is_completed: false, due_date: '2026-02-05', owner_id: 'auth0|2' },
-  { id: 't3', title: 'Revisar métricas Q2', is_completed: false, due_date: '2026-02-10', owner_id: 'auth0|1' },
-  { id: 't4', title: 'Reunião de planejamento', is_completed: false, due_date: '2026-02-01', owner_id: 'auth0|1' },
-  { id: 't5', title: 'Atualizar documentação', is_completed: false, due_date: '2026-02-07', owner_id: 'auth0|2' },
+const INITIAL_TASKS: GetTasksDto[] = [
+  { id: 't1', title: 'Definir paleta de cores', isCompleted: true, dueDate: '2026-02-03', createdAt: '2026-01-01T00:00:00.000Z' },
+  { id: 't2', title: 'Desenvolver Homepage', isCompleted: false, dueDate: '2026-02-05', createdAt: '2026-01-01T00:00:00.000Z' },
+  { id: 't3', title: 'Revisar métricas Q2', isCompleted: false, dueDate: '2026-02-10', createdAt: '2026-01-01T00:00:00.000Z' },
+  { id: 't4', title: 'Reunião de planejamento', isCompleted: false, dueDate: '2026-02-01', createdAt: '2026-01-01T00:00:00.000Z' },
+  { id: 't5', title: 'Atualizar documentação', isCompleted: false, dueDate: '2026-02-07', createdAt: '2026-01-01T00:00:00.000Z' },
 ];
 
-const INITIAL_PROJECTS = [
-  { id: 'p1', name: 'Lançamento Website', description: 'Redesign e launch', color: 'bg-blue-500', owner_id: 'auth0|1' },
-  { id: 'p2', name: 'Roadmap Q3', description: 'Planejamento trimestral', color: 'bg-emerald-500', owner_id: 'auth0|1' },
-  { id: 'p3', name: 'Marketing Social', description: 'Campanhas redes sociais', color: 'bg-purple-500', owner_id: 'auth0|2' }
+const INITIAL_PROJECTS: GetProjectsDto[] = [
+  { id: 'p1', name: 'Lançamento Website', description: 'Redesign e launch', color: 'bg-blue-500', createdAt: '2026-01-01T00:00:00.000Z' },
+  { id: 'p2', name: 'Roadmap Q3', description: 'Planejamento trimestral', color: 'bg-emerald-500', createdAt: '2026-01-01T00:00:00.000Z' },
+  { id: 'p3', name: 'Marketing Social', description: 'Campanhas redes sociais', color: 'bg-purple-500', createdAt: '2026-01-01T00:00:00.000Z' }
 ];
 
 const INITIAL_PROJECT_TASKS = [
@@ -48,11 +49,11 @@ const formatDate = (date: Date): string => {
 
 const WeekViewPage = () => {
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(getMonday(new Date()));
-  const [tasks, setTasks] = useState(INITIAL_TASKS);
+  const [tasks, setTasks] = useState<GetTasksDto[]>(INITIAL_TASKS);
   const [projectTasks] = useState(INITIAL_PROJECT_TASKS);
-  const [projects] = useState(INITIAL_PROJECTS);
+  const [projects] = useState<GetProjectsDto[]>(INITIAL_PROJECTS);
   const [showEditTaskModal, setShowEditTaskModal] = useState(false);
-  const [taskToEdit, setTaskToEdit] = useState<any>(null);
+  const [taskToEdit, setTaskToEdit] = useState<(CreateTaskDto & { id?: string }) | null>(null);
 
   const currentMonth = useMemo(() => new Date(currentWeekStart.getFullYear(), currentWeekStart.getMonth(), 1), [currentWeekStart]);
 
@@ -82,8 +83,8 @@ const WeekViewPage = () => {
     const endStr = currentWeekEnd.toISOString().split('T')[0];
 
     return tasks.filter(task => {
-      if (!task.due_date) return false;
-      return task.due_date >= startStr && task.due_date <= endStr;
+      if (!task.dueDate) return false;
+      return task.dueDate >= startStr && task.dueDate <= endStr;
     });
   }, [tasks, currentWeekStart, currentWeekEnd]);
 
@@ -107,17 +108,17 @@ const WeekViewPage = () => {
   // Actions
   const toggleTaskCompletion = (taskId: string) => {
     setTasks(prev => prev.map(t =>
-      t.id === taskId ? { ...t, is_completed: !t.is_completed } : t
+      t.id === taskId ? { ...t, isCompleted: !t.isCompleted } : t
     ));
   };
 
   const addTask = () => {
-    const newTask = {
+    const newTask: GetTasksDto = {
       id: `t-${Date.now()}`,
       title: '',
-      is_completed: false,
-      due_date: currentWeekStart.toISOString().split('T')[0],
-      owner_id: 'auth0|1'
+      isCompleted: false,
+      dueDate: currentWeekStart.toISOString().split('T')[0],
+      createdAt: new Date().toISOString()
     };
     setTasks(prev => [...prev, newTask]);
   };
@@ -126,8 +127,8 @@ const WeekViewPage = () => {
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, title } : t));
   };
 
-  const updateTaskDueDate = (taskId: string, due_date: string) => {
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, due_date } : t));
+  const updateTaskDueDate = (taskId: string, dueDate: string) => {
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, dueDate } : t));
   };
 
   const getTaskProjects = (taskId: string) => {
@@ -145,9 +146,9 @@ const WeekViewPage = () => {
     // Not implemented in this view
   };
 
-  const getFieldValue = () => '';
-  const updateCustomValue = () => { };
-  const handleEditTask = (task: any) => {
+  const getFieldValue = (_taskId: string, _fieldId: string) => '';
+  const updateCustomValue = (_taskId: string, _fieldId: string, _value: string | number) => { };
+  const handleEditTask = (task: GetTasksDto) => {
     setTaskToEdit(task);
     setShowEditTaskModal(true);
   };
@@ -158,13 +159,21 @@ const WeekViewPage = () => {
     }
   };
 
-  const handleSaveTask = (task: any) => {
+  const handleSaveTask = (task: CreateTaskDto & { id?: string }) => {
     if (task.id) {
       // Edit existing
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...task } : t));
     } else {
       // Add new
-      const newTask = { ...task, id: `t-${Date.now()}` };
+      const newTask: GetTasksDto = {
+        id: `t-${Date.now()}`,
+        title: task.title,
+        dueDate: task.dueDate,
+        isCompleted: task.isCompleted,
+        notes: task.notes,
+        parentTaskId: task.parentTaskId,
+        createdAt: new Date().toISOString()
+      };
       setTasks(prev => [...prev, newTask]);
     }
   };
