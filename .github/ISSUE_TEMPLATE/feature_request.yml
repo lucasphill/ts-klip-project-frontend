@@ -1,0 +1,61 @@
+name: ✨ Solicitação de Feature
+description: Sugira uma nova funcionalidade ou atualização para o projeto
+title: "[FEATURE] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado pela sua sugestão! Por favor, preencha as informações abaixo para nos ajudar a entender e avaliar sua solicitação.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema ou Necessidade
+      description: Descreva o problema ou necessidade que motivou esta solicitação.
+      placeholder: Ex. Fico frustrado quando... / Precisaria de...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Solução Proposta
+      description: Descreva de forma clara e objetiva a funcionalidade ou atualização que você gostaria.
+      placeholder: Descreva sua ideia aqui...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativas Consideradas
+      description: Descreva alternativas ou soluções que você já considerou.
+      placeholder: Quais outras abordagens você pensou?
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Prioridade
+      description: Qual a prioridade desta solicitação para você?
+      options:
+        - Baixa
+        - Média
+        - Alta
+        - Crítica
+    validations:
+      required: true
+
+  - type: textarea
+    id: mockups
+    attributes:
+      label: Mockups / Referências Visuais
+      description: Se aplicável, adicione mockups, wireframes ou referências visuais para ilustrar a feature.
+      placeholder: Cole imagens, links ou referências aqui...
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Contexto Adicional
+      description: Adicione qualquer outro contexto ou informação sobre a solicitação de feature aqui.
+      placeholder: Informações extras que possam ajudar na avaliação...
