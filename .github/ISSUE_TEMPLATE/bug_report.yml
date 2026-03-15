@@ -1,0 +1,84 @@
+name: 🐛 Reporte de Bug
+description: Reporte um bug ou problema encontrado no projeto
+title: "[BUG] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por reportar um bug! Por favor, preencha as informações abaixo para nos ajudar a reproduzir e corrigir o problema.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Descrição do Bug
+      description: Descreva o bug de forma clara e objetiva.
+      placeholder: O que aconteceu?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Passos para Reproduzir
+      description: Liste os passos necessários para reproduzir o comportamento.
+      placeholder: |
+        1. Vá para '...'
+        2. Clique em '...'
+        3. Role até '...'
+        4. Veja o erro
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportamento Esperado
+      description: Descreva o que você esperava que acontecesse.
+      placeholder: O que deveria ter acontecido?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Comportamento Atual
+      description: Descreva o que realmente aconteceu.
+      placeholder: O que realmente aconteceu?
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots / Vídeos
+      description: Se aplicável, adicione capturas de tela ou vídeos para ajudar a explicar o problema.
+      placeholder: Cole imagens ou links aqui...
+
+  - type: dropdown
+    id: browsers
+    attributes:
+      label: Navegadores Afetados
+      description: Em quais navegadores o bug ocorre?
+      multiple: true
+      options:
+        - Chrome
+        - Firefox
+        - Safari
+        - Edge
+        - Opera
+        - Outro
+
+  - type: input
+    id: os
+    attributes:
+      label: Sistema Operacional
+      description: Qual sistema operacional você está usando?
+      placeholder: Ex. Windows 11, macOS Ventura, Ubuntu 22.04
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Contexto Adicional
+      description: Adicione qualquer outro contexto sobre o problema aqui.
+      placeholder: Informações extras que possam ajudar na investigação...
