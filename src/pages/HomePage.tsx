@@ -43,9 +43,22 @@ const HomePage = () => {
   const fetchTasks = async () => {
     try {
       const response = await tasksApi.getAll();
-      setTasks(response.data ?? []);
+      //normalize due date field
+      const normalizedTasks = (response.data ?? []).map((task: any) => {
+        const rawDueDate = task.dueDate ?? task.due_date;
+
+        return {
+          ...task,
+          dueDate:
+            typeof rawDueDate === 'string' && rawDueDate.trim()
+              ? rawDueDate.split('T')[0]
+              : undefined,
+        };
+      });
+      console.log('Tarefas carregadas:', normalizedTasks);
+      setTasks(normalizedTasks);
     } catch (error: any) {
-      toast.error(error?.message ?? 'Erro ao buscar projetos');
+      toast.error(error?.message ?? 'Erro ao buscar tarefas');
     }
   };
 

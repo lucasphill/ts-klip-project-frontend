@@ -126,13 +126,13 @@ const Sidebar = () => {
             onClick={() => navigate('/')}
             isOpen={isSidebarOpen}
           />
-          <NavItem
+          {/* <NavItem
             icon={<Calendar size={20} />}
             label="Esta Semana"
             active={activeTab === 'week'}
             onClick={() => navigate('/week')}
             isOpen={isSidebarOpen}
-          />
+          /> */}
 
           <div className="pt-6 mb-2">
             {isSidebarOpen && (
