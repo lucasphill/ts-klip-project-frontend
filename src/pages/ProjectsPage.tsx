@@ -1,269 +1,398 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { ToastContainer, toast } from 'react-toastify';
 import TaskTable from '../components/TaskTable';
 import AddTaskModal from '../components/AddTaskModal';
 import TaskViewLayout from '../components/TaskViewLayout';
+import {
+  customFieldDefinitionsApi,
+  customFieldValuesApi,
+  projectsApi,
+  projectsCustomFieldDefinitionsApi,
+  projectsTasksApi,
+  tasksApi,
+} from '../services/api';
 import type {
+  CreateCustomFieldDefinitionDto,
+  CreateCustomFieldValueDto,
   CreateTaskDto,
+  CustomFieldValue,
   GetCustomFieldDefinitionDto,
   GetProjectsDto,
-  GetTasksDto
+  GetTasksDto,
+  GetTasksWithCustomFieldsDto,
 } from '../types/apiTypes';
 
-type ProjectTaskLink = {
-  project_id: string;
-  task_id: string;
+type ProjectTask = GetTasksDto & {
+  customFields?: Record<string, CustomFieldValue>;
 };
 
-type ProjectFieldLink = {
-  project_id: string;
-  custom_field_id: string;
+const normalizeDueDate = (value?: string | null) => {
+  if (typeof value !== 'string' || !value.trim()) {
+    return undefined;
+  }
+
+  return value.split('T')[0];
 };
 
-type FieldValueRecord = {
-  id: string;
-  task_id: string;
-  custom_field_id: string;
-  value_text?: string;
-  value_number?: number;
+const normalizeTask = (task: GetTasksDto | GetTasksWithCustomFieldsDto): ProjectTask => ({
+  ...task,
+  dueDate: normalizeDueDate(task.dueDate),
+  customFields: 'customFields' in task ? task.customFields ?? {} : {},
+});
+
+const normalizeFieldOptions = (options?: string | string[] | null) => {
+  if (Array.isArray(options)) {
+    return options.map((option) => option.trim()).filter(Boolean);
+  }
+
+  return String(options ?? '')
+    .split(',')
+    .map((option) => option.trim())
+    .filter(Boolean);
 };
 
-const INITIAL_PROJECTS: GetProjectsDto[] = [
-  { id: 'p1', name: 'Lançamento Website', description: 'Redesign e launch', color: 'bg-blue-500', createdAt: '2026-01-01T00:00:00.000Z' },
-  { id: 'p2', name: 'Roadmap Q3', description: 'Planejamento trimestral', color: 'bg-emerald-500', createdAt: '2026-01-01T00:00:00.000Z' },
-  { id: 'p3', name: 'Marketing Social', description: 'Campanhas redes sociais', color: 'bg-purple-500', createdAt: '2026-01-01T00:00:00.000Z' }
-];
+const normalizeFieldKey = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toLowerCase();
 
-const INITIAL_TASKS: GetTasksDto[] = [
-  { id: 't1', title: 'Definir paleta de cores', isCompleted: true, dueDate: '2023-11-10', createdAt: '2026-01-01T00:00:00.000Z' },
-  { id: 't2', title: 'Desenvolver Homepage', isCompleted: false, dueDate: '2023-11-15', createdAt: '2026-01-01T00:00:00.000Z' },
-  { id: 't3', title: 'Revisar métricas Q2', isCompleted: false, dueDate: '2023-11-20', createdAt: '2026-01-01T00:00:00.000Z' },
-];
+const normalizeCustomField = (field: GetCustomFieldDefinitionDto): GetCustomFieldDefinitionDto => ({
+  ...field,
+  options: normalizeFieldOptions(field.options),
+});
 
-// Tabela project_tasks (Many-to-Many)
-const INITIAL_PROJECT_TASKS: ProjectTaskLink[] = [
-  { project_id: 'p1', task_id: 't1' },
-  { project_id: 'p1', task_id: 't2' },
-  { project_id: 'p2', task_id: 't3' }
-];
+const areSameOptions = (left: string[], right: string[]) =>
+  left.length === right.length && left.every((option, index) => option === right[index]);
 
-// Tabela custom_field_definitions
-const INITIAL_FIELD_DEFS: GetCustomFieldDefinitionDto[] = [
-  { id: 'cf1', name: 'Prioridade', type: 'enum', options: ['Alta', 'Média', 'Baixa'], createdAt: '2026-01-01T00:00:00.000Z' },
-  { id: 'cf2', name: 'Estimativa (Horas)', type: 'number', createdAt: '2026-01-01T00:00:00.000Z' },
-  { id: 'cf3', name: 'Link Figma', type: 'text', createdAt: '2026-01-01T00:00:00.000Z' }
-];
+const toTaskPayload = (task: CreateTaskDto) => ({
+  title: task.title.trim(),
+  dueDate: task.dueDate ? `${task.dueDate}T00:00:00` : undefined,
+  isCompleted: task.isCompleted ?? false,
+  notes: task.notes?.trim() || undefined,
+  parentTaskId: task.parentTaskId?.trim() || undefined,
+});
 
-// Tabela project_custom_fields (Quais campos pertencem a quais projetos)
-const INITIAL_PROJECT_FIELDS: ProjectFieldLink[] = [
-  { project_id: 'p1', custom_field_id: 'cf1' }, // Website tem Prioridade
-  { project_id: 'p1', custom_field_id: 'cf3' }, // Website tem Link Figma
-  { project_id: 'p2', custom_field_id: 'cf2' }, // Roadmap tem Estimativa
-];
+const buildCustomFieldValuePayload = (
+  taskId: string,
+  customFieldId: string,
+  fieldType: GetCustomFieldDefinitionDto['type'],
+  value: CustomFieldValue
+): CreateCustomFieldValueDto => {
+  const payload: CreateCustomFieldValueDto = {
+    taskId,
+    customFieldId,
+  };
 
-// Tabela custom_field_values (Valores reais)
-const INITIAL_FIELD_VALUES: FieldValueRecord[] = [
-  { id: 'v1', task_id: 't1', custom_field_id: 'cf1', value_text: 'Alta' },
-  { id: 'v2', task_id: 't2', custom_field_id: 'cf3', value_text: 'figma.com/file/xyz' },
-  { id: 'v3', task_id: 't3', custom_field_id: 'cf2', value_number: 4 },
-];
+  if (fieldType === 'number') {
+    payload.valueNumber =
+      value === undefined || value === null || value === '' ? undefined : Number(value);
+    return payload;
+  }
 
-// --- COMPONENTES ---
+  payload.valueText = value === undefined || value === null ? '' : String(value);
+  return payload;
+};
 
 const ProjectsPage = () => {
-  // --- ROUTING ---
   const { projectId } = useParams();
-  const activeView = projectId || 'all'; // Se tem projectId na URL, usa ele; senão, é 'all'
-
-  // --- STATE ---
-  const [tasks, setTasks] = useState<GetTasksDto[]>(INITIAL_TASKS);
-  const [projectTasks, setProjectTasks] = useState<ProjectTaskLink[]>(INITIAL_PROJECT_TASKS);
-  const [customFields] = useState<GetCustomFieldDefinitionDto[]>(INITIAL_FIELD_DEFS);
-  const [projectFields] = useState<ProjectFieldLink[]>(INITIAL_PROJECT_FIELDS);
-  const [fieldValues, setFieldValues] = useState<FieldValueRecord[]>(INITIAL_FIELD_VALUES);
-  const [projects] = useState<GetProjectsDto[]>(INITIAL_PROJECTS);
+  const [projects, setProjects] = useState<GetProjectsDto[]>([]);
+  const [tasks, setTasks] = useState<ProjectTask[]>([]);
+  const [customFields, setCustomFields] = useState<GetCustomFieldDefinitionDto[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [showEditTaskModal, setShowEditTaskModal] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<(CreateTaskDto & { id?: string }) | null>(null);
 
-  // --- DERIVED STATE ---
+  const currentProject = useMemo(
+    () => projects.find((project) => project.id === projectId) ?? null,
+    [projectId, projects]
+  );
 
-  const currentProject = projects.find(p => p.id === activeView) || null;
+  const refreshProjectData = async () => {
+    if (!projectId) {
+      setProjects([]);
+      setTasks([]);
+      setCustomFields([]);
+      setIsLoading(false);
+      return;
+    }
 
-  // Filtrar tarefas baseadas na view atual
-  const visibleTasks = useMemo(() => {
-    if (activeView === 'all') return tasks;
+    setIsLoading(true);
 
-    // Join logic: tasks -> project_tasks -> project
-    const taskIdsInProject = projectTasks
-      .filter(pt => pt.project_id === activeView)
-      .map(pt => pt.task_id);
+    try {
+      const [projectsResponse, projectFieldsResponse] = await Promise.all([
+        projectsApi.getAll(),
+        projectsCustomFieldDefinitionsApi.getByProject(projectId),
+      ]);
 
-    return tasks.filter(t => taskIdsInProject.includes(t.id));
-  }, [activeView, tasks, projectTasks]);
+      let projectTasks: ProjectTask[] = [];
 
-  // Obter campos customizados do projeto ativo
-  const activeCustomFields = useMemo(() => {
-    if (activeView === 'all') return [];
+      try {
+        const tasksWithFieldsResponse = await projectsTasksApi.getWithCustomFieldsByProject(projectId);
+        projectTasks = (tasksWithFieldsResponse.data ?? []).map(normalizeTask);
+      } catch {
+        const tasksResponse = await projectsTasksApi.getByProject(projectId);
+        projectTasks = (tasksResponse.data ?? []).map(normalizeTask);
+      }
 
-    const fieldIds = projectFields
-      .filter(pf => pf.project_id === activeView)
-      .map(pf => pf.custom_field_id);
-
-    return customFields.filter(cf => fieldIds.includes(cf.id));
-  }, [activeView, projectFields, customFields]);
-
-  // --- ACTIONS ---
-
-  const toggleTaskCompletion = (taskId: string) => {
-    setTasks(prev => prev.map(t =>
-      t.id === taskId ? { ...t, isCompleted: !t.isCompleted } : t
-    ));
+      setProjects(projectsResponse.data ?? []);
+      setTasks(projectTasks);
+      setCustomFields((projectFieldsResponse.data ?? []).map(normalizeCustomField));
+    } catch (error: any) {
+      toast.error(error?.message ?? 'Erro ao carregar o projeto');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const updateCustomValue = (taskId: string, fieldId: string, value: string | number) => {
-    setFieldValues(prev => {
-      // Verifica se já existe valor
-      const existingIndex = prev.findIndex(v => v.task_id === taskId && v.custom_field_id === fieldId);
+  useEffect(() => {
+    void refreshProjectData();
+  }, [projectId]);
 
-      const baseValue = {
-        id: existingIndex >= 0 ? prev[existingIndex].id : `v-${Date.now()}`,
-        task_id: taskId,
-        custom_field_id: fieldId
-      };
+  const persistTaskUpdate = async (taskId: string, updates: Partial<ProjectTask>) => {
+    const existingTask = tasks.find((task) => task.id === taskId);
+    if (!existingTask) return;
 
-      const newValue: FieldValueRecord = typeof value === 'number'
-        ? { ...baseValue, value_number: value }
-        : { ...baseValue, value_text: value };
+    const updatedTask = { ...existingTask, ...updates };
 
-      if (existingIndex >= 0) {
-        const newArr = [...prev];
-        newArr[existingIndex] = newValue;
-        return newArr;
-      } else {
-        return [...prev, newValue];
-      }
-    });
+    setTasks((previousTasks) =>
+      previousTasks.map((task) => (task.id === taskId ? updatedTask : task))
+    );
+
+    try {
+      await tasksApi.update(taskId, toTaskPayload(updatedTask));
+    } catch (error: any) {
+      toast.error(error?.message ?? 'Erro ao atualizar tarefa');
+      await refreshProjectData();
+    }
+  };
+
+  const toggleTaskCompletion = (taskId: string) => {
+    const task = tasks.find((item) => item.id === taskId);
+    if (!task) return;
+
+    void persistTaskUpdate(taskId, { isCompleted: !(task.isCompleted ?? false) });
   };
 
   const addTask = () => {
-    const newTask: GetTasksDto = {
-      id: `t-${Date.now()}`,
+    setTaskToEdit({
       title: '',
       isCompleted: false,
       dueDate: new Date().toISOString().split('T')[0],
-      createdAt: new Date().toISOString()
-    };
-
-    setTasks(prev => [...prev, newTask]);
-
-    // Se estiver num projeto, cria o vínculo project_tasks
-    if (activeView !== 'all') {
-      setProjectTasks(prev => [...prev, { project_id: activeView, task_id: newTask.id }]);
-    }
+      notes: '',
+      parentTaskId: '',
+    });
+    setShowEditTaskModal(true);
   };
 
-  const addProjectToTask = (taskId: string, projectId: string) => {
-    // Evita duplicatas
-    const exists = projectTasks.some(pt => pt.task_id === taskId && pt.project_id === projectId);
-    if (!exists && projectId) {
-      setProjectTasks(prev => [...prev, { project_id: projectId, task_id: taskId }]);
-    }
-  };
-
-  const removeProjectFromTask = (taskId: string, projectId: string) => {
-    setProjectTasks(prev => prev.filter(pt => !(pt.task_id === taskId && pt.project_id === projectId)));
-  };
-
-  // Helper para pegar valor de campo customizado de forma segura
   const getFieldValue = (taskId: string, fieldId: string) => {
-    const record = fieldValues.find(v => v.task_id === taskId && v.custom_field_id === fieldId);
-    if (!record) return '';
-    return record.value_text ?? record.value_number ?? '';
+    const task = tasks.find((item) => item.id === taskId);
+    const field = customFields.find((item) => item.id === fieldId);
+
+    if (!task) return '';
+    if (task.customFields?.[fieldId] !== undefined) return task.customFields[fieldId];
+    if (field && task.customFields?.[field.name] !== undefined) return task.customFields[field.name];
+
+    if (field && task.customFields) {
+      const normalizedTargetKey = normalizeFieldKey(field.name);
+      const matchingEntry = Object.entries(task.customFields).find(([key]) => normalizeFieldKey(key) === normalizedTargetKey);
+      if (matchingEntry) {
+        return matchingEntry[1];
+      }
+    }
+
+    return '';
   };
 
-  // Helper para pegar projetos de uma tarefa
-  const getTaskProjects = (taskId: string) => {
-    const projectIds = projectTasks
-      .filter(pt => pt.task_id === taskId)
-      .map(pt => pt.project_id);
-    return projects.filter(p => projectIds.includes(p.id));
+  const getTaskProjects = (_taskId: string) => (currentProject ? [currentProject] : []);
+
+  const updateCustomValue = (taskId: string, fieldId: string, value: CustomFieldValue) => {
+    const field = customFields.find((item) => item.id === fieldId);
+    const task = tasks.find((item) => item.id === taskId);
+    if (!field || !task || !projectId) return;
+
+    const nextCustomFields = { ...(task.customFields ?? {}) };
+    delete nextCustomFields[fieldId];
+    nextCustomFields[field.name] = value;
+
+    setTasks((previousTasks) =>
+      previousTasks.map((currentTask) =>
+        currentTask.id === taskId
+          ? {
+            ...currentTask,
+            customFields: nextCustomFields,
+          }
+          : currentTask
+      )
+    );
+
+    const payload = buildCustomFieldValuePayload(taskId, fieldId, field.type, value);
+    const currentValue = getFieldValue(taskId, fieldId);
+    const hasCurrentValue = currentValue !== '' && currentValue !== undefined && currentValue !== null;
+    const request = hasCurrentValue ? customFieldValuesApi.update(payload, projectId) : customFieldValuesApi.create(payload, projectId);
+
+    void (async () => {
+      try {
+        await request;
+        await refreshProjectData();
+      } catch (error: any) {
+        toast.error(error?.message ?? 'Erro ao salvar campo personalizado');
+        await refreshProjectData();
+      }
+    })();
   };
 
   const updateTaskTitle = (taskId: string, title: string) => {
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, title } : t));
+    void persistTaskUpdate(taskId, { title });
   };
 
   const updateTaskDueDate = (taskId: string, dueDate: string) => {
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, dueDate } : t));
+    void persistTaskUpdate(taskId, { dueDate });
   };
 
-  const handleEditTask = (task: GetTasksDto) => {
+  const updateTaskInline = (taskId: string, updates: { title?: string; dueDate?: string }) => {
+    void persistTaskUpdate(taskId, updates);
+  };
+
+  const handleEditTask = (task: ProjectTask) => {
     setTaskToEdit(task);
     setShowEditTaskModal(true);
   };
 
   const handleDeleteTask = (taskId: string) => {
-    if (confirm('Tem certeza que deseja excluir esta tarefa?')) {
-      setTasks(prev => prev.filter(t => t.id !== taskId));
-      setProjectTasks(prev => prev.filter(pt => pt.task_id !== taskId));
-      setFieldValues(prev => prev.filter(fv => fv.task_id !== taskId));
-    }
+    if (!confirm('Tem certeza que deseja excluir esta tarefa?')) return;
+
+    void (async () => {
+      try {
+        await tasksApi.remove(taskId);
+        setTasks((previousTasks) => previousTasks.filter((task) => task.id !== taskId));
+        toast.success('Tarefa excluida com sucesso');
+      } catch (error: any) {
+        toast.error(error?.message ?? 'Erro ao excluir tarefa');
+      }
+    })();
   };
 
   const handleSaveTask = (task: CreateTaskDto & { id?: string }) => {
-    if (task.id) {
-      // Edit existing
-      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...task } : t));
-    } else {
-      // Add new (not used here, but keeping for consistency)
-      const newTask: GetTasksDto = {
-        id: `t-${Date.now()}`,
-        title: task.title,
-        dueDate: task.dueDate,
-        isCompleted: task.isCompleted,
-        notes: task.notes,
-        parentTaskId: task.parentTaskId,
-        createdAt: new Date().toISOString()
-      };
-      setTasks(prev => [...prev, newTask]);
-      if (activeView !== 'all') {
-        setProjectTasks(prev => [...prev, { project_id: activeView, task_id: newTask.id }]);
+    if (!projectId) return;
+
+    void (async () => {
+      try {
+        if (task.id) {
+          await tasksApi.update(task.id, toTaskPayload(task));
+          setTasks((previousTasks) =>
+            previousTasks.map((currentTask) =>
+              currentTask.id === task.id ? { ...currentTask, ...task } : currentTask
+            )
+          );
+          toast.success('Tarefa atualizada');
+        } else {
+          const createdTaskResponse = await tasksApi.create(toTaskPayload(task));
+          const createdTask = createdTaskResponse.data;
+          await projectsTasksApi.assign(projectId, createdTask.id);
+          toast.success('Tarefa criada com sucesso');
+          await refreshProjectData();
+        }
+      } catch (error: any) {
+        toast.error(error?.message ?? 'Erro ao salvar tarefa');
+      } finally {
+        setShowEditTaskModal(false);
+        setTaskToEdit(null);
       }
+    })();
+  };
+
+  const handleCreateCustomField = async (field: CreateCustomFieldDefinitionDto) => {
+    if (!projectId) return;
+
+    const normalizedNewOptions = normalizeFieldOptions(field.options);
+
+    try {
+      await customFieldDefinitionsApi.create({
+        ...field,
+        options: normalizedNewOptions.length > 0 ? normalizedNewOptions.join(',') : undefined,
+      });
+
+      const allFieldsResponse = await customFieldDefinitionsApi.getAll();
+      const matchingField = (allFieldsResponse.data ?? [])
+        .map(normalizeCustomField)
+        .filter((item) =>
+          item.name.trim().toLowerCase() === field.name.trim().toLowerCase()
+          && item.type === field.type
+          && areSameOptions(normalizeFieldOptions(item.options), normalizedNewOptions)
+        )
+        .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())[0];
+
+      if (!matchingField) {
+        throw new Error('Nao foi possivel localizar o campo criado para vincular ao projeto.');
+      }
+
+      await projectsCustomFieldDefinitionsApi.assign(projectId, matchingField.id);
+      setCustomFields((previousFields) => {
+        const nextFields = previousFields.filter((item) => item.id !== matchingField.id);
+        return [...nextFields, matchingField];
+      });
+      toast.success('Campo personalizado adicionado ao projeto');
+    } catch (error: any) {
+      toast.error(error?.message ?? 'Erro ao criar campo personalizado');
+      throw error;
     }
   };
 
-  // --- RENDERERS ---
+  const handleRemoveCustomField = async (field: GetCustomFieldDefinitionDto) => {
+    if (!projectId) return;
+    if (!confirm(`Remover o campo "${field.name}" deste projeto?`)) return;
+
+    try {
+      await projectsCustomFieldDefinitionsApi.unassign(projectId, field.id);
+      setCustomFields((previousFields) => previousFields.filter((item) => item.id !== field.id));
+      toast.success('Campo removido do projeto');
+    } catch (error: any) {
+      toast.error(error?.message ?? 'Erro ao remover campo personalizado');
+    }
+  };
 
   return (
     <>
+      <ToastContainer hideProgressBar closeOnClick closeButton position="top-center" />
       <TaskViewLayout
-        title={currentProject ? currentProject.name : 'Todas as Tarefas'}
-        description={currentProject?.description ?? 'Visualize e gerencie todas as suas tarefas aqui.'}
-        color={currentProject ? currentProject.color : 'bg-slate-500'}
+        title={currentProject?.name ?? 'Projeto'}
+        description={currentProject?.description ?? 'Visualize e gerencie as tarefas deste projeto.'}
+        color={currentProject?.color}
         canAddCustomField={!!currentProject}
+        customFields={customFields}
+        onCreateCustomField={handleCreateCustomField}
+        onRemoveCustomField={handleRemoveCustomField}
       >
-        {/* TASK LIST AREA */}
-        <div className="flex-1 overflow-auto bg-white">
-          <TaskTable
-            visibleTasks={visibleTasks}
-            activeView={activeView}
-            activeCustomFields={activeCustomFields}
-            getFieldValue={getFieldValue}
-            updateCustomValue={updateCustomValue}
-            toggleTaskCompletion={toggleTaskCompletion}
-            addTask={addTask}
-            projects={projects}
-            getTaskProjects={getTaskProjects}
-            addProjectToTask={addProjectToTask}
-            removeProjectFromTask={removeProjectFromTask}
-            updateTaskTitle={updateTaskTitle}
-            updateTaskDueDate={updateTaskDueDate}
-            onEditTask={handleEditTask}
-            onDeleteTask={handleDeleteTask}
-          />
-        </div>
+        {isLoading ? (
+          <div className="px-6 py-8 text-sm text-slate-500">Carregando projeto...</div>
+        ) : !currentProject ? (
+          <div className="px-6 py-8 text-sm text-slate-500">Projeto nao encontrado.</div>
+        ) : (
+          <div className="flex-1 overflow-auto bg-white">
+            <TaskTable
+              visibleTasks={tasks}
+              activeView={projectId ?? ''}
+              activeCustomFields={customFields}
+              getFieldValue={getFieldValue}
+              updateCustomValue={updateCustomValue}
+              toggleTaskCompletion={toggleTaskCompletion}
+              addTask={addTask}
+              projects={projects}
+              getTaskProjects={getTaskProjects}
+              addProjectToTask={() => undefined}
+              removeProjectFromTask={() => undefined}
+              updateTaskTitle={updateTaskTitle}
+              updateTaskDueDate={updateTaskDueDate}
+              updateTaskInline={updateTaskInline}
+              onEditTask={handleEditTask}
+              onDeleteTask={handleDeleteTask}
+            />
+          </div>
+        )}
 
-        {/* Edit Task Modal */}
         <AddTaskModal
           isOpen={showEditTaskModal}
           onClose={() => {
@@ -276,6 +405,6 @@ const ProjectsPage = () => {
       </TaskViewLayout>
     </>
   );
-}
+};
 
 export default ProjectsPage;

@@ -1,6 +1,7 @@
 import axios, { AxiosError } from "axios";
 import type {
   CreateCustomFieldDefinitionDto,
+  CreateCustomFieldValueDto,
   CreateProjectDto,
   CreateTaskDto,
   GetCustomFieldDefinitionDto,
@@ -102,18 +103,18 @@ export const customFieldDefinitionsApi = {
 };
 
 export const customFieldValuesApi = {
-  create: async (customFieldValueId: string, projectId?: string) => {
+  create: async (data: CreateCustomFieldValueDto, projectId?: string) => {
     const response = await api.post<ResponseModelDto<unknown>>(
-      `/CustomFieldValues/${customFieldValueId}`,
-      undefined,
+      '/CustomFieldValues',
+      data,
       { params: { projectId } }
     );
     return response.data;
   },
-  update: async (customFieldValueId: string, projectId?: string) => {
+  update: async (data: CreateCustomFieldValueDto, projectId?: string) => {
     const response = await api.put<ResponseModelDto<unknown>>(
-      `/CustomFieldValues/${customFieldValueId}`,
-      undefined,
+      '/CustomFieldValues',
+      data,
       { params: { projectId } }
     );
     return response.data;
