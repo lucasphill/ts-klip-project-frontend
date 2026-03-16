@@ -12,6 +12,9 @@ export interface HealthResponseDto {
 }
 //#endregion
 
+export type CustomFieldType = 'text' | 'number' | 'date' | 'boolean' | 'enum';
+export type CustomFieldValue = string | number | boolean | null | undefined;
+
 //#region Create Models
 export interface CreateTaskDto{
   title: string;
@@ -29,8 +32,16 @@ export interface CreateProjectDto{
 
 export interface CreateCustomFieldDefinitionDto {
   name: string;
-  type: 'text' | 'number' | 'date' | 'boolean' | 'enum';
-  options?: string[]; // Apenas para type 'enum'
+  type: CustomFieldType;
+  options?: string | string[]; // API aceita string; frontend pode manipular como array
+}
+
+export interface CreateCustomFieldValueDto {
+  taskId: string;
+  customFieldId: string;
+  valueText?: string;
+  valueNumber?: number;
+  selectedOptionId?: string;
 }
 //#endregion
 
@@ -46,7 +57,7 @@ export interface GetTasksDto {
 }
 
 export interface GetTasksWithCustomFieldsDto extends GetTasksDto  {
-  customFields: { [key: string]: any }; // Chave-valor para campos personalizados 
+  customFields?: Record<string, CustomFieldValue>;
 }
 
 export interface GetProjectsDto {
@@ -61,7 +72,7 @@ export interface GetCustomFieldDefinitionDto {
   createdAt: string;
   id: string;
   name: string;
-  options?: string[]; // Apenas para type 'enum'
-  type: 'text' | 'number' | 'date' | 'boolean' | 'enum';
+  options?: string | string[] | null;
+  type: CustomFieldType;
 }
 //#endregion

@@ -1,24 +1,29 @@
 import { useState } from "react";
 import type { FC } from "react";
+import type { CreateCustomFieldDefinitionDto, CustomFieldType } from "../types/apiTypes";
 
 type Field = {
   name: string;
   type: string;
-  optionsString?: string;
+  optionsString: string;
 };
 
 const AddCustomFieldModal: FC<{
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (field: Field) => void;
+  onCreate: (field: CreateCustomFieldDefinitionDto) => void | Promise<void>;
 }> = ({ isOpen, onClose, onCreate }) => {
   const [field, setField] = useState<Field>({ name: "", type: "text", optionsString: "" });
 
   if (!isOpen) return null;
 
-  const submit = () => {
+  const submit = async () => {
     if (!field.name.trim()) return;
-    onCreate(field);
+    await onCreate({
+      name: field.name.trim(),
+      type: field.type as CustomFieldType,
+      options: field.type === "enum" ? field.optionsString.trim() || undefined : undefined,
+    });
     setField({ name: "", type: "text", optionsString: "" });
   };
 
@@ -62,7 +67,7 @@ const AddCustomFieldModal: FC<{
 
         <div className="flex items-center gap-2 mt-4 justify-end">
           <button
-            onClick={submit}
+            onClick={() => void submit()}
             className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700"
           >
             Criar campo

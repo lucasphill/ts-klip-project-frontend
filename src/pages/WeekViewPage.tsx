@@ -3,7 +3,7 @@ import WeekNavigator from '../components/WeekNavigator';
 import TaskTable from '../components/TaskTable';
 import AddTaskModal from '../components/AddTaskModal';
 import TaskViewLayout from '../components/TaskViewLayout';
-import type { CreateTaskDto, GetProjectsDto, GetTasksDto } from '../types/apiTypes';
+import type { CreateTaskDto, CustomFieldValue, GetProjectsDto, GetTasksDto } from '../types/apiTypes';
 
 const INITIAL_TASKS: GetTasksDto[] = [
   { id: 't1', title: 'Definir paleta de cores', isCompleted: true, dueDate: '2026-02-03', createdAt: '2026-01-01T00:00:00.000Z' },
@@ -147,7 +147,7 @@ const WeekViewPage = () => {
   };
 
   const getFieldValue = (_taskId: string, _fieldId: string) => '';
-  const updateCustomValue = (_taskId: string, _fieldId: string, _value: string | number) => { };
+  const updateCustomValue = (_taskId: string, _fieldId: string, _value: CustomFieldValue) => { };
   const handleEditTask = (task: GetTasksDto) => {
     setTaskToEdit(task);
     setShowEditTaskModal(true);

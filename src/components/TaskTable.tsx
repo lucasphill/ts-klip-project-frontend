@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import {
   CheckCircle2,
   Circle,
@@ -14,15 +14,24 @@ import {
   ArrowUpDown,
   XCircle
 } from 'lucide-react';
-import type { GetCustomFieldDefinitionDto, GetProjectsDto, GetTasksDto } from '../types/apiTypes';
+import type {
+  CustomFieldValue,
+  GetCustomFieldDefinitionDto,
+  GetProjectsDto,
+  GetTasksDto,
+} from '../types/apiTypes';
+
+type TaskTableTask = GetTasksDto & {
+  customFields?: Record<string, CustomFieldValue>;
+};
 
 interface TaskTableProps {
   activeView: string; // mostra todos ou só de um projeto específico, recebe o id do projeto ou "all"
-  visibleTasks: GetTasksDto[];
+  visibleTasks: TaskTableTask[];
   activeCustomFields?: GetCustomFieldDefinitionDto[];
   projects: GetProjectsDto[];
-  getFieldValue?: (taskId: string, fieldId: string) => any;
-  updateCustomValue?: (taskId: string, fieldId: string, value: any) => void;
+  getFieldValue?: (taskId: string, fieldId: string) => CustomFieldValue;
+  updateCustomValue?: (taskId: string, fieldId: string, value: CustomFieldValue) => void;
   toggleTaskCompletion: (taskId: string) => void;
   addTask: () => void;
   getTaskProjects: (taskId: string) => GetProjectsDto[];
@@ -30,7 +39,8 @@ interface TaskTableProps {
   removeProjectFromTask: (taskId: string, projectId: string) => void;
   updateTaskTitle: (taskId: string, title: string) => void;
   updateTaskDueDate: (taskId: string, dueDate: string) => void;
-  onEditTask?: (task: GetTasksDto) => void;
+  updateTaskInline?: (taskId: string, updates: { title?: string; dueDate?: string }) => void;
+  onEditTask?: (task: TaskTableTask) => void;
   onDeleteTask?: (taskId: string) => void;
 }
 
@@ -48,6 +58,7 @@ const TaskTable = ({
   removeProjectFromTask,
   updateTaskTitle,
   updateTaskDueDate,
+  updateTaskInline,
   onEditTask,
   onDeleteTask
 }: TaskTableProps) => {
@@ -63,6 +74,49 @@ const TaskTable = ({
   const getDueDate = (t: GetTasksDto) => (t?.dueDate ?? '');
   const getTitle = (t: GetTasksDto) => (t?.title ?? '');
   const safeCustomFields = Array.isArray(activeCustomFields) ? activeCustomFields : [];
+  const getFieldOptions = (field: GetCustomFieldDefinitionDto) => {
+    if (Array.isArray(field.options)) {
+      return field.options;
+    }
+
+    return String(field.options ?? '')
+      .split(',')
+      .map((option) => option.trim())
+      .filter(Boolean);
+  };
+
+  const getColorDotProps = (color?: string): { className: string; style?: CSSProperties } | null => {
+    if (!color) return null;
+
+    if (color.startsWith('bg-')) {
+      return { className: color };
+    }
+
+    return {
+      className: '',
+      style: { backgroundColor: color },
+    };
+  };
+
+  const getResolvedFieldValue = (task: TaskTableTask, field: GetCustomFieldDefinitionDto): CustomFieldValue => {
+    if (getFieldValue) {
+      return getFieldValue(task.id, field.id);
+    }
+
+    return task.customFields?.[field.id] ?? task.customFields?.[field.name] ?? '';
+  };
+
+  const renderReadOnlyFieldValue = (field: GetCustomFieldDefinitionDto, value: CustomFieldValue) => {
+    if (field.type === 'boolean') {
+      return (
+        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${value ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+          {value ? 'Sim' : 'Nao'}
+        </span>
+      );
+    }
+
+    return <span className="text-sm text-slate-700">{String(value ?? '-')}</span>;
+  };
 
   const filteredTasks = useMemo(() => {
     let list = [...visibleTasks];
@@ -110,11 +164,15 @@ const TaskTable = ({
   const confirmEdit = (taskId: string) => {
     const draft = draftById[taskId];
     if (!draft) return;
-    if (updateTaskTitle && draft.title !== undefined) {
-      updateTaskTitle(taskId, draft.title);
-    }
-    if (updateTaskDueDate && draft.dueDate !== undefined) {
-      updateTaskDueDate(taskId, draft.dueDate);
+    if (updateTaskInline) {
+      updateTaskInline(taskId, draft);
+    } else {
+      if (updateTaskTitle && draft.title !== undefined) {
+        updateTaskTitle(taskId, draft.title);
+      }
+      if (updateTaskDueDate && draft.dueDate !== undefined) {
+        updateTaskDueDate(taskId, draft.dueDate);
+      }
     }
     cancelEdit(taskId);
   };
@@ -208,6 +266,8 @@ const TaskTable = ({
               {field.type === 'number' && <Hash className="w-3 h-3" />}
               {field.type === 'text' && <Type className="w-3 h-3" />}
               {field.type === 'enum' && <List className="w-3 h-3" />}
+              {field.type === 'date' && <Calendar className="w-3 h-3" />}
+              {field.type === 'boolean' && <CheckCircle2 className="w-3 h-3" />}
               {field.name}
             </div>
           ))}
@@ -278,7 +338,15 @@ const TaskTable = ({
                         key={proj.id}
                         className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200"
                       >
-                        <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${proj.color}`} />
+                        {(() => {
+                          const colorDot = getColorDotProps(proj.color);
+                          return (
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full mr-1.5 ${colorDot?.className ?? ''}`}
+                              style={colorDot?.style}
+                            />
+                          );
+                        })()}
                         {proj.name}
                         <button
                           onClick={() => removeProjectFromTask(task.id, proj.id)}
@@ -348,30 +416,55 @@ const TaskTable = ({
                 </div>
 
                 {/* Dynamic Custom Field Columns */}
-                {safeCustomFields.map((field: any) => (
-                  <div key={field.id} className="w-48 px-4 py-2 border-r border-slate-100 shrink-0">
-                    {field.type === 'enum' ? (
-                      <select
-                        className="w-full bg-transparent text-sm border-none focus:ring-0 p-0 text-slate-700 cursor-pointer"
-                        value={getFieldValue ? getFieldValue(task.id, field.id) : ''}
-                        onChange={(e) => updateCustomValue && updateCustomValue(task.id, field.id, e.target.value)}
-                      >
-                        <option value="">-</option>
-                        {field.options && field.options.map((opt: any) => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        type={field.type === 'number' ? 'number' : 'text'}
-                        value={getFieldValue ? getFieldValue(task.id, field.id) : ''}
-                        onChange={(e) => updateCustomValue && updateCustomValue(task.id, field.id, field.type === 'number' ? parseFloat(e.target.value) : e.target.value)}
-                        placeholder="-"
-                        className="w-full bg-transparent text-sm border-none focus:ring-0 p-0 text-slate-700 placeholder:text-slate-300"
-                      />
-                    )}
-                  </div>
-                ))}
+                {safeCustomFields.map((field: any) => {
+                  const fieldValue = getResolvedFieldValue(task, field);
+                  const fieldOptions = getFieldOptions(field);
+
+                  return (
+                    <div key={field.id} className="w-48 px-4 py-2 border-r border-slate-100 shrink-0">
+                      {!updateCustomValue ? (
+                        renderReadOnlyFieldValue(field, fieldValue)
+                      ) : field.type === 'enum' ? (
+                        <select
+                          className="w-full bg-transparent text-sm border-none focus:ring-0 p-0 text-slate-700 cursor-pointer"
+                          value={String(fieldValue ?? '')}
+                          onChange={(e) => updateCustomValue(task.id, field.id, e.target.value)}
+                        >
+                          <option value="">-</option>
+                          {fieldOptions.map((opt) => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      ) : field.type === 'boolean' ? (
+                        <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(fieldValue)}
+                            onChange={(e) => updateCustomValue(task.id, field.id, e.target.checked)}
+                            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          {fieldValue ? 'Sim' : 'Nao'}
+                        </label>
+                      ) : (
+                        <input
+                          type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                          value={String(fieldValue ?? '')}
+                          onChange={(e) =>
+                            updateCustomValue(
+                              task.id,
+                              field.id,
+                              field.type === 'number'
+                                ? (e.target.value === '' ? undefined : Number(e.target.value))
+                                : e.target.value
+                            )
+                          }
+                          placeholder="-"
+                          className="w-full bg-transparent text-sm border-none focus:ring-0 p-0 text-slate-700 placeholder:text-slate-300"
+                        />
+                      )}
+                    </div>
+                  );
+                })}
 
                 {/* Actions Column */}
                 <div className="w-32 px-4 py-2 shrink-0">
