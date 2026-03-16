@@ -4,7 +4,6 @@ import { ToastContainer, toast } from 'react-toastify';
 import type { CreateProjectDto, CreateTaskDto, GetProjectsDto } from "../types/apiTypes";
 import { projectsApi, tasksApi } from "../services/api";
 import {
-  Calendar,
   ChevronLeft,
   ChevronRight,
   Hash,
