@@ -27,7 +27,7 @@ const Navbar = () => {
               </g>
             </svg>
           </div>
-          <span className="font-bold text-slate-800 text-lg tracking-tight">Klip</span>
+          <span className="font-bold text-slate-800 text-lg tracking-tight">Klip (Beta)</span>
         </button>
 
         {/* Right: User Profile (Auth0 Mock) */}
