@@ -12,7 +12,7 @@ interface Project {
 interface AddProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (project: Project) => void;
+  onSave: (project: Project) => Promise<void> | void;
   project?: Project | null;
 }
 
@@ -28,6 +28,7 @@ const PRESET_COLORS = [
 ];
 
 const AddProjectModal: FC<AddProjectModalProps> = ({ isOpen, onClose, onSave, project }) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<Project>({
     name: '',
     description: '',
@@ -53,15 +54,19 @@ const AddProjectModal: FC<AddProjectModalProps> = ({ isOpen, onClose, onSave, pr
     }
   }, [project, isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) return;
 
-    onSave({
-      ...formData,
-      id: project?.id,
-    });
-    onClose();
+    setIsSubmitting(true);
+    try {
+      await onSave({ ...formData, id: project?.id });
+      onClose();
+    } catch {
+      // onSave já exibiu o toast de erro; modal permanece aberto
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -76,7 +81,8 @@ const AddProjectModal: FC<AddProjectModalProps> = ({ isOpen, onClose, onSave, pr
           </h2>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 transition-colors"
+            disabled={isSubmitting}
+            className="text-slate-400 hover:text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -123,8 +129,8 @@ const AddProjectModal: FC<AddProjectModalProps> = ({ isOpen, onClose, onSave, pr
                   type="button"
                   onClick={() => setFormData({ ...formData, color })}
                   className={`w-10 h-10 rounded-lg transition-all ${formData.color === color
-                      ? 'ring-2 ring-slate-400 ring-offset-2 scale-110'
-                      : 'hover:scale-105'
+                    ? 'ring-2 ring-slate-400 ring-offset-2 scale-110'
+                    : 'hover:scale-105'
                     }`}
                   style={{ backgroundColor: color }}
                 />
@@ -137,15 +143,17 @@ const AddProjectModal: FC<AddProjectModalProps> = ({ isOpen, onClose, onSave, pr
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors font-medium"
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors font-medium"
             >
-              {project ? 'Salvar' : 'Criar Projeto'}
+              {isSubmitting ? 'Salvando...' : (project?.id ? 'Salvar' : 'Criar Projeto')}
             </button>
           </div>
         </form>

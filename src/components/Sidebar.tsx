@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ToastContainer, toast } from 'react-toastify';
+import { toast } from 'sonner';
 import type { CreateProjectDto, CreateTaskDto, GetProjectsDto } from "../types/apiTypes";
 import { projectsApi, tasksApi } from "../services/api";
+import { useTasksContext } from "../contexts/TasksContext";
+import { useProjectsContext } from "../contexts/ProjectsContext";
 import {
   ChevronLeft,
   ChevronRight,
@@ -19,6 +21,8 @@ import AddProjectModal from "./AddProjectModal";
 
 const Sidebar = () => {
   const navigate = useNavigate();
+  const { appendTask } = useTasksContext();
+  const { projects, fetchProjects, removeProjectLocal } = useProjectsContext();
 
   const activeTab = location.pathname === '/' ? 'home' : location.pathname.substring(1);
 
@@ -28,19 +32,9 @@ const Sidebar = () => {
   const [projectSearch, setProjectSearch] = useState('');
   const [projectToEdit, setProjectToEdit] = useState<GetProjectsDto | null>(null);
 
-  const [projects, setProjects] = useState<GetProjectsDto[]>([]);
-
-  const fetchProjects = async () => {
-    try {
-      const response = await projectsApi.getAll();
-      setProjects(response.data ?? []);
-    } catch (error: any) {
-      toast.error(error?.message ?? 'Erro ao buscar projetos');
-    }
-  };
-
   useEffect(() => {
-    fetchProjects();
+    fetchProjects().catch((error: any) => toast.error(error?.message ?? 'Erro ao buscar projetos'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filteredProjects = useMemo(() =>
@@ -50,16 +44,18 @@ const Sidebar = () => {
 
 
   //#region Handlers
-  const handleSaveTask = async (task: CreateTaskDto) => {
+  const handleSaveTask = async (task: CreateTaskDto): Promise<void> => {
     try {
-      await tasksApi.create(task);
+      const response = await tasksApi.create(task);
+      appendTask(response.data);
       toast.success('Tarefa criada com sucesso! ' + task.title);
     } catch (error: any) {
       toast.error(error?.message ?? 'Erro ao criar tarefa');
+      throw error;
     }
   };
 
-  const handleSaveProject = async (project: CreateProjectDto & { id?: string }) => {
+  const handleSaveProject = async (project: CreateProjectDto & { id?: string }): Promise<void> => {
     try {
       if (project.id) {
         const { id, ...payload } = project;
@@ -73,6 +69,7 @@ const Sidebar = () => {
       setProjectToEdit(null);
     } catch (error: any) {
       toast.error(error?.message ?? 'Erro ao salvar projeto');
+      throw error;
     }
   };
 
@@ -85,7 +82,7 @@ const Sidebar = () => {
     if (!confirm('Tem certeza que deseja excluir este projeto?')) return;
     try {
       await projectsApi.remove(projectId);
-      await fetchProjects();
+      removeProjectLocal(projectId);
       toast.success('Projeto excluído com sucesso!');
     } catch (error: any) {
       toast.error(error?.message ?? 'Erro ao excluir projeto');
@@ -95,7 +92,6 @@ const Sidebar = () => {
 
   return (
     <>
-      <ToastContainer hideProgressBar closeOnClick closeButton position="top-center" />
       <aside className={`${isSidebarOpen ? 'w-64' : 'w-20'} bg-slate-50 border-r border-slate-200 transition-all duration-300 flex flex-col relative shrink-0`}>
 
         {/* Toggle Button */}

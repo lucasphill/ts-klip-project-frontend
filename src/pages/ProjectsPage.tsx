@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { ToastContainer, toast } from 'react-toastify';
+import { toast } from 'sonner';
 import TaskTable from '../components/TaskTable';
 import AddTaskModal from '../components/AddTaskModal';
 import TaskViewLayout from '../components/TaskViewLayout';
+import { useProjectsContext } from '../contexts/ProjectsContext';
 import {
   customFieldDefinitionsApi,
   customFieldValuesApi,
-  projectsApi,
   projectsCustomFieldDefinitionsApi,
   projectsTasksApi,
   tasksApi,
@@ -18,7 +18,6 @@ import type {
   CreateTaskDto,
   CustomFieldValue,
   GetCustomFieldDefinitionDto,
-  GetProjectsDto,
   GetTasksDto,
   GetTasksWithCustomFieldsDto,
 } from '../types/apiTypes';
@@ -98,7 +97,7 @@ const buildCustomFieldValuePayload = (
 
 const ProjectsPage = () => {
   const { projectId } = useParams();
-  const [projects, setProjects] = useState<GetProjectsDto[]>([]);
+  const { projects, fetchProjects } = useProjectsContext();
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
   const [customFields, setCustomFields] = useState<GetCustomFieldDefinitionDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -112,7 +111,6 @@ const ProjectsPage = () => {
 
   const refreshProjectData = async () => {
     if (!projectId) {
-      setProjects([]);
       setTasks([]);
       setCustomFields([]);
       setIsLoading(false);
@@ -122,8 +120,8 @@ const ProjectsPage = () => {
     setIsLoading(true);
 
     try {
-      const [projectsResponse, projectFieldsResponse] = await Promise.all([
-        projectsApi.getAll(),
+      const [, projectFieldsResponse] = await Promise.all([
+        fetchProjects(),
         projectsCustomFieldDefinitionsApi.getByProject(projectId),
       ]);
 
@@ -137,7 +135,6 @@ const ProjectsPage = () => {
         projectTasks = (tasksResponse.data ?? []).map(normalizeTask);
       }
 
-      setProjects(projectsResponse.data ?? []);
       setTasks(projectTasks);
       setCustomFields((projectFieldsResponse.data ?? []).map(normalizeCustomField));
     } catch (error: any) {
@@ -180,7 +177,7 @@ const ProjectsPage = () => {
     setTaskToEdit({
       title: '',
       isCompleted: false,
-      dueDate: new Date().toISOString().split('T')[0],
+      dueDate: '',
       notes: '',
       parentTaskId: '',
     });
@@ -275,33 +272,29 @@ const ProjectsPage = () => {
     })();
   };
 
-  const handleSaveTask = (task: CreateTaskDto & { id?: string }) => {
+  const handleSaveTask = async (task: CreateTaskDto & { id?: string }): Promise<void> => {
     if (!projectId) return;
 
-    void (async () => {
-      try {
-        if (task.id) {
-          await tasksApi.update(task.id, toTaskPayload(task));
-          setTasks((previousTasks) =>
-            previousTasks.map((currentTask) =>
-              currentTask.id === task.id ? { ...currentTask, ...task } : currentTask
-            )
-          );
-          toast.success('Tarefa atualizada');
-        } else {
-          const createdTaskResponse = await tasksApi.create(toTaskPayload(task));
-          const createdTask = createdTaskResponse.data;
-          await projectsTasksApi.assign(projectId, createdTask.id);
-          toast.success('Tarefa criada com sucesso');
-          await refreshProjectData();
-        }
-      } catch (error: any) {
-        toast.error(error?.message ?? 'Erro ao salvar tarefa');
-      } finally {
-        setShowEditTaskModal(false);
-        setTaskToEdit(null);
+    try {
+      if (task.id) {
+        await tasksApi.update(task.id, toTaskPayload(task));
+        setTasks((previousTasks) =>
+          previousTasks.map((currentTask) =>
+            currentTask.id === task.id ? { ...currentTask, ...task } : currentTask
+          )
+        );
+        toast.success('Tarefa atualizada');
+      } else {
+        const createdTaskResponse = await tasksApi.create(toTaskPayload(task));
+        const createdTask = createdTaskResponse.data;
+        await projectsTasksApi.assign(projectId, createdTask.id);
+        toast.success('Tarefa criada com sucesso');
+        await refreshProjectData();
       }
-    })();
+    } catch (error: any) {
+      toast.error(error?.message ?? 'Erro ao salvar tarefa');
+      throw error;
+    }
   };
 
   const handleCreateCustomField = async (field: CreateCustomFieldDefinitionDto) => {
@@ -356,7 +349,6 @@ const ProjectsPage = () => {
 
   return (
     <>
-      <ToastContainer hideProgressBar closeOnClick closeButton position="top-center" />
       <TaskViewLayout
         title={currentProject?.name ?? 'Projeto'}
         description={currentProject?.description ?? 'Visualize e gerencie as tarefas deste projeto.'}

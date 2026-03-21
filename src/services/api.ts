@@ -103,19 +103,17 @@ export const customFieldDefinitionsApi = {
 };
 
 export const customFieldValuesApi = {
-  create: async (data: CreateCustomFieldValueDto, projectId?: string) => {
+  create: async (data: CreateCustomFieldValueDto, projectId: string) => {
     const response = await api.post<ResponseModelDto<unknown>>(
-      '/CustomFieldValues',
+      `/CustomFieldValues/${projectId}`,
       data,
-      { params: { projectId } }
     );
     return response.data;
   },
-  update: async (data: CreateCustomFieldValueDto, projectId?: string) => {
+  update: async (data: CreateCustomFieldValueDto, projectId: string) => {
     const response = await api.put<ResponseModelDto<unknown>>(
-      '/CustomFieldValues',
+      `/CustomFieldValues/${projectId}`,
       data,
-      { params: { projectId } }
     );
     return response.data;
   },

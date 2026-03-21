@@ -5,15 +5,16 @@ import type { CreateTaskDto } from '../types/apiTypes';
 interface AddTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (task: CreateTaskDto & { id?: string }) => void;
+  onSave: (task: CreateTaskDto & { id?: string }) => Promise<void> | void;
   task?: (CreateTaskDto & { id?: string }) | null;
 }
 
 const AddTaskModal: FC<AddTaskModalProps> = ({ isOpen, onClose, onSave, task }) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<CreateTaskDto>({
     title: '',
     isCompleted: false,
-    dueDate: new Date().toISOString().split('T')[0],
+    dueDate: '',
     notes: '',
     parentTaskId: '',
   });
@@ -23,7 +24,7 @@ const AddTaskModal: FC<AddTaskModalProps> = ({ isOpen, onClose, onSave, task }) 
       setFormData({
         title: task.title,
         isCompleted: task.isCompleted ?? false,
-        dueDate: task.dueDate ?? new Date().toISOString().split('T')[0],
+        dueDate: task.dueDate ?? '',
         notes: task.notes ?? '',
         parentTaskId: task.parentTaskId ?? '',
       });
@@ -31,14 +32,14 @@ const AddTaskModal: FC<AddTaskModalProps> = ({ isOpen, onClose, onSave, task }) 
       setFormData({
         title: '',
         isCompleted: false,
-        dueDate: new Date().toISOString().split('T')[0],
+        dueDate: '',
         notes: '',
         parentTaskId: '',
       });
     }
   }, [task, isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim()) return;
 
@@ -50,11 +51,15 @@ const AddTaskModal: FC<AddTaskModalProps> = ({ isOpen, onClose, onSave, task }) 
       parentTaskId: formData.parentTaskId?.trim() || undefined,
     };
 
-    onSave({
-      ...normalizedTask,
-      id: task?.id,
-    });
-    onClose();
+    setIsSubmitting(true);
+    try {
+      await onSave({ ...normalizedTask, id: task?.id });
+      onClose();
+    } catch {
+      // onSave já exibiu o toast de erro; modal permanece aberto para o usuário corrigir
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -69,7 +74,8 @@ const AddTaskModal: FC<AddTaskModalProps> = ({ isOpen, onClose, onSave, task }) 
           </h2>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 transition-colors"
+            disabled={isSubmitting}
+            className="text-slate-400 hover:text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -137,15 +143,17 @@ const AddTaskModal: FC<AddTaskModalProps> = ({ isOpen, onClose, onSave, task }) 
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors font-medium"
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors font-medium"
             >
-              {task ? 'Salvar' : 'Criar Tarefa'}
+              {isSubmitting ? 'Salvando...' : (task?.id ? 'Salvar' : 'Criar Tarefa')}
             </button>
           </div>
         </form>
