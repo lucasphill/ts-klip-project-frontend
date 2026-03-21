@@ -1,9 +1,7 @@
 import { LogOut } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
 const Navbar = () => {
-  const navigate = useNavigate();
   const { logout, user } = useAuth();
 
 

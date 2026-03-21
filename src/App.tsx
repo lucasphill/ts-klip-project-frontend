@@ -6,7 +6,8 @@ import HomePage from './pages/HomePage';
 import ProjectsPage from './pages/ProjectsPage';
 import WeekViewPage from './pages/WeekViewPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-
+import { TasksProvider } from './contexts/TasksContext';
+import { ProjectsProvider } from './contexts/ProjectsContext';
 import { useLoading } from './contexts/LoadingContext';
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
@@ -83,7 +84,11 @@ const App = () => {
   return (
     <AuthProvider>
       <Router>
-        <AppRoutes />
+        <ProjectsProvider>
+          <TasksProvider>
+            <AppRoutes />
+          </TasksProvider>
+        </ProjectsProvider>
       </Router>
     </AuthProvider>
   )
