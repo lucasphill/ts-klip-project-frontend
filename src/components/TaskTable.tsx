@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
   CheckCircle2,
   Circle,
@@ -64,8 +64,9 @@ const TaskTable = ({
 }: TaskTableProps) => {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 
-  const [draftById, setDraftById] = useState<Record<string, { title?: string; dueDate?: string }>>({});
-
+  // Custom field text/number draft state + debounce timers
+  const [cfDrafts, setCfDrafts] = useState<Record<string, string>>({});
+  const cfTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'pending'>('all');
   const [sortBy, setSortBy] = useState<'due_date' | 'title' | 'created'>('due_date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -141,40 +142,13 @@ const TaskTable = ({
     return list;
   }, [visibleTasks, statusFilter, sortBy, sortDir]);
 
-  const startEdit = (task: GetTasksDto) => {
-    setEditingTaskId(task.id);
-    setDraftById(prev => ({
-      ...prev,
-      [task.id]: {
-        title: task.title ?? '',
-        dueDate: task.dueDate ?? ''
-      }
-    }));
-  };
-
-  const cancelEdit = (taskId: string) => {
-    setEditingTaskId(prev => (prev === taskId ? null : prev));
-    setDraftById(prev => {
-      const next = { ...prev };
-      delete next[taskId];
-      return next;
-    });
-  };
-
-  const confirmEdit = (taskId: string) => {
-    const draft = draftById[taskId];
-    if (!draft) return;
+  const saveTaskField = (taskId: string, updates: { title?: string; dueDate?: string }) => {
     if (updateTaskInline) {
-      updateTaskInline(taskId, draft);
+      updateTaskInline(taskId, updates);
     } else {
-      if (updateTaskTitle && draft.title !== undefined) {
-        updateTaskTitle(taskId, draft.title);
-      }
-      if (updateTaskDueDate && draft.dueDate !== undefined) {
-        updateTaskDueDate(taskId, draft.dueDate);
-      }
+      if (updateTaskTitle && updates.title !== undefined) updateTaskTitle(taskId, updates.title);
+      if (updateTaskDueDate && updates.dueDate !== undefined) updateTaskDueDate(taskId, updates.dueDate);
     }
-    cancelEdit(taskId);
   };
 
   return (
@@ -279,8 +253,9 @@ const TaskTable = ({
         {/* TABLE BODY */}
         <div>
           {filteredTasks.map((task: any) => {
-            const isEditing = editingTaskId === task.id;
-            const draft = draftById[task.id] || {};
+            const titleKey = `${task.id}::__title`;
+            const titleDraft = cfDrafts[titleKey];
+            const isEditing = editingTaskId === task.id || titleDraft !== undefined;
             return (
               <div
                 key={task.id}
@@ -299,30 +274,39 @@ const TaskTable = ({
                 <div className="flex-1 px-4 py-2 border-r border-slate-100 shrink-0 min-w-[200px]">
                   <input
                     type="text"
-                    value={isEditing ? (draft.title ?? '') : getTitle(task)}
+                    value={titleDraft !== undefined ? titleDraft : getTitle(task)}
                     placeholder="Escreva uma tarefa..."
                     onChange={(e) => {
                       const val = e.target.value;
-                      if (!isEditing) startEdit(task);
-                      setDraftById(prev => ({
-                        ...prev,
-                        [task.id]: { ...prev[task.id], title: val }
-                      }));
+                      setCfDrafts(prev => ({ ...prev, [titleKey]: val }));
+                      if (cfTimers.current[titleKey]) clearTimeout(cfTimers.current[titleKey]);
+                      cfTimers.current[titleKey] = setTimeout(() => {
+                        saveTaskField(task.id, { title: val });
+                        setCfDrafts(prev => { const n = { ...prev }; delete n[titleKey]; return n; });
+                        delete cfTimers.current[titleKey];
+                      }, 1500);
                     }}
-                    onFocus={() => !isEditing && startEdit(task)}
+                    onFocus={() => setEditingTaskId(task.id)}
                     onBlur={() => {
-                      if (isEditing) {
-                        confirmEdit(task.id);
+                      setEditingTaskId(null);
+                      if (cfTimers.current[titleKey]) {
+                        clearTimeout(cfTimers.current[titleKey]);
+                        delete cfTimers.current[titleKey];
+                      }
+                      if (titleDraft !== undefined) {
+                        saveTaskField(task.id, { title: titleDraft });
+                        setCfDrafts(prev => { const n = { ...prev }; delete n[titleKey]; return n; });
                       }
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
-                        if (isEditing) confirmEdit(task.id);
                         e.currentTarget.blur();
                       } else if (e.key === 'Escape') {
                         e.preventDefault();
-                        cancelEdit(task.id);
+                        if (cfTimers.current[titleKey]) { clearTimeout(cfTimers.current[titleKey]); delete cfTimers.current[titleKey]; }
+                        setCfDrafts(prev => { const n = { ...prev }; delete n[titleKey]; return n; });
+                        setEditingTaskId(null);
                         e.currentTarget.blur();
                       }
                     }}
@@ -384,32 +368,10 @@ const TaskTable = ({
                     <Calendar className="w-3.5 h-3.5 text-slate-400" />
                     <input
                       type="date"
-                      value={isEditing ? (draft.dueDate ?? '') : getDueDate(task)}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (!isEditing) startEdit(task);
-                        setDraftById(prev => ({
-                          ...prev,
-                          [task.id]: { ...prev[task.id], dueDate: val }
-                        }));
-                      }}
-                      onFocus={() => !isEditing && startEdit(task)}
-                      onBlur={() => {
-                        if (isEditing) {
-                          confirmEdit(task.id);
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          if (isEditing) confirmEdit(task.id);
-                          e.currentTarget.blur();
-                        } else if (e.key === 'Escape') {
-                          e.preventDefault();
-                          cancelEdit(task.id);
-                          e.currentTarget.blur();
-                        }
-                      }}
+                      value={getDueDate(task)}
+                      onChange={(e) => saveTaskField(task.id, { dueDate: e.target.value })}
+                      onFocus={() => setEditingTaskId(task.id)}
+                      onBlur={() => setEditingTaskId(null)}
                       className="bg-transparent border-none focus:ring-0 p-0 text-sm text-slate-700 cursor-pointer hover:text-slate-900"
                     />
                   </div>
@@ -419,6 +381,8 @@ const TaskTable = ({
                 {safeCustomFields.map((field: any) => {
                   const fieldValue = getResolvedFieldValue(task, field);
                   const fieldOptions = getFieldOptions(field);
+                  const cfKey = `${task.id}::${field.id}`;
+                  const cfDraftVal = cfDrafts[cfKey];
 
                   return (
                     <div key={field.id} className="w-48 px-4 py-2 border-r border-slate-100 shrink-0">
@@ -445,19 +409,38 @@ const TaskTable = ({
                           />
                           {fieldValue ? 'Sim' : 'Nao'}
                         </label>
+                      ) : field.type === 'date' ? (
+                        <input
+                          type="date"
+                          value={String(fieldValue ?? '')}
+                          onChange={(e) => updateCustomValue(task.id, field.id, e.target.value)}
+                          placeholder="-"
+                          className="w-full bg-transparent text-sm border-none focus:ring-0 p-0 text-slate-700 placeholder:text-slate-300"
+                        />
                       ) : (
                         <input
-                          type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-                          value={String(fieldValue ?? '')}
-                          onChange={(e) =>
-                            updateCustomValue(
-                              task.id,
-                              field.id,
-                              field.type === 'number'
-                                ? (e.target.value === '' ? undefined : Number(e.target.value))
-                                : e.target.value
-                            )
-                          }
+                          type={field.type === 'number' ? 'number' : 'text'}
+                          value={cfDraftVal !== undefined ? cfDraftVal : String(fieldValue ?? '')}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setCfDrafts(prev => ({ ...prev, [cfKey]: val }));
+                            if (cfTimers.current[cfKey]) clearTimeout(cfTimers.current[cfKey]);
+                            cfTimers.current[cfKey] = setTimeout(() => {
+                              updateCustomValue!(task.id, field.id, field.type === 'number' ? (val === '' ? undefined : Number(val)) : val);
+                              setCfDrafts(prev => { const n = { ...prev }; delete n[cfKey]; return n; });
+                              delete cfTimers.current[cfKey];
+                            }, 1500);
+                          }}
+                          onBlur={() => {
+                            if (cfTimers.current[cfKey]) {
+                              clearTimeout(cfTimers.current[cfKey]);
+                              delete cfTimers.current[cfKey];
+                            }
+                            if (cfDraftVal !== undefined) {
+                              updateCustomValue!(task.id, field.id, field.type === 'number' ? (cfDraftVal === '' ? undefined : Number(cfDraftVal)) : cfDraftVal);
+                              setCfDrafts(prev => { const n = { ...prev }; delete n[cfKey]; return n; });
+                            }
+                          }}
                           placeholder="-"
                           className="w-full bg-transparent text-sm border-none focus:ring-0 p-0 text-slate-700 placeholder:text-slate-300"
                         />
@@ -469,17 +452,26 @@ const TaskTable = ({
                 {/* Actions Column */}
                 <div className="w-32 px-4 py-2 shrink-0">
                   <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {isEditing && (
+                    {titleDraft !== undefined && (
                       <>
                         <button
-                          onClick={() => confirmEdit(task.id)}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            if (cfTimers.current[titleKey]) { clearTimeout(cfTimers.current[titleKey]); delete cfTimers.current[titleKey]; }
+                            saveTaskField(task.id, { title: titleDraft });
+                            setCfDrafts(prev => { const n = { ...prev }; delete n[titleKey]; return n; });
+                          }}
                           className="p-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-md transition-colors"
                           title="Confirmar edição"
                         >
                           <CheckCircle2 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => cancelEdit(task.id)}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            if (cfTimers.current[titleKey]) { clearTimeout(cfTimers.current[titleKey]); delete cfTimers.current[titleKey]; }
+                            setCfDrafts(prev => { const n = { ...prev }; delete n[titleKey]; return n; });
+                          }}
                           className="p-1.5 bg-slate-100 text-slate-500 hover:bg-slate-200 rounded-md transition-colors"
                           title="Cancelar edição"
                         >

@@ -121,12 +121,35 @@ const HomePage = () => {
     return projects.filter(p => projectIds.includes(p.id));
   };
 
+  const persistTaskUpdate = async (taskId: string, updates: Partial<GetTasksDto>) => {
+    const existing = tasks.find(t => t.id === taskId);
+    if (!existing) return;
+    const updated = { ...existing, ...updates };
+    updateTaskLocal(taskId, updates);
+    try {
+      await tasksApi.update(taskId, {
+        title: updated.title?.trim() ?? '',
+        dueDate: updated.dueDate ? `${updated.dueDate}T00:00:00` : undefined,
+        isCompleted: updated.isCompleted ?? false,
+        notes: (updated as any).notes?.trim() || undefined,
+        parentTaskId: (updated as any).parentTaskId?.trim() || undefined,
+      });
+    } catch (error: any) {
+      toast.error(error?.message ?? 'Erro ao atualizar tarefa');
+      updateTaskLocal(taskId, existing); // rollback
+    }
+  };
+
   const updateTaskTitle = (taskId: string, title: string) => {
-    updateTaskLocal(taskId, { title });
+    void persistTaskUpdate(taskId, { title });
   };
 
   const updateTaskDueDate = (taskId: string, dueDate: string) => {
-    updateTaskLocal(taskId, { dueDate });
+    void persistTaskUpdate(taskId, { dueDate });
+  };
+
+  const updateTaskInline = (taskId: string, updates: { title?: string; dueDate?: string }) => {
+    void persistTaskUpdate(taskId, updates);
   };
 
 
@@ -214,6 +237,7 @@ const HomePage = () => {
             removeProjectFromTask={removeProjectFromTask}
             updateTaskTitle={updateTaskTitle}
             updateTaskDueDate={updateTaskDueDate}
+            updateTaskInline={updateTaskInline}
             onEditTask={handleEditTask}
             onDeleteTask={handleDeleteTask}
           />
