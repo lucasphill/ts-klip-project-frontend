@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import TaskTable from '../components/TaskTable';
 import AddTaskModal from '../components/AddTaskModal';
 import TaskViewLayout from '../components/TaskViewLayout';
-import { ToastContainer, toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { projectsApi, tasksApi, projectsTasksApi } from '../services/api';
 import type { GetProjectsDto, GetTasksDto, CreateTaskDto } from '../types/apiTypes';
 
@@ -253,7 +253,6 @@ const HomePage = () => {
 
   return (
     <>
-      <ToastContainer hideProgressBar closeOnClick closeButton position="top-center" />
       <TaskViewLayout
         title={'Todas as Tarefas'}
         description={'Visualize e gerencie todas as suas tarefas aqui.'}

@@ -1,4 +1,5 @@
 import { type FC, type ReactNode } from "react";
+import { Toaster } from "sonner";
 import Footer from "./Footer";
 import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
@@ -6,6 +7,7 @@ import Sidebar from "./Sidebar";
 const Layout: FC<{ children: ReactNode }> = ({ children }) => {
   return (
     <div className="flex flex-col h-screen w-full bg-slate-50 text-slate-800 font-sans">
+      <Toaster position="top-center" richColors />
       <Navbar />
       {/* CONTENT WRAPPER: Sidebar + Main Content */}
       <div className="flex flex-1 overflow-hidden">

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { ToastContainer, toast } from 'react-toastify';
+import { toast } from 'sonner';
 import TaskTable from '../components/TaskTable';
 import AddTaskModal from '../components/AddTaskModal';
 import TaskViewLayout from '../components/TaskViewLayout';
@@ -356,7 +356,6 @@ const ProjectsPage = () => {
 
   return (
     <>
-      <ToastContainer hideProgressBar closeOnClick closeButton position="top-center" />
       <TaskViewLayout
         title={currentProject?.name ?? 'Projeto'}
         description={currentProject?.description ?? 'Visualize e gerencie as tarefas deste projeto.'}

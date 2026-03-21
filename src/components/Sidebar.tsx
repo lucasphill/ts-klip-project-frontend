@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ToastContainer, toast } from 'react-toastify';
+import { toast } from 'sonner';
 import type { CreateProjectDto, CreateTaskDto, GetProjectsDto } from "../types/apiTypes";
 import { projectsApi, tasksApi } from "../services/api";
 import {
@@ -95,7 +95,6 @@ const Sidebar = () => {
 
   return (
     <>
-      <ToastContainer hideProgressBar closeOnClick closeButton position="top-center" />
       <aside className={`${isSidebarOpen ? 'w-64' : 'w-20'} bg-slate-50 border-r border-slate-200 transition-all duration-300 flex flex-col relative shrink-0`}>
 
         {/* Toggle Button */}
