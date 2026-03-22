@@ -168,7 +168,7 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
             />
             <NavItem
               icon={<CalendarDays size={18} />}
-              label="Calendario (Em desenvolvimento)"
+              label="Calendario"
               active={activeTab === "calendar" || activeTab === "week"}
               onClick={() => handleNavigate("/calendar")}
               isOpen={isExpanded}

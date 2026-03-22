@@ -11,11 +11,11 @@ const Navbar = ({ onOpenSidebar }: { onOpenSidebar: () => void }) => {
     location.pathname === "/"
       ? "Inbox"
       : location.pathname.startsWith("/calendar") || location.pathname.startsWith("/week")
-        ? "Calendario"
-        : "Projeto";
+        ? "Calendário"
+        : "Projetos";
 
   useEffect(() => {
-    document.title = `Visualizacao: ${currentViewLabel} | Klip`;
+    document.title = `${currentViewLabel} | Klip`;
   }, [currentViewLabel]);
 
   return (

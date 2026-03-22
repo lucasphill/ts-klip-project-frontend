@@ -145,23 +145,41 @@ textarea {
   padding: 10px 4px;
 }
 
+.fc .fc-daygrid-day-events {
+  margin-top: 6px;
+  margin-left: 6px;
+  margin-right: 6px;
+}
+
 .fc .klip-fc-event {
   border: none !important;
   border-radius: 8px !important;
+  margin-bottom: 3px !important;
   padding: 1px 6px !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
   font-size: 0.75rem !important;
   font-weight: 600 !important;
 }
 
 .fc .klip-fc-event.is-pending {
-  background: #dbeafe !important;
-  color: #1e3a8a !important;
+  background: #1d4ed8 !important;
+  color: #eff6ff !important;
+  border: 1px solid #1e40af !important;
 }
 
 .fc .klip-fc-event.is-completed {
-  background: #dcfce7 !important;
-  color: #166534 !important;
+  background: #166534 !important;
+  color: #ecfdf5 !important;
+  border: 1px solid #14532d !important;
   text-decoration: line-through;
+}
+
+@media (max-width: 768px) {
+  .fc .fc-daygrid-day-events {
+    margin-left: 3px;
+    margin-right: 3px;
+  }
 }
 
 .mobile-sheet-enter {
