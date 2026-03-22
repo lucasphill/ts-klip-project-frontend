@@ -11,11 +11,11 @@ const Navbar = ({ onOpenSidebar }: { onOpenSidebar: () => void }) => {
     location.pathname === "/"
       ? "Inbox"
       : location.pathname.startsWith("/calendar") || location.pathname.startsWith("/week")
-        ? "Calendario"
-        : "Projeto";
+        ? "Calendário"
+        : "Projetos";
 
   useEffect(() => {
-    document.title = `Visualizacao: ${currentViewLabel} | Klip`;
+    document.title = `${currentViewLabel} | Klip`;
   }, [currentViewLabel]);
 
   return (
@@ -38,9 +38,6 @@ const Navbar = ({ onOpenSidebar }: { onOpenSidebar: () => void }) => {
             </svg>
             <span className="text-lg font-bold tracking-tight text-slate-900">Klip</span>
           </a>
-          <span className="hidden rounded-full border border-white/65 bg-white/60 px-3 py-1 text-xs font-semibold text-slate-600 backdrop-blur sm:inline-flex">
-            Visualizacao: {currentViewLabel}
-          </span>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">

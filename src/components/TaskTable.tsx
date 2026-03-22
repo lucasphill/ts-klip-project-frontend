@@ -51,6 +51,7 @@ interface TaskTableProps {
   updateTaskInline?: (taskId: string, updates: { title?: string; dueDate?: string }) => void;
   onEditTask?: (task: TaskTableTask) => void;
   onDeleteTask?: (taskId: string) => void;
+  hideAddTaskButton?: boolean;
 }
 
 const getColorDotProps = (color?: string): { className: string; style?: CSSProperties } | null => {
@@ -94,6 +95,7 @@ const TaskTable = ({
   updateTaskInline,
   onEditTask,
   onDeleteTask,
+  hideAddTaskButton = false,
 }: TaskTableProps) => {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [cfDrafts, setCfDrafts] = useState<Record<string, string>>({});
@@ -741,15 +743,17 @@ const TaskTable = ({
         )}
       </div>
 
-      <div className="border-t border-slate-200 bg-white px-3 py-3">
-        <button
-          onClick={addTask}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50"
-        >
-          <Plus className="h-4 w-4" />
-          Adicionar tarefa
-        </button>
-      </div>
+      {!hideAddTaskButton && (
+        <div className="border-t border-slate-200 bg-white px-3 py-3">
+          <button
+            onClick={addTask}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50"
+          >
+            <Plus className="h-4 w-4" />
+            Adicionar tarefa
+          </button>
+        </div>
+      )}
     </div>
   );
 };

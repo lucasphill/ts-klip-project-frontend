@@ -87,8 +87,8 @@ const AddCustomFieldModal: FC<{
               >
                 <option value="text">Texto</option>
                 <option value="number">Numero</option>
-                <option value="date">Data</option>
-                <option value="boolean">Booleano</option>
+                {/* <option value="date">Data</option>
+                <option value="boolean">Booleano</option> */}
                 <option value="enum">Selecao</option>
               </select>
             </div>

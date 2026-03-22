@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
 import ProjectsPage from './pages/ProjectsPage';
-import WeekViewPage from './pages/WeekViewPage';
+import MonthViewPage from './pages/MonthViewPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { TasksProvider } from './contexts/TasksContext';
 import { ProjectsProvider } from './contexts/ProjectsContext';
@@ -49,7 +49,7 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Layout>
-              <WeekViewPage />
+              <MonthViewPage />
             </Layout>
           </ProtectedRoute>
         }
@@ -59,7 +59,7 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Layout>
-              <WeekViewPage />
+              <MonthViewPage />
             </Layout>
           </ProtectedRoute>
         }
