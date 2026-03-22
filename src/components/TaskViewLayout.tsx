@@ -65,6 +65,12 @@ const TaskViewLayout: FC<TaskViewLayoutProps & { children: ReactNode }> = ({
     setIsCreatingField(false);
   };
 
+  const handleRemoveField = async (field: GetCustomFieldDefinitionDto) => {
+    if (!onRemoveCustomField) return;
+    if (!confirm(`Tem certeza que deseja remover o campo "${field.name}" deste projeto?`)) return;
+    await onRemoveCustomField(field);
+  };
+
   return (
     <>
       <header className="border-b border-slate-200 bg-white/90 px-4 py-4 backdrop-blur sm:px-6">
@@ -99,7 +105,7 @@ const TaskViewLayout: FC<TaskViewLayoutProps & { children: ReactNode }> = ({
                 {field.name}
                 {canAddCustomField && onRemoveCustomField && (
                   <button
-                    onClick={() => void onRemoveCustomField(field)}
+                    onClick={() => void handleRemoveField(field)}
                     className="rounded-full p-0.5 text-slate-500 hover:bg-rose-100 hover:text-rose-700"
                     title={`Remover campo ${field.name}`}
                   >

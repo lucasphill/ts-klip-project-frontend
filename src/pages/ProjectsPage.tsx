@@ -346,7 +346,6 @@ const ProjectsPage = () => {
 
   const handleRemoveCustomField = async (field: GetCustomFieldDefinitionDto) => {
     if (!projectId) return;
-    if (!confirm(`Remover o campo "${field.name}" deste projeto?`)) return;
 
     try {
       await projectsCustomFieldDefinitionsApi.unassign(projectId, field.id);
