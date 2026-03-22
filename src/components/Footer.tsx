@@ -9,23 +9,36 @@ const Footer = () => {
 
   useEffect(() => {
     setLoading(true);
-    healthApi.getHealth().then(setHealth).catch(console.error).finally(() => setLoading(false));
-  }, []);
+    healthApi
+      .getHealth()
+      .then(setHealth)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [setLoading]);
 
   const apiStatusIsHealthy = health?.status === "Healthy";
-  const statusColor = apiStatusIsHealthy ? "bg-emerald-500" : "bg-red-500";
 
   return (
-    <footer className="mx-auto w-full border-t border-slate-200 py-3 px-4 flex flex-col md:flex-row md:items-center justify-between items-start gap-2 text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-      <div className="flex flex-wrap items-center gap-6">
-        <span className="whitespace-nowrap">Desenvolvido por: <a href="https://github.com/lucasphill" target="_blank" rel="noopener noreferrer">Lucas Phill</a></span>
-      </div>
-      <div className="flex flex-wrap items-center gap-6">
-        <div className={`w-2 h-2 rounded-full ${statusColor}`}></div>
-        <p className="mt-2 md:mt-0 text-center md:text-right">© {new Date().getFullYear()} Klip</p>
+    <footer className="flex flex-col items-center gap-2 text-center text-xs text-slate-500 md:flex-row md:items-center md:justify-between md:text-left">
+      <p className="font-medium">
+        Desenvolvido por{" "}
+        <a
+          href="https://github.com/lucasphill"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline decoration-slate-300 underline-offset-4 transition-colors hover:text-slate-700"
+        >
+          Lucas Phill
+        </a>
+      </p>
+      <div className="flex items-center justify-center gap-2 md:justify-start">
+        <span className={`inline-flex h-2.5 w-2.5 rounded-full ${apiStatusIsHealthy ? "bg-emerald-500" : "bg-rose-500"}`} />
+        <span className="font-medium">{apiStatusIsHealthy ? "API online" : "API com alerta"}</span>
+        <span className="text-slate-400">|</span>
+        <span className="text-slate-500">© {new Date().getFullYear()} Klip</span>
       </div>
     </footer>
   );
-}
+};
 
 export default Footer;

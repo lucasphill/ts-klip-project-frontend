@@ -7,67 +7,76 @@ type Props = {
   onPrev: () => void;
   onNext: () => void;
   onToday: () => void;
-  formatDate: (d: Date) => string;
+  formatDate: (date: Date) => string;
   currentMonth: Date;
   weeksInMonth: { start: Date; end: Date }[];
   onSelectWeek: (start: Date) => void;
 };
 
-const WeekNavigator: FC<Props> = ({ currentWeekStart, currentWeekEnd, onPrev, onNext, onToday, formatDate, currentMonth, weeksInMonth, onSelectWeek }) => {
+const WeekNavigator: FC<Props> = ({
+  currentWeekStart,
+  currentWeekEnd,
+  onPrev,
+  onNext,
+  onToday,
+  formatDate,
+  currentMonth,
+  weeksInMonth,
+  onSelectWeek,
+}) => {
   return (
-    <>
-      <div className="p-4 flex items-center gap-3">
+    <section className="border-b border-slate-200 bg-white/80 px-4 py-4 backdrop-blur sm:px-6">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <button
           onClick={onPrev}
-          className="hover:bg-slate-100 rounded-md transition-colors"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-50"
           title="Semana anterior"
         >
-          <ChevronLeft className="w-4 h-4 text-slate-600" />
+          <ChevronLeft className="h-4 w-4" />
         </button>
-        <span className="text-sm text-slate-600 font-medium min-w-[200px] text-center">
+        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700">
           {formatDate(currentWeekStart)} - {formatDate(currentWeekEnd)}
-        </span>
+        </div>
         <button
           onClick={onNext}
-          className="hover:bg-slate-100 rounded-md transition-colors"
-          title="Próxima semana"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-50"
+          title="Proxima semana"
         >
-          <ChevronRight className="w-4 h-4 text-slate-600" />
+          <ChevronRight className="h-4 w-4" />
         </button>
         <button
           onClick={onToday}
-          className="ml-2 px-3 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+          className="ml-auto inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-700 transition-colors hover:bg-slate-50"
         >
           Hoje
         </button>
       </div>
 
-      <div className="p-4">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            {currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
-          </span>
-        </div>
-        <div className="mt-2 grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
-          {weeksInMonth.map((week, idx) => {
+      <div className="mt-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          {currentMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+        </p>
+        <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {weeksInMonth.map((week, index) => {
             const isActive = currentWeekStart >= week.start && currentWeekStart <= week.end;
             return (
               <button
-                key={`${week.start.toISOString()}-${idx}`}
+                key={`${week.start.toISOString()}-${index}`}
                 onClick={() => onSelectWeek(week.start)}
-                className={`text-left p-2 rounded-md border text-xs transition-colors ${isActive
-                  ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
-                  : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
-                  }`}
+                className={`rounded-xl border px-3 py-2 text-left transition-colors ${
+                  isActive
+                    ? "border-[#2f6fb2]/35 bg-[#2f6fb2]/10 text-[#1f4e7a]"
+                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                }`}
               >
-                <div className="font-semibold">Semana {idx + 1}</div>
-                <div className="text-[10px]">{formatDate(week.start)} - {formatDate(week.end)}</div>
+                <p className="text-xs font-semibold">Semana {index + 1}</p>
+                <p className="mt-0.5 text-[11px]">{formatDate(week.start)} - {formatDate(week.end)}</p>
               </button>
             );
           })}
         </div>
       </div>
-    </>
+    </section>
   );
 };
 

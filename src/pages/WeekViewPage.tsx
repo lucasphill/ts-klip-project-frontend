@@ -1,231 +1,265 @@
-import { useState, useMemo } from 'react';
-import WeekNavigator from '../components/WeekNavigator';
-import TaskTable from '../components/TaskTable';
-import AddTaskModal from '../components/AddTaskModal';
-import TaskViewLayout from '../components/TaskViewLayout';
-import type { CreateTaskDto, CustomFieldValue, GetProjectsDto, GetTasksDto } from '../types/apiTypes';
+import { useMemo, useState } from "react";
+import FullCalendar from "@fullcalendar/react";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import ptBrLocale from "@fullcalendar/core/locales/pt-br";
+import type { DatesSetArg, EventClickArg } from "@fullcalendar/core";
+import { CheckCircle2, Circle, Pencil, Plus, Trash2 } from "lucide-react";
+import AddTaskModal from "../components/AddTaskModal";
+import TaskViewLayout from "../components/TaskViewLayout";
+import type { CreateTaskDto, GetTasksDto } from "../types/apiTypes";
+
+const toDateString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const addDays = (date: Date, days: number): Date => {
+  const copy = new Date(date);
+  copy.setDate(copy.getDate() + days);
+  return copy;
+};
+
+const currentMonth = new Date();
+const monthBase = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
 
 const INITIAL_TASKS: GetTasksDto[] = [
-  { id: 't1', title: 'Definir paleta de cores', isCompleted: true, dueDate: '2026-02-03', createdAt: '2026-01-01T00:00:00.000Z' },
-  { id: 't2', title: 'Desenvolver Homepage', isCompleted: false, dueDate: '2026-02-05', createdAt: '2026-01-01T00:00:00.000Z' },
-  { id: 't3', title: 'Revisar métricas Q2', isCompleted: false, dueDate: '2026-02-10', createdAt: '2026-01-01T00:00:00.000Z' },
-  { id: 't4', title: 'Reunião de planejamento', isCompleted: false, dueDate: '2026-02-01', createdAt: '2026-01-01T00:00:00.000Z' },
-  { id: 't5', title: 'Atualizar documentação', isCompleted: false, dueDate: '2026-02-07', createdAt: '2026-01-01T00:00:00.000Z' },
+  { id: "t1", title: "Planejar sprint mensal", isCompleted: false, dueDate: toDateString(addDays(monthBase, 2)), createdAt: new Date().toISOString() },
+  { id: "t2", title: "Review com stakeholders", isCompleted: false, dueDate: toDateString(addDays(monthBase, 7)), createdAt: new Date().toISOString() },
+  { id: "t3", title: "Atualizar documentacao", isCompleted: true, dueDate: toDateString(addDays(monthBase, 11)), createdAt: new Date().toISOString() },
+  { id: "t4", title: "Entrega da release", isCompleted: false, dueDate: toDateString(addDays(monthBase, 19)), createdAt: new Date().toISOString() },
+  { id: "t5", title: "Planejamento do proximo mes", isCompleted: false, dueDate: toDateString(addDays(monthBase, 25)), createdAt: new Date().toISOString() },
 ];
-
-const INITIAL_PROJECTS: GetProjectsDto[] = [
-  { id: 'p1', name: 'Lançamento Website', description: 'Redesign e launch', color: 'bg-blue-500', createdAt: '2026-01-01T00:00:00.000Z' },
-  { id: 'p2', name: 'Roadmap Q3', description: 'Planejamento trimestral', color: 'bg-emerald-500', createdAt: '2026-01-01T00:00:00.000Z' },
-  { id: 'p3', name: 'Marketing Social', description: 'Campanhas redes sociais', color: 'bg-purple-500', createdAt: '2026-01-01T00:00:00.000Z' }
-];
-
-const INITIAL_PROJECT_TASKS = [
-  { project_id: 'p1', task_id: 't1' },
-  { project_id: 'p1', task_id: 't2' },
-  { project_id: 'p2', task_id: 't3' },
-  { project_id: 'p3', task_id: 't4' },
-  { project_id: 'p1', task_id: 't5' }
-];
-
-// Helper: Obter segunda-feira da semana de uma data
-const getMonday = (date: Date): Date => {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Ajusta para segunda-feira
-  return new Date(d.setDate(diff));
-};
-
-// Helper: Obter domingo da semana de uma data
-const getSunday = (monday: Date): Date => {
-  const d = new Date(monday);
-  d.setDate(d.getDate() + 6);
-  return d;
-};
-
-// Helper: Formatar data para exibição
-const formatDate = (date: Date): string => {
-  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
-};
 
 const WeekViewPage = () => {
-  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(getMonday(new Date()));
   const [tasks, setTasks] = useState<GetTasksDto[]>(INITIAL_TASKS);
-  const [projectTasks] = useState(INITIAL_PROJECT_TASKS);
-  const [projects] = useState<GetProjectsDto[]>(INITIAL_PROJECTS);
   const [showEditTaskModal, setShowEditTaskModal] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<(CreateTaskDto & { id?: string }) | null>(null);
+  const [visibleRange, setVisibleRange] = useState<{
+    start: Date;
+    end: Date;
+    title: string;
+  }>({
+    start: new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1),
+    end: new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1),
+    title: currentMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
+  });
 
-  const currentMonth = useMemo(() => new Date(currentWeekStart.getFullYear(), currentWeekStart.getMonth(), 1), [currentWeekStart]);
+  const calendarEvents = useMemo(
+    () =>
+      tasks
+        .filter((task) => Boolean(task.dueDate))
+        .map((task) => ({
+          id: task.id,
+          title: task.title || "Sem titulo",
+          date: task.dueDate,
+          allDay: true,
+          extendedProps: {
+            isCompleted: task.isCompleted ?? false,
+          },
+        })),
+    [tasks]
+  );
 
-  const currentWeekEnd = useMemo(() => getSunday(currentWeekStart), [currentWeekStart]);
+  const monthTasks = useMemo(
+    () =>
+      tasks
+        .filter((task) => {
+          if (!task.dueDate) return false;
+          const dueDate = new Date(`${task.dueDate}T00:00:00`);
+          return dueDate >= visibleRange.start && dueDate < visibleRange.end;
+        })
+        .sort((left, right) => String(left.dueDate).localeCompare(String(right.dueDate))),
+    [tasks, visibleRange]
+  );
 
-  const weeksInMonth = useMemo(() => {
-    const weeks: { start: Date; end: Date }[] = [];
-    const firstDay = new Date(currentMonth);
-    const firstWeekStart = getMonday(firstDay);
-    const lastDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-    let cursor = new Date(firstWeekStart);
-
-    while (cursor <= lastDay || weeks.length === 0) {
-      const start = new Date(cursor);
-      const end = getSunday(start);
-      weeks.push({ start, end });
-      cursor = new Date(end);
-      cursor.setDate(cursor.getDate() + 1);
-    }
-
-    return weeks;
-  }, [currentMonth]);
-
-  // Filtrar tarefas da semana atual
-  const weekTasks = useMemo(() => {
-    const startStr = currentWeekStart.toISOString().split('T')[0];
-    const endStr = currentWeekEnd.toISOString().split('T')[0];
-
-    return tasks.filter(task => {
-      if (!task.dueDate) return false;
-      return task.dueDate >= startStr && task.dueDate <= endStr;
-    });
-  }, [tasks, currentWeekStart, currentWeekEnd]);
-
-  // Navegação entre semanas
-  const goToPreviousWeek = () => {
-    const newDate = new Date(currentWeekStart);
-    newDate.setDate(newDate.getDate() - 7);
-    setCurrentWeekStart(getMonday(newDate));
-  };
-
-  const goToNextWeek = () => {
-    const newDate = new Date(currentWeekStart);
-    newDate.setDate(newDate.getDate() + 7);
-    setCurrentWeekStart(getMonday(newDate));
-  };
-
-  const goToCurrentWeek = () => {
-    setCurrentWeekStart(getMonday(new Date()));
-  };
-
-  // Actions
-  const toggleTaskCompletion = (taskId: string) => {
-    setTasks(prev => prev.map(t =>
-      t.id === taskId ? { ...t, isCompleted: !t.isCompleted } : t
-    ));
-  };
-
-  const addTask = () => {
-    const newTask: GetTasksDto = {
-      id: `t-${Date.now()}`,
-      title: '',
+  const openCreateTaskModal = (dueDate?: string) => {
+    setTaskToEdit({
+      title: "",
       isCompleted: false,
-      dueDate: currentWeekStart.toISOString().split('T')[0],
-      createdAt: new Date().toISOString()
-    };
-    setTasks(prev => [...prev, newTask]);
-  };
-
-  const updateTaskTitle = (taskId: string, title: string) => {
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, title } : t));
-  };
-
-  const updateTaskDueDate = (taskId: string, dueDate: string) => {
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, dueDate } : t));
-  };
-
-  const getTaskProjects = (taskId: string) => {
-    const projectIds = projectTasks
-      .filter(pt => pt.task_id === taskId)
-      .map(pt => pt.project_id);
-    return projects.filter(p => projectIds.includes(p.id));
-  };
-
-  const addProjectToTask = (_taskId: string, _projectId: string) => {
-    // Not implemented in this view
-  };
-
-  const removeProjectFromTask = (_taskId: string, _projectId: string) => {
-    // Not implemented in this view
-  };
-
-  const getFieldValue = (_taskId: string, _fieldId: string) => '';
-  const updateCustomValue = (_taskId: string, _fieldId: string, _value: CustomFieldValue) => { };
-  const handleEditTask = (task: GetTasksDto) => {
-    setTaskToEdit(task);
+      dueDate,
+      notes: "",
+      parentTaskId: "",
+    });
     setShowEditTaskModal(true);
   };
 
+  const handleEventClick = (arg: EventClickArg) => {
+    const task = tasks.find((item) => item.id === arg.event.id);
+    if (!task) return;
+    setTaskToEdit({
+      id: task.id,
+      title: task.title,
+      dueDate: task.dueDate,
+      isCompleted: task.isCompleted,
+      notes: task.notes,
+      parentTaskId: task.parentTaskId,
+    });
+    setShowEditTaskModal(true);
+  };
+
+  const handleDatesSet = (arg: DatesSetArg) => {
+    setVisibleRange({
+      start: arg.start,
+      end: arg.end,
+      title: arg.view.title,
+    });
+  };
+
+  const toggleTaskCompletion = (taskId: string) => {
+    setTasks((previous) =>
+      previous.map((task) => (task.id === taskId ? { ...task, isCompleted: !task.isCompleted } : task))
+    );
+  };
+
   const handleDeleteTask = (taskId: string) => {
-    if (confirm('Tem certeza que deseja excluir esta tarefa?')) {
-      setTasks(prev => prev.filter(t => t.id !== taskId));
-    }
+    if (!confirm("Tem certeza que deseja excluir esta tarefa?")) return;
+    setTasks((previous) => previous.filter((task) => task.id !== taskId));
   };
 
   const handleSaveTask = (task: CreateTaskDto & { id?: string }) => {
     if (task.id) {
-      // Edit existing
-      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...task } : t));
-    } else {
-      // Add new
-      const newTask: GetTasksDto = {
-        id: `t-${Date.now()}`,
-        title: task.title,
-        dueDate: task.dueDate,
-        isCompleted: task.isCompleted,
-        notes: task.notes,
-        parentTaskId: task.parentTaskId,
-        createdAt: new Date().toISOString()
-      };
-      setTasks(prev => [...prev, newTask]);
+      setTasks((previous) =>
+        previous.map((currentTask) =>
+          currentTask.id === task.id
+            ? {
+              ...currentTask,
+              ...task,
+              dueDate: task.dueDate,
+              isCompleted: task.isCompleted ?? false,
+            }
+            : currentTask
+        )
+      );
+      return;
     }
+
+    const createdTask: GetTasksDto = {
+      id: `t-${Date.now()}`,
+      title: task.title,
+      dueDate: task.dueDate,
+      isCompleted: task.isCompleted ?? false,
+      notes: task.notes,
+      parentTaskId: task.parentTaskId,
+      createdAt: new Date().toISOString(),
+    };
+    setTasks((previous) => [...previous, createdTask]);
   };
+
   return (
     <>
-      <AddTaskModal
-        isOpen={showEditTaskModal}
-        onClose={() => {
-          setShowEditTaskModal(false);
-          setTaskToEdit(null);
-        }}
-        onSave={handleSaveTask}
-        task={taskToEdit}
-      />
       <TaskViewLayout
-        title={'Visão Semanal'}
-        description={'Visualize e gerencie suas tarefas desta semana.'}
+        title="Calendario"
+        description="Visualize suas tarefas no mes e clique nos eventos para editar rapidamente."
         canAddCustomField={false}
       >
-        <WeekNavigator
-          currentWeekStart={currentWeekStart}
-          currentWeekEnd={currentWeekEnd}
-          onPrev={goToPreviousWeek}
-          onNext={goToNextWeek}
-          onToday={goToCurrentWeek}
-          formatDate={formatDate}
-          currentMonth={currentMonth}
-          weeksInMonth={weeksInMonth}
-          onSelectWeek={(start) => setCurrentWeekStart(getMonday(start))}
-        />
-        {/* TASK LIST AREA */}
-        <div className="flex-1 overflow-auto bg-white">
-          <TaskTable
-            visibleTasks={weekTasks}
-            activeView="week"
-            activeCustomFields={[]}
-            getFieldValue={getFieldValue}
-            updateCustomValue={updateCustomValue}
-            toggleTaskCompletion={toggleTaskCompletion}
-            addTask={addTask}
-            projects={projects}
-            getTaskProjects={getTaskProjects}
-            addProjectToTask={addProjectToTask}
-            removeProjectFromTask={removeProjectFromTask}
-            updateTaskTitle={updateTaskTitle}
-            updateTaskDueDate={updateTaskDueDate}
-            onEditTask={handleEditTask}
-            onDeleteTask={handleDeleteTask}
-          />
-        </div>
+        <section className="flex min-h-0 flex-1 flex-col overflow-auto bg-white p-4 sm:p-6">
+          <div className="surface-panel rounded-2xl bg-white p-3 sm:p-4">
+            <FullCalendar
+              plugins={[dayGridPlugin]}
+              locale={ptBrLocale}
+              initialView="dayGridMonth"
+              headerToolbar={{
+                left: "prev,next today",
+                center: "title",
+                right: "",
+              }}
+              buttonText={{ today: "Hoje" }}
+              events={calendarEvents}
+              eventClick={handleEventClick}
+              datesSet={handleDatesSet}
+              dayMaxEvents={3}
+              fixedWeekCount={false}
+              height="auto"
+              eventClassNames={(arg) =>
+                arg.event.extendedProps.isCompleted
+                  ? ["klip-fc-event", "is-completed"]
+                  : ["klip-fc-event", "is-pending"]
+              }
+              eventTimeFormat={{
+                hour: "2-digit",
+                minute: "2-digit",
+                meridiem: false,
+              }}
+            />
+          </div>
 
-        {/* Edit Task Modal */}
+          <div className="mt-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-slate-900">Tarefas do periodo</h2>
+                <p className="text-sm text-slate-500">{visibleRange.title}</p>
+              </div>
+              <button
+                onClick={() => openCreateTaskModal(toDateString(new Date()))}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+              >
+                <Plus className="h-4 w-4" />
+                Nova tarefa
+              </button>
+            </div>
+
+            {monthTasks.length === 0 ? (
+              <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-500">
+                Nenhuma tarefa com prazo neste periodo.
+              </div>
+            ) : (
+              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {monthTasks.map((task) => (
+                  <article key={task.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <button
+                        onClick={() => toggleTaskCompletion(task.id)}
+                        className="mt-0.5 text-slate-400 transition-colors hover:text-emerald-600"
+                        title="Alternar status"
+                      >
+                        {task.isCompleted ? (
+                          <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                        ) : (
+                          <Circle className="h-5 w-5" />
+                        )}
+                      </button>
+                      <div className="min-w-0 flex-1">
+                        <p className={`truncate text-sm font-semibold ${task.isCompleted ? "text-slate-400 line-through" : "text-slate-900"}`}>
+                          {task.title}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">Prazo: {task.dueDate || "Sem data"}</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center justify-end gap-1.5">
+                      <button
+                        onClick={() => {
+                          setTaskToEdit({
+                            id: task.id,
+                            title: task.title,
+                            dueDate: task.dueDate,
+                            isCompleted: task.isCompleted,
+                            notes: task.notes,
+                            parentTaskId: task.parentTaskId,
+                          });
+                          setShowEditTaskModal(true);
+                        }}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                        title="Editar tarefa"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteTask(task.id)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-rose-100 hover:text-rose-700"
+                        title="Excluir tarefa"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
         <AddTaskModal
           isOpen={showEditTaskModal}
           onClose={() => {

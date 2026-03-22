@@ -1,56 +1,81 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { toast } from 'sonner';
-import type { CreateProjectDto, CreateTaskDto, GetProjectsDto } from "../types/apiTypes";
-import { projectsApi, tasksApi } from "../services/api";
-import { useTasksContext } from "../contexts/TasksContext";
-import { useProjectsContext } from "../contexts/ProjectsContext";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import {
+  CalendarDays,
   ChevronLeft,
   ChevronRight,
-  Hash,
   Home,
   Pencil,
   Plus,
   Search,
-  Trash2
+  Trash2,
+  X,
 } from "lucide-react";
+import type { CreateProjectDto, CreateTaskDto, GetProjectsDto } from "../types/apiTypes";
+import { projectsApi, tasksApi } from "../services/api";
+import { useTasksContext } from "../contexts/TasksContext";
+import { useProjectsContext } from "../contexts/ProjectsContext";
 import NavItem from "./NavItem";
 import AddTaskModal from "./AddTaskModal";
 import AddProjectModal from "./AddProjectModal";
 
-const Sidebar = () => {
+type SidebarProps = {
+  isDesktopExpanded: boolean;
+  isMobileOpen: boolean;
+  onToggleDesktop: () => void;
+  onCloseMobile: () => void;
+};
+
+const getColorDotProps = (color?: string): { className: string; style?: CSSProperties } | null => {
+  if (!color) return null;
+
+  if (color.startsWith("bg-")) {
+    return { className: color };
+  }
+
+  return {
+    className: "",
+    style: { backgroundColor: color },
+  };
+};
+
+const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobile }: SidebarProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { appendTask } = useTasksContext();
   const { projects, fetchProjects, removeProjectLocal } = useProjectsContext();
 
-  const activeTab = location.pathname === '/' ? 'home' : location.pathname.substring(1);
+  const activeTab = location.pathname === "/" ? "home" : location.pathname.slice(1);
+  const isExpanded = isDesktopExpanded || isMobileOpen;
 
-  const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [showNewTaskModal, setShowNewTaskModal] = useState(false);
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
-  const [projectSearch, setProjectSearch] = useState('');
+  const [projectSearch, setProjectSearch] = useState("");
   const [projectToEdit, setProjectToEdit] = useState<GetProjectsDto | null>(null);
 
   useEffect(() => {
-    fetchProjects().catch((error: any) => toast.error(error?.message ?? 'Erro ao buscar projetos'));
+    fetchProjects().catch((error: any) => toast.error(error?.message ?? "Erro ao buscar projetos"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const filteredProjects = useMemo(() =>
-    projects.filter(p => p.name.toLowerCase().includes(projectSearch.toLowerCase())),
+  const filteredProjects = useMemo(
+    () => projects.filter((project) => project.name.toLowerCase().includes(projectSearch.toLowerCase())),
     [projects, projectSearch]
   );
 
+  const handleNavigate = (target: string) => {
+    navigate(target);
+    onCloseMobile();
+  };
 
-  //#region Handlers
   const handleSaveTask = async (task: CreateTaskDto): Promise<void> => {
     try {
       const response = await tasksApi.create(task);
       appendTask(response.data);
-      toast.success('Tarefa criada com sucesso! ' + task.title);
+      toast.success(`Tarefa criada com sucesso: ${task.title}`);
     } catch (error: any) {
-      toast.error(error?.message ?? 'Erro ao criar tarefa');
+      toast.error(error?.message ?? "Erro ao criar tarefa");
       throw error;
     }
   };
@@ -60,15 +85,15 @@ const Sidebar = () => {
       if (project.id) {
         const { id, ...payload } = project;
         await projectsApi.update(id, payload);
-        toast.success('Projeto atualizado com sucesso! ' + project.name);
+        toast.success(`Projeto atualizado: ${project.name}`);
       } else {
         await projectsApi.create(project);
-        toast.success('Projeto salvo com sucesso! ' + project.name);
+        toast.success(`Projeto criado: ${project.name}`);
       }
       await fetchProjects();
       setProjectToEdit(null);
     } catch (error: any) {
-      toast.error(error?.message ?? 'Erro ao salvar projeto');
+      toast.error(error?.message ?? "Erro ao salvar projeto");
       throw error;
     }
   };
@@ -79,146 +104,199 @@ const Sidebar = () => {
   };
 
   const handleDeleteProject = async (projectId: string) => {
-    if (!confirm('Tem certeza que deseja excluir este projeto?')) return;
+    if (!confirm("Tem certeza que deseja excluir este projeto?")) return;
+
     try {
       await projectsApi.remove(projectId);
       removeProjectLocal(projectId);
-      toast.success('Projeto excluído com sucesso!');
+      toast.success("Projeto excluido com sucesso");
     } catch (error: any) {
-      toast.error(error?.message ?? 'Erro ao excluir projeto');
+      toast.error(error?.message ?? "Erro ao excluir projeto");
     }
   };
-  //#endregion
 
   return (
     <>
-      <aside className={`${isSidebarOpen ? 'w-64' : 'w-20'} bg-slate-50 border-r border-slate-200 transition-all duration-300 flex flex-col relative shrink-0`}>
-
-        {/* Toggle Button */}
+      {isMobileOpen && (
         <button
-          onClick={() => setSidebarOpen(!isSidebarOpen)}
-          className="absolute -right-3 top-6 z-30 w-6 h-6 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-300 shadow-sm transition-all"
-          title={isSidebarOpen ? 'Recolher sidebar' : 'Expandir sidebar'}
-        >
-          {isSidebarOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
-        </button>
+          className="fixed inset-0 z-30 bg-slate-900/40 backdrop-blur-[2px] md:hidden"
+          onClick={onCloseMobile}
+          aria-label="Fechar menu lateral"
+        />
+      )}
 
-        <div className="p-4">
+      <aside
+        className={`
+          fixed inset-y-0 left-0 z-40 flex h-full flex-col border-r border-slate-200/70 bg-white/95 shadow-2xl backdrop-blur md:relative md:z-20 md:shadow-none
+          ${isExpanded ? "w-[18.5rem]" : "w-[5.4rem]"}
+          ${isMobileOpen ? "translate-x-0 mobile-sheet-enter" : "-translate-x-full md:translate-x-0"}
+          transition-all duration-300
+        `}
+      >
+        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 md:hidden">
+          <p className="text-sm font-semibold text-slate-700">Navegacao</p>
           <button
-            onClick={() => setShowNewTaskModal(true)}
-            className="flex items-center justify-center gap-2 w-full bg-white border border-slate-200 hover:border-indigo-300 hover:shadow-sm text-slate-600 font-medium py-2 rounded-xl transition-all"
+            onClick={onCloseMobile}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+            aria-label="Fechar menu lateral"
           >
-            <Plus size={18} className="text-indigo-600" />
-            {isSidebarOpen && <span>Nova Tarefa</span>}
+            <X className="h-4 w-4" />
           </button>
         </div>
 
-        <nav className="flex-1 py-2 px-3 space-y-0.5 overflow-y-auto">
-          <NavItem
-            icon={<Home size={20} />}
-            label="Inbox"
-            active={activeTab === 'home'}
-            onClick={() => navigate('/')}
-            isOpen={isSidebarOpen}
-          />
-          {/* <NavItem
-            icon={<Calendar size={20} />}
-            label="Esta Semana"
-            active={activeTab === 'week'}
-            onClick={() => navigate('/week')}
-            isOpen={isSidebarOpen}
-          /> */}
+        <div className="p-3 md:p-4">
+          <button
+            onClick={() => {
+              setShowNewTaskModal(true);
+              onCloseMobile();
+            }}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#2f6fb2] px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#225587]"
+          >
+            <Plus className="h-4 w-4" />
+            {isExpanded && <span>Nova tarefa</span>}
+          </button>
+        </div>
 
-          <div className="pt-6 mb-2">
-            {isSidebarOpen && (
-              <div className="flex items-center justify-between px-3 mb-2">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Projetos</p>
+        <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-3">
+          <div className="space-y-1">
+            <NavItem
+              icon={<Home size={18} />}
+              label="Inbox"
+              active={activeTab === "home"}
+              onClick={() => handleNavigate("/")}
+              isOpen={isExpanded}
+            />
+            <NavItem
+              icon={<CalendarDays size={18} />}
+              label="Calendario"
+              active={activeTab === "calendar" || activeTab === "week"}
+              onClick={() => handleNavigate("/calendar")}
+              isOpen={isExpanded}
+            />
+          </div>
+
+          <div className="space-y-2">
+            {isExpanded && (
+              <div className="flex items-center justify-between px-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Projetos</p>
                 <button
                   onClick={() => setShowNewProjectModal(true)}
-                  className="text-slate-400 hover:text-indigo-600 transition-colors"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                  title="Novo projeto"
                 >
                   <Plus size={14} />
                 </button>
               </div>
             )}
 
-            {isSidebarOpen && (
-              <div className="relative mb-2">
-                <Search size={12} className="absolute left-2.5 top-2 text-slate-400" />
+            {isExpanded && (
+              <div className="relative px-1">
+                <Search size={14} className="pointer-events-none absolute left-4 top-2.5 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Buscar..."
-                  className="w-full bg-slate-100 focus:bg-white border-transparent focus:border-indigo-200 rounded-md py-1.5 pl-8 pr-2 text-xs outline-none transition-all"
+                  placeholder="Buscar projeto"
+                  className="field h-9 w-full bg-white pl-9 pr-3 text-sm"
                   value={projectSearch}
-                  onChange={(e) => setProjectSearch(e.target.value)}
+                  onChange={(event) => setProjectSearch(event.target.value)}
                 />
               </div>
             )}
 
-            {filteredProjects.map(project => (
-              <div key={project.id} className="group flex items-center">
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => navigate(`/${project.id}`)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      navigate(`/${project.id}`);
-                    }
-                  }}
-                  className={`flex items-center w-full px-3 py-2 rounded-xl transition-all
-                        ${isSidebarOpen ? 'justify-between' : 'justify-center'}
-                        ${activeTab === project.id
-                      ? 'bg-indigo-50 text-indigo-700 font-semibold'
-                      : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
-                >
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    <span
-                      className={`transition-colors ${activeTab === project.id ? 'text-indigo-600' : 'group-hover:text-slate-700'}`}
-                      style={{ color: activeTab === project.id ? undefined : project.color }}
+            <div className="space-y-1">
+              {filteredProjects.map((project) => {
+                const colorDot = getColorDotProps(project.color);
+
+                return (
+                  <div key={project.id} className="group flex items-center rounded-xl">
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleNavigate(`/${project.id}`)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          handleNavigate(`/${project.id}`);
+                        }
+                      }}
+                      className={`flex w-full items-center rounded-xl px-2.5 py-2 text-sm transition-all ${isExpanded ? "justify-between" : "justify-center"
+                        } ${activeTab === project.id
+                          ? "bg-slate-100 text-slate-900"
+                          : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                        }`}
                     >
-                      <Hash size={18} />
-                    </span>
-                    {isSidebarOpen && <span className="text-sm truncate">{project.name}</span>}
-                  </div>
-                  {isSidebarOpen && (
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditProject(project);
-                        }}
-                        className="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"
-                        title="Editar projeto"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteProject(project.id);
-                        }}
-                        className="p-1 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50"
-                        title="Excluir projeto"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <span className="flex min-w-0 items-center gap-2.5">
+                        <span className={`h-2.5 w-2.5 rounded-full ${colorDot?.className ?? ""}`} style={colorDot?.style} />
+                        {isExpanded && <span className="truncate">{project.name}</span>}
+                      </span>
+
+                      {isExpanded && (
+                        <span className="flex items-center gap-1">
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              handleEditProject(project);
+                            }}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                handleEditProject(project);
+                              }
+                            }}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+                            title="Editar projeto"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </span>
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              void handleDeleteProject(project.id);
+                            }}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                void handleDeleteProject(project.id);
+                              }
+                            }}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 hover:text-rose-800"
+                            title="Excluir projeto"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </span>
+                        </span>
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
-            ))}
+                  </div>
+                );
+              })}
+
+              {filteredProjects.length === 0 && isExpanded && (
+                <p className="px-2 py-2 text-xs text-slate-500">Nenhum projeto encontrado.</p>
+              )}
+            </div>
           </div>
         </nav>
+
+        <div className="hidden px-3 py-3 md:block">
+          <button
+            onClick={onToggleDesktop}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+          >
+            {isDesktopExpanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            {isDesktopExpanded && <span>Recolher menu</span>}
+          </button>
+        </div>
       </aside>
 
-      {/* Modals */}
-      <AddTaskModal
-        isOpen={showNewTaskModal}
-        onClose={() => setShowNewTaskModal(false)}
-        onSave={handleSaveTask}
-      />
+      <AddTaskModal isOpen={showNewTaskModal} onClose={() => setShowNewTaskModal(false)} onSave={handleSaveTask} />
       <AddProjectModal
         isOpen={showNewProjectModal}
         onClose={() => {

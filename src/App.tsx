@@ -45,6 +45,16 @@ const AppRoutes = () => {
         }
       />
       <Route
+        path="/calendar"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <WeekViewPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/week"
         element={
           <ProtectedRoute>
@@ -64,16 +74,22 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-      {/* 404 page */}
-      <Route path="*" element={
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
-            <p className="text-gray-600 mb-4">Page not found</p>
-            <a href="/" className="btn btn-primary">Voltar para home</a>
+      <Route
+        path="*"
+        element={
+          <div className="flex min-h-screen items-center justify-center px-4">
+            <div className="surface-panel max-w-md rounded-2xl bg-white p-8 text-center">
+              <h1 className="text-5xl font-bold text-slate-900">404</h1>
+              <p className="mt-2 text-sm text-slate-500">Pagina nao encontrada.</p>
+              <a
+                href="/"
+                className="mt-5 inline-flex items-center justify-center rounded-xl bg-[#2f6fb2] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#225587]"
+              >
+                Voltar para a home
+              </a>
+            </div>
           </div>
-        </div>
-      }
+        }
       />
     </Routes>
 

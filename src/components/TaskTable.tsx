@@ -1,32 +1,41 @@
-import { useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
-  CheckCircle2,
-  Circle,
-  Plus,
-  Calendar,
-  Hash,
-  Type,
-  List,
-  X,
-  Pencil,
-  Trash2,
-  Filter,
   ArrowUpDown,
-  XCircle
-} from 'lucide-react';
+  Calendar,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Circle,
+  Filter,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  X,
+  XCircle,
+} from "lucide-react";
+import {
+  Table,
+  TableBody,
+  Cell,
+  Column,
+  Row,
+  TableHeader,
+  type SortDescriptor,
+} from "react-aria-components";
 import type {
   CustomFieldValue,
   GetCustomFieldDefinitionDto,
   GetProjectsDto,
   GetTasksDto,
-} from '../types/apiTypes';
+} from "../types/apiTypes";
 
 type TaskTableTask = GetTasksDto & {
   customFields?: Record<string, CustomFieldValue>;
 };
 
 interface TaskTableProps {
-  activeView: string; // mostra todos ou só de um projeto específico, recebe o id do projeto ou "all"
+  activeView: string;
   visibleTasks: TaskTableTask[];
   activeCustomFields?: GetCustomFieldDefinitionDto[];
   projects: GetProjectsDto[];
@@ -44,6 +53,30 @@ interface TaskTableProps {
   onDeleteTask?: (taskId: string) => void;
 }
 
+const getColorDotProps = (color?: string): { className: string; style?: CSSProperties } | null => {
+  if (!color) return null;
+
+  if (color.startsWith("bg-")) {
+    return { className: color };
+  }
+
+  return {
+    className: "",
+    style: { backgroundColor: color },
+  };
+};
+
+const normalizeDate = (value?: string | null) => {
+  if (!value) return "";
+  return String(value).split("T")[0];
+};
+
+const compareText = (left: string, right: string) =>
+  left.localeCompare(right, "pt-BR", { sensitivity: "base", numeric: true });
+
+const matchesQuery = (value: string, query: string) =>
+  value.toLocaleLowerCase("pt-BR").includes(query.toLocaleLowerCase("pt-BR"));
+
 const TaskTable = ({
   activeView,
   visibleTasks,
@@ -60,43 +93,41 @@ const TaskTable = ({
   updateTaskDueDate,
   updateTaskInline,
   onEditTask,
-  onDeleteTask
+  onDeleteTask,
 }: TaskTableProps) => {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-
-  // Custom field text/number draft state + debounce timers
   const [cfDrafts, setCfDrafts] = useState<Record<string, string>>({});
   const cfTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-  const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'pending'>('all');
-  const [sortBy, setSortBy] = useState<'due_date' | 'title' | 'created'>('due_date');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "pending">("all");
+  const [columnSearch, setColumnSearch] = useState<Record<string, string>>({});
+  const [areFiltersExpanded, setAreFiltersExpanded] = useState(false);
+  const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({
+    column: "dueDate",
+    direction: "ascending",
+  });
 
-  const getIsCompleted = (t: GetTasksDto) => (t?.isCompleted ?? false);
-  const getDueDate = (t: GetTasksDto) => (t?.dueDate ?? '');
-  const getTitle = (t: GetTasksDto) => (t?.title ?? '');
+  useEffect(() => {
+    return () => {
+      Object.values(cfTimers.current).forEach((timer) => clearTimeout(timer));
+    };
+  }, []);
+
   const safeCustomFields = Array.isArray(activeCustomFields) ? activeCustomFields : [];
+
+  const getIsCompleted = (task: GetTasksDto) => task?.isCompleted ?? false;
+  const getTitle = (task: GetTasksDto) => task?.title ?? "";
+  const getDueDate = (task: GetTasksDto) => normalizeDate(task?.dueDate);
+  const getCreatedAt = (task: GetTasksDto) => normalizeDate(task?.createdAt) || "";
+
   const getFieldOptions = (field: GetCustomFieldDefinitionDto) => {
     if (Array.isArray(field.options)) {
       return field.options;
     }
 
-    return String(field.options ?? '')
-      .split(',')
+    return String(field.options ?? "")
+      .split(",")
       .map((option) => option.trim())
       .filter(Boolean);
-  };
-
-  const getColorDotProps = (color?: string): { className: string; style?: CSSProperties } | null => {
-    if (!color) return null;
-
-    if (color.startsWith('bg-')) {
-      return { className: color };
-    }
-
-    return {
-      className: '',
-      style: { backgroundColor: color },
-    };
   };
 
   const getResolvedFieldValue = (task: TaskTableTask, field: GetCustomFieldDefinitionDto): CustomFieldValue => {
@@ -104,415 +135,620 @@ const TaskTable = ({
       return getFieldValue(task.id, field.id);
     }
 
-    return task.customFields?.[field.id] ?? task.customFields?.[field.name] ?? '';
+    return task.customFields?.[field.id] ?? task.customFields?.[field.name] ?? "";
   };
 
-  const renderReadOnlyFieldValue = (field: GetCustomFieldDefinitionDto, value: CustomFieldValue) => {
-    if (field.type === 'boolean') {
-      return (
-        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${value ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-          {value ? 'Sim' : 'Nao'}
-        </span>
-      );
+  const getCustomFieldValueLabel = (task: TaskTableTask, field: GetCustomFieldDefinitionDto) => {
+    const value = getResolvedFieldValue(task, field);
+    if (field.type === "boolean") {
+      return value ? "sim" : "nao";
     }
+    return String(value ?? "");
+  };
 
-    return <span className="text-sm text-slate-700">{String(value ?? '-')}</span>;
+  const setColumnSearchValue = (columnKey: string, value: string) => {
+    setColumnSearch((previous) => ({ ...previous, [columnKey]: value }));
   };
 
   const filteredTasks = useMemo(() => {
-    let list = [...visibleTasks];
+    let taskList = [...visibleTasks];
 
-    if (statusFilter === 'completed') {
-      list = list.filter(t => getIsCompleted(t));
-    } else if (statusFilter === 'pending') {
-      list = list.filter(t => !getIsCompleted(t));
+    if (statusFilter === "completed") {
+      taskList = taskList.filter((task) => getIsCompleted(task));
     }
 
-    list.sort((a, b) => {
-      const dir = sortDir === 'asc' ? 1 : -1;
-      if (sortBy === 'title') {
-        return String(getTitle(a)).localeCompare(String(getTitle(b))) * dir;
+    if (statusFilter === "pending") {
+      taskList = taskList.filter((task) => !getIsCompleted(task));
+    }
+
+    taskList = taskList.filter((task) => {
+      const taskQuery = (columnSearch.task ?? "").trim();
+      const projectsQuery = (columnSearch.projects ?? "").trim();
+      const dueDateQuery = (columnSearch.dueDate ?? "").trim();
+
+      if (taskQuery && !matchesQuery(getTitle(task), taskQuery)) {
+        return false;
       }
-      if (sortBy === 'due_date') {
-        return String(getDueDate(a)).localeCompare(String(getDueDate(b))) * dir;
+
+      if (activeView === "all" && projectsQuery) {
+        const projectsLabel = getTaskProjects(task.id)
+          .map((project) => project.name)
+          .join(" ");
+        if (!matchesQuery(projectsLabel, projectsQuery)) {
+          return false;
+        }
       }
-      return String(a.id || '').localeCompare(String(b.id || '')) * dir;
+
+      if (dueDateQuery && !matchesQuery(getDueDate(task), dueDateQuery)) {
+        return false;
+      }
+
+      for (const field of safeCustomFields) {
+        const fieldQuery = (columnSearch[`cf-${field.id}`] ?? "").trim();
+        if (!fieldQuery) continue;
+
+        const fieldLabel = getCustomFieldValueLabel(task, field);
+        if (!matchesQuery(fieldLabel, fieldQuery)) {
+          return false;
+        }
+      }
+
+      return true;
     });
 
-    return list;
-  }, [visibleTasks, statusFilter, sortBy, sortDir]);
+    const directionFactor = sortDescriptor.direction === "descending" ? -1 : 1;
+    const sortColumn = String(sortDescriptor.column ?? "dueDate");
+
+    taskList.sort((left, right) => {
+      if (sortColumn === "status") {
+        return (Number(getIsCompleted(left)) - Number(getIsCompleted(right))) * directionFactor;
+      }
+
+      if (sortColumn === "task") {
+        return compareText(getTitle(left), getTitle(right)) * directionFactor;
+      }
+
+      if (sortColumn === "projects") {
+        const leftProjects = getTaskProjects(left.id).map((project) => project.name).join(" ");
+        const rightProjects = getTaskProjects(right.id).map((project) => project.name).join(" ");
+        return compareText(leftProjects, rightProjects) * directionFactor;
+      }
+
+      if (sortColumn === "dueDate") {
+        return compareText(getDueDate(left), getDueDate(right)) * directionFactor;
+      }
+
+      if (sortColumn.startsWith("cf-")) {
+        const fieldId = sortColumn.replace("cf-", "");
+        const field = safeCustomFields.find((item) => item.id === fieldId);
+        if (!field) return 0;
+        return compareText(getCustomFieldValueLabel(left, field), getCustomFieldValueLabel(right, field)) * directionFactor;
+      }
+
+      if (sortColumn === "createdAt") {
+        return compareText(getCreatedAt(left), getCreatedAt(right)) * directionFactor;
+      }
+
+      return 0;
+    });
+
+    return taskList;
+  }, [visibleTasks, statusFilter, columnSearch, sortDescriptor, safeCustomFields]);
 
   const saveTaskField = (taskId: string, updates: { title?: string; dueDate?: string }) => {
     if (updateTaskInline) {
       updateTaskInline(taskId, updates);
-    } else {
-      if (updateTaskTitle && updates.title !== undefined) updateTaskTitle(taskId, updates.title);
-      if (updateTaskDueDate && updates.dueDate !== undefined) updateTaskDueDate(taskId, updates.dueDate);
+      return;
+    }
+
+    if (updates.title !== undefined) {
+      updateTaskTitle(taskId, updates.title);
+    }
+
+    if (updates.dueDate !== undefined) {
+      updateTaskDueDate(taskId, updates.dueDate);
     }
   };
 
+  const commitDraft = (key: string, commit: (value: string) => void) => {
+    const value = cfDrafts[key];
+    if (value === undefined) return;
+
+    commit(value);
+    setCfDrafts((previous) => {
+      const next = { ...previous };
+      delete next[key];
+      return next;
+    });
+  };
+
+  const cancelDraft = (key: string) => {
+    setCfDrafts((previous) => {
+      const next = { ...previous };
+      delete next[key];
+      return next;
+    });
+    if (cfTimers.current[key]) {
+      clearTimeout(cfTimers.current[key]);
+      delete cfTimers.current[key];
+    }
+  };
+
+  const queueDraftCommit = (key: string, value: string, commit: (next: string) => void) => {
+    setCfDrafts((previous) => ({ ...previous, [key]: value }));
+    if (cfTimers.current[key]) {
+      clearTimeout(cfTimers.current[key]);
+    }
+    cfTimers.current[key] = setTimeout(() => {
+      commit(value);
+      setCfDrafts((previous) => {
+        const next = { ...previous };
+        delete next[key];
+        return next;
+      });
+      delete cfTimers.current[key];
+    }, 1200);
+  };
+
+  const renderReadOnlyFieldValue = (field: GetCustomFieldDefinitionDto, value: CustomFieldValue) => {
+    if (field.type === "boolean") {
+      return (
+        <span
+          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${value ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
+            }`}
+        >
+          {value ? "Sim" : "Nao"}
+        </span>
+      );
+    }
+
+    return <span className="text-sm text-slate-700">{String(value ?? "-")}</span>;
+  };
+
+  const renderCustomFieldEditor = (task: TaskTableTask, field: GetCustomFieldDefinitionDto) => {
+    const fieldValue = getResolvedFieldValue(task, field);
+    const fieldOptions = getFieldOptions(field);
+    const key = `${task.id}::${field.id}`;
+    const draft = cfDrafts[key];
+
+    if (!updateCustomValue) {
+      return renderReadOnlyFieldValue(field, fieldValue);
+    }
+
+    if (field.type === "enum") {
+      return (
+        <select
+          className="field h-9 w-full bg-white px-2 text-sm"
+          value={String(fieldValue ?? "")}
+          onChange={(event) => updateCustomValue(task.id, field.id, event.target.value)}
+        >
+          <option value="">-</option>
+          {fieldOptions.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
+    if (field.type === "boolean") {
+      return (
+        <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            checked={Boolean(fieldValue)}
+            onChange={(event) => updateCustomValue(task.id, field.id, event.target.checked)}
+            className="h-4 w-4 rounded border-slate-300 text-[#2f6fb2]"
+          />
+          {fieldValue ? "Sim" : "Nao"}
+        </label>
+      );
+    }
+
+    if (field.type === "date") {
+      return (
+        <input
+          type="date"
+          value={String(fieldValue ?? "")}
+          onChange={(event) => updateCustomValue(task.id, field.id, event.target.value)}
+          className="field h-9 w-full bg-white px-2 text-sm"
+        />
+      );
+    }
+
+    return (
+      <input
+        type={field.type === "number" ? "number" : "text"}
+        value={draft !== undefined ? draft : String(fieldValue ?? "")}
+        onChange={(event) => {
+          queueDraftCommit(key, event.target.value, (nextValue) => {
+            if (field.type === "number") {
+              updateCustomValue(task.id, field.id, nextValue === "" ? undefined : Number(nextValue));
+            } else {
+              updateCustomValue(task.id, field.id, nextValue);
+            }
+          });
+        }}
+        onBlur={() => {
+          if (cfTimers.current[key]) {
+            clearTimeout(cfTimers.current[key]);
+            delete cfTimers.current[key];
+          }
+
+          commitDraft(key, (nextValue) => {
+            if (field.type === "number") {
+              updateCustomValue(task.id, field.id, nextValue === "" ? undefined : Number(nextValue));
+            } else {
+              updateCustomValue(task.id, field.id, nextValue);
+            }
+          });
+        }}
+        className="field h-9 w-full bg-white px-2 text-sm"
+        placeholder="-"
+      />
+    );
+  };
+
   return (
-    <div className="min-w-full inline-block align-middle">
-      {/* Filters */}
-      <div className="w-full p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="text-xs text-slate-400">
-            Mostrando <span className="font-semibold text-slate-600">{filteredTasks.length}</span> tarefas
-          </div>
-          <div className="flex flex-wrap items-center gap-2 ml-auto">
-            <div className="relative flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-              <Filter className="w-4 h-4 text-slate-400 mr-2" />
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="border-b border-slate-200 bg-white/90 p-4 backdrop-blur">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+          <p className="text-sm text-slate-500">
+            Mostrando <span className="font-semibold text-slate-700">{filteredTasks.length}</span> tarefas
+          </p>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
+              <Filter className="h-4 w-4 text-slate-400" />
               <select
-                className="text-sm bg-transparent focus:outline-none text-slate-700 pr-6"
+                className="bg-transparent text-sm text-slate-700 outline-none"
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as 'all' | 'completed' | 'pending')}
+                onChange={(event) => setStatusFilter(event.target.value as "all" | "completed" | "pending")}
               >
                 <option value="all">Todas</option>
-                <option value="completed">Concluídas</option>
+                <option value="completed">Concluidas</option>
                 <option value="pending">Pendentes</option>
               </select>
             </div>
-            <div className="relative flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-              <ArrowUpDown className="w-4 h-4 text-slate-400 mr-2" />
-              <select
-                className="text-sm bg-transparent focus:outline-none text-slate-700 pr-2"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as 'due_date' | 'title' | 'created')}
-              >
-                <option value="due_date">Prazo</option>
-                <option value="title">Título</option>
-                <option value="created">Criação</option>
-              </select>
-              <select
-                className="text-sm bg-transparent focus:outline-none text-slate-700 pr-2 ml-2"
-                value={sortDir}
-                onChange={(e) => setSortDir(e.target.value as 'asc' | 'desc')}
-              >
-                <option value="asc">Asc</option>
-                <option value="desc">Desc</option>
-              </select>
-            </div>
+
+            <button
+              onClick={() => setAreFiltersExpanded((previous) => !previous)}
+              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-50"
+            >
+              {areFiltersExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              {areFiltersExpanded ? "Esconder filtros" : "Mostrar filtros"}
+            </button>
+
             <button
               onClick={() => {
-                setStatusFilter('all');
-                setSortBy('due_date');
-                setSortDir('asc');
+                setStatusFilter("all");
+                setColumnSearch({});
+                setSortDescriptor({ column: "dueDate", direction: "ascending" });
               }}
-              className="flex items-center gap-1 px-3 py-2 text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors"
-              title="Limpar filtros"
+              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-50"
             >
-              <XCircle className="w-4 h-4" />
+              <XCircle className="h-4 w-4" />
               Limpar filtros
             </button>
           </div>
         </div>
 
-        {/* Active filter chips */}
-        {/* <div className="flex flex-wrap items-center gap-2 mt-3 justify-end">
-          {statusFilter !== 'all' && (
-            <span className="inline-flex items-center gap-1 text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-1 rounded-full">
-              Status: {statusFilter === 'completed' ? 'Concluídas' : 'Pendentes'}
-            </span>
-          )}
-          {(sortBy !== 'due_date' || sortDir !== 'asc') && (
-            <span className="inline-flex items-center gap-1 text-xs bg-slate-50 text-slate-700 border border-slate-200 px-2 py-1 rounded-full">
-              Ordenar: {sortBy === 'title' ? 'Título' : sortBy === 'created' ? 'Criação' : 'Prazo'} • {sortDir === 'asc' ? 'Asc' : 'Desc'}
-            </span>
-          )}
-        </div> */}
-      </div>
-      <div className="border-b border-slate-200">
-        {/* TABLE HEADER */}
-        <div className="flex items-center bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wider sticky top-0 z-10 border-b border-slate-200 shadow-sm">
-          <div className="w-10 px-4 py-3 text-center"></div>
-          <div className="flex-1 px-4 py-3 border-r border-slate-100">Nome da Tarefa</div>
-
-          {/* Conditionally Render Projects Column Header */}
-          {activeView === 'all' && (
-            <div className="w-64 px-4 py-3 border-r border-slate-100">Projetos</div>
-          )}
-
-          <div className="w-40 px-4 py-3 border-r border-slate-100">Prazo</div>
-
-          {/* Dynamic Headers for Custom Fields */}
-          {safeCustomFields.map((field: any) => (
-            <div key={field.id} className="w-48 px-4 py-3 border-r border-slate-100 flex items-center gap-2">
-              {field.type === 'number' && <Hash className="w-3 h-3" />}
-              {field.type === 'text' && <Type className="w-3 h-3" />}
-              {field.type === 'enum' && <List className="w-3 h-3" />}
-              {field.type === 'date' && <Calendar className="w-3 h-3" />}
-              {field.type === 'boolean' && <CheckCircle2 className="w-3 h-3" />}
-              {field.name}
+        {areFiltersExpanded && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <div className="relative w-full min-w-[180px] flex-1 md:w-auto md:max-w-[240px]">
+              <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+              <input
+                className="field h-9 w-full bg-white pl-8 pr-2 text-sm"
+                placeholder="Buscar na coluna Tarefa"
+                value={columnSearch.task ?? ""}
+                onChange={(event) => setColumnSearchValue("task", event.target.value)}
+              />
             </div>
-          ))}
 
-          {/* Actions Column */}
-          <div className="w-24 px-4 py-3 text-center">Ações</div>
-        </div>
+            {activeView === "all" && (
+              <div className="relative w-full min-w-[180px] flex-1 md:w-auto md:max-w-[240px]">
+                <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                <input
+                  className="field h-9 w-full bg-white pl-8 pr-2 text-sm"
+                  placeholder="Buscar na coluna Projetos"
+                  value={columnSearch.projects ?? ""}
+                  onChange={(event) => setColumnSearchValue("projects", event.target.value)}
+                />
+              </div>
+            )}
 
-        {/* TABLE BODY */}
-        <div>
-          {filteredTasks.map((task: any) => {
-            const titleKey = `${task.id}::__title`;
-            const titleDraft = cfDrafts[titleKey];
-            const isEditing = editingTaskId === task.id || titleDraft !== undefined;
-            return (
-              <div
-                key={task.id}
-                className={`group flex items-center border-b border-slate-100 last:border-0 transition-all ${isEditing ? 'bg-indigo-50/60 ring-1 ring-indigo-200/60 shadow-sm' : 'hover:bg-slate-50'
-                  }`}
+            <div className="relative w-full min-w-[180px] flex-1 md:w-auto md:max-w-[220px]">
+              <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+              <input
+                className="field h-9 w-full bg-white pl-8 pr-2 text-sm"
+                placeholder="Buscar na coluna Prazo"
+                value={columnSearch.dueDate ?? ""}
+                onChange={(event) => setColumnSearchValue("dueDate", event.target.value)}
+              />
+            </div>
+
+            {safeCustomFields.map((field) => (
+              <div key={field.id} className="relative w-full min-w-[180px] flex-1 md:w-auto md:max-w-[240px]">
+                <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                <input
+                  className="field h-9 w-full bg-white pl-8 pr-2 text-sm"
+                  placeholder={`Buscar em ${field.name}`}
+                  value={columnSearch[`cf-${field.id}`] ?? ""}
+                  onChange={(event) => setColumnSearchValue(`cf-${field.id}`, event.target.value)}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-auto bg-white">
+        <Table
+          aria-label="Tabela de tarefas"
+          className="min-w-[980px] w-full border-separate border-spacing-0"
+          sortDescriptor={sortDescriptor}
+          onSortChange={setSortDescriptor}
+        >
+          <TableHeader className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur">
+            <Column
+              id="status"
+              allowsSorting
+              className="w-14 border-b border-slate-200 px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600"
+            >
+              {({ sortDirection }) => (
+                <span className="inline-flex items-center gap-1">
+                  Status
+                  <ArrowUpDown className={`h-3.5 w-3.5 ${sortDirection ? "text-slate-700" : "text-slate-400"}`} />
+                </span>
+              )}
+            </Column>
+            <Column
+              id="task"
+              allowsSorting
+              className="min-w-[240px] border-b border-slate-200 px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600"
+            >
+              {({ sortDirection }) => (
+                <span className="inline-flex items-center gap-1">
+                  Tarefa
+                  <ArrowUpDown className={`h-3.5 w-3.5 ${sortDirection ? "text-slate-700" : "text-slate-400"}`} />
+                </span>
+              )}
+            </Column>
+            {activeView === "all" && (
+              <Column
+                id="projects"
+                allowsSorting
+                className="w-72 border-b border-slate-200 px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600"
               >
+                {({ sortDirection }) => (
+                  <span className="inline-flex items-center gap-1">
+                    Projetos
+                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortDirection ? "text-slate-700" : "text-slate-400"}`} />
+                  </span>
+                )}
+              </Column>
+            )}
+            <Column
+              id="dueDate"
+              allowsSorting
+              className="w-44 border-b border-slate-200 px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600"
+            >
+              {({ sortDirection }) => (
+                <span className="inline-flex items-center gap-1">
+                  Prazo
+                  <ArrowUpDown className={`h-3.5 w-3.5 ${sortDirection ? "text-slate-700" : "text-slate-400"}`} />
+                </span>
+              )}
+            </Column>
+            {safeCustomFields.map((field) => (
+              <Column
+                key={field.id}
+                id={`cf-${field.id}`}
+                allowsSorting
+                className="w-52 border-b border-slate-200 px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600"
+              >
+                {({ sortDirection }) => (
+                  <span className="inline-flex items-center gap-1">
+                    {field.name}
+                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortDirection ? "text-slate-700" : "text-slate-400"}`} />
+                  </span>
+                )}
+              </Column>
+            ))}
+            <Column id="actions" className="w-28 border-b border-slate-200 px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-600">
+              Acoes
+            </Column>
+          </TableHeader>
 
-                {/* Checkbox Column */}
-                <div className="w-10 px-4 py-2 flex justify-center shrink-0">
-                  <button onClick={() => toggleTaskCompletion(task.id)} className="text-slate-400 hover:text-green-600 transition-colors">
-                    {getIsCompleted(task) ? <CheckCircle2 className="w-5 h-5 text-green-600" /> : <Circle className="w-5 h-5" />}
-                  </button>
-                </div>
+          <TableBody>
+            {filteredTasks.map((task) => {
+              const titleKey = `${task.id}::__title`;
+              const titleDraft = cfDrafts[titleKey];
+              const titleValue = titleDraft !== undefined ? titleDraft : getTitle(task);
+              const isEditing = editingTaskId === task.id || titleDraft !== undefined;
 
-                {/* Task Title Column */}
-                <div className="flex-1 px-4 py-2 border-r border-slate-100 shrink-0 min-w-[200px]">
-                  <input
-                    type="text"
-                    value={titleDraft !== undefined ? titleDraft : getTitle(task)}
-                    placeholder="Escreva uma tarefa..."
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setCfDrafts(prev => ({ ...prev, [titleKey]: val }));
-                      if (cfTimers.current[titleKey]) clearTimeout(cfTimers.current[titleKey]);
-                      cfTimers.current[titleKey] = setTimeout(() => {
-                        saveTaskField(task.id, { title: val });
-                        setCfDrafts(prev => { const n = { ...prev }; delete n[titleKey]; return n; });
-                        delete cfTimers.current[titleKey];
-                      }, 1500);
-                    }}
-                    onFocus={() => setEditingTaskId(task.id)}
-                    onBlur={() => {
-                      setEditingTaskId(null);
-                      if (cfTimers.current[titleKey]) {
-                        clearTimeout(cfTimers.current[titleKey]);
-                        delete cfTimers.current[titleKey];
-                      }
-                      if (titleDraft !== undefined) {
-                        saveTaskField(task.id, { title: titleDraft });
-                        setCfDrafts(prev => { const n = { ...prev }; delete n[titleKey]; return n; });
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        e.currentTarget.blur();
-                      } else if (e.key === 'Escape') {
-                        e.preventDefault();
-                        if (cfTimers.current[titleKey]) { clearTimeout(cfTimers.current[titleKey]); delete cfTimers.current[titleKey]; }
-                        setCfDrafts(prev => { const n = { ...prev }; delete n[titleKey]; return n; });
+              return (
+                <Row
+                  id={task.id}
+                  key={task.id}
+                  className={`group transition-colors ${isEditing ? "bg-sky-50/70" : "hover:bg-slate-50"}`}
+                >
+                  <Cell className="border-b border-slate-100 px-3 py-2">
+                    <button
+                      onClick={() => toggleTaskCompletion(task.id)}
+                      className="text-slate-400 transition-colors hover:text-emerald-600"
+                    >
+                      {getIsCompleted(task) ? (
+                        <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                      ) : (
+                        <Circle className="h-5 w-5" />
+                      )}
+                    </button>
+                  </Cell>
+
+                  <Cell className="border-b border-slate-100 px-3 py-2">
+                    <input
+                      type="text"
+                      value={titleValue}
+                      placeholder="Escreva uma tarefa..."
+                      onFocus={() => setEditingTaskId(task.id)}
+                      onBlur={() => {
                         setEditingTaskId(null);
-                        e.currentTarget.blur();
-                      }
-                    }}
-                    className={`w-full bg-transparent border-none focus:ring-0 p-0 text-sm ${getIsCompleted(task) ? 'text-slate-400 line-through' : 'text-slate-800'}`}
-                  />
-                </div>
+                        if (cfTimers.current[titleKey]) {
+                          clearTimeout(cfTimers.current[titleKey]);
+                          delete cfTimers.current[titleKey];
+                        }
+                        commitDraft(titleKey, (nextValue) => saveTaskField(task.id, { title: nextValue }));
+                      }}
+                      onChange={(event) => {
+                        queueDraftCommit(titleKey, event.target.value, (nextValue) => saveTaskField(task.id, { title: nextValue }));
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Escape") {
+                          event.preventDefault();
+                          cancelDraft(titleKey);
+                          setEditingTaskId(null);
+                          event.currentTarget.blur();
+                        }
 
-                {/* Projects Column (Only in All Tasks view) */}
-                {activeView === 'all' && (
-                  <div className="w-64 px-4 py-2 border-r border-slate-100 shrink-0 flex items-center gap-1.5 flex-wrap">
-                    {getTaskProjects(task.id).map((proj: any) => (
-                      <span
-                        key={proj.id}
-                        className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200"
-                      >
-                        {(() => {
-                          const colorDot = getColorDotProps(proj.color);
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          event.currentTarget.blur();
+                        }
+                      }}
+                      className={`w-full rounded-lg border border-transparent bg-transparent px-2 py-1 text-sm outline-none transition-colors focus:border-slate-300 focus:bg-white ${getIsCompleted(task) ? "text-slate-400 line-through" : "text-slate-800"
+                        }`}
+                    />
+                  </Cell>
+
+                  {activeView === "all" && (
+                    <Cell className="border-b border-slate-100 px-3 py-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {getTaskProjects(task.id).map((project) => {
+                          const colorDot = getColorDotProps(project.color);
+
                           return (
                             <span
-                              className={`w-1.5 h-1.5 rounded-full mr-1.5 ${colorDot?.className ?? ''}`}
-                              style={colorDot?.style}
-                            />
+                              key={project.id}
+                              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-700"
+                            >
+                              <span className={`h-2 w-2 rounded-full ${colorDot?.className ?? ""}`} style={colorDot?.style} />
+                              {project.name}
+                              <button
+                                onClick={() => removeProjectFromTask(task.id, project.id)}
+                                className="text-slate-400 transition-colors hover:text-rose-600"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </span>
                           );
-                        })()}
-                        {proj.name}
-                        <button
-                          onClick={() => removeProjectFromTask(task.id, proj.id)}
-                          className="ml-1 text-slate-400 hover:text-red-500"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    ))}
+                        })}
 
-                    {/* Add Project Button (Native Select Trick) */}
-                    <div className="relative group/add inline-flex items-center justify-center">
-                      <button className="p-0.5 rounded-full hover:bg-slate-200 text-slate-400 hover:text-indigo-600 transition-colors">
-                        <Plus className="w-4 h-4" />
-                      </button>
-                      <select
-                        className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-                        value=""
-                        onChange={(e) => addProjectToTask(task.id, e.target.value)}
-                      >
-                        <option value="" disabled>Adicionar...</option>
-                        {projects
-                          .filter((p: any) => !getTaskProjects(task.id).find((tp: any) => tp.id === p.id))
-                          .map((p: any) => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                          ))}
-                      </select>
+                        <div className="relative inline-flex">
+                          <button className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-slate-300 text-slate-400 hover:text-slate-700">
+                            <Plus className="h-3.5 w-3.5" />
+                          </button>
+                          <select
+                            className="absolute inset-0 cursor-pointer opacity-0"
+                            value=""
+                            onChange={(event) => addProjectToTask(task.id, event.target.value)}
+                          >
+                            <option value="" disabled>
+                              Adicionar...
+                            </option>
+                            {projects
+                              .filter((project) => !getTaskProjects(task.id).find((taskProject) => taskProject.id === project.id))
+                              .map((project) => (
+                                <option key={project.id} value={project.id}>
+                                  {project.name}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                      </div>
+                    </Cell>
+                  )}
+
+                  <Cell className="border-b border-slate-100 px-3 py-2">
+                    <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1.5">
+                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                      <input
+                        type="date"
+                        value={getDueDate(task)}
+                        onChange={(event) => saveTaskField(task.id, { dueDate: event.target.value })}
+                        className="w-full bg-transparent text-sm text-slate-700 outline-none"
+                      />
                     </div>
-                  </div>
-                )}
+                  </Cell>
 
-                {/* Due Date Column */}
-                <div className="w-40 px-4 py-2 border-r border-slate-100 shrink-0">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                    <input
-                      type="date"
-                      value={getDueDate(task)}
-                      onChange={(e) => saveTaskField(task.id, { dueDate: e.target.value })}
-                      onFocus={() => setEditingTaskId(task.id)}
-                      onBlur={() => setEditingTaskId(null)}
-                      className="bg-transparent border-none focus:ring-0 p-0 text-sm text-slate-700 cursor-pointer hover:text-slate-900"
-                    />
-                  </div>
-                </div>
+                  {safeCustomFields.map((field) => (
+                    <Cell key={field.id} className="border-b border-slate-100 px-3 py-2">
+                      {renderCustomFieldEditor(task, field)}
+                    </Cell>
+                  ))}
 
-                {/* Dynamic Custom Field Columns */}
-                {safeCustomFields.map((field: any) => {
-                  const fieldValue = getResolvedFieldValue(task, field);
-                  const fieldOptions = getFieldOptions(field);
-                  const cfKey = `${task.id}::${field.id}`;
-                  const cfDraftVal = cfDrafts[cfKey];
-
-                  return (
-                    <div key={field.id} className="w-48 px-4 py-2 border-r border-slate-100 shrink-0">
-                      {!updateCustomValue ? (
-                        renderReadOnlyFieldValue(field, fieldValue)
-                      ) : field.type === 'enum' ? (
-                        <select
-                          className="w-full bg-transparent text-sm border-none focus:ring-0 p-0 text-slate-700 cursor-pointer"
-                          value={String(fieldValue ?? '')}
-                          onChange={(e) => updateCustomValue(task.id, field.id, e.target.value)}
+                  <Cell className="border-b border-slate-100 px-3 py-2">
+                    <div className="flex items-center justify-center gap-1">
+                      {titleDraft !== undefined && (
+                        <>
+                          <button
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => commitDraft(titleKey, (nextValue) => saveTaskField(task.id, { title: nextValue }))}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                            title="Salvar titulo"
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                          </button>
+                          <button
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => cancelDraft(titleKey)}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200"
+                            title="Cancelar"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </>
+                      )}
+                      {onEditTask && (
+                        <button
+                          onClick={() => onEditTask(task)}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-200 hover:text-slate-700"
+                          title="Editar tarefa"
                         >
-                          <option value="">-</option>
-                          {fieldOptions.map((opt) => (
-                            <option key={opt} value={opt}>{opt}</option>
-                          ))}
-                        </select>
-                      ) : field.type === 'boolean' ? (
-                        <label className="inline-flex items-center gap-2 text-sm text-slate-700">
-                          <input
-                            type="checkbox"
-                            checked={Boolean(fieldValue)}
-                            onChange={(e) => updateCustomValue(task.id, field.id, e.target.checked)}
-                            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                          />
-                          {fieldValue ? 'Sim' : 'Nao'}
-                        </label>
-                      ) : field.type === 'date' ? (
-                        <input
-                          type="date"
-                          value={String(fieldValue ?? '')}
-                          onChange={(e) => updateCustomValue(task.id, field.id, e.target.value)}
-                          placeholder="-"
-                          className="w-full bg-transparent text-sm border-none focus:ring-0 p-0 text-slate-700 placeholder:text-slate-300"
-                        />
-                      ) : (
-                        <input
-                          type={field.type === 'number' ? 'number' : 'text'}
-                          value={cfDraftVal !== undefined ? cfDraftVal : String(fieldValue ?? '')}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setCfDrafts(prev => ({ ...prev, [cfKey]: val }));
-                            if (cfTimers.current[cfKey]) clearTimeout(cfTimers.current[cfKey]);
-                            cfTimers.current[cfKey] = setTimeout(() => {
-                              updateCustomValue!(task.id, field.id, field.type === 'number' ? (val === '' ? undefined : Number(val)) : val);
-                              setCfDrafts(prev => { const n = { ...prev }; delete n[cfKey]; return n; });
-                              delete cfTimers.current[cfKey];
-                            }, 1500);
-                          }}
-                          onBlur={() => {
-                            if (cfTimers.current[cfKey]) {
-                              clearTimeout(cfTimers.current[cfKey]);
-                              delete cfTimers.current[cfKey];
-                            }
-                            if (cfDraftVal !== undefined) {
-                              updateCustomValue!(task.id, field.id, field.type === 'number' ? (cfDraftVal === '' ? undefined : Number(cfDraftVal)) : cfDraftVal);
-                              setCfDrafts(prev => { const n = { ...prev }; delete n[cfKey]; return n; });
-                            }
-                          }}
-                          placeholder="-"
-                          className="w-full bg-transparent text-sm border-none focus:ring-0 p-0 text-slate-700 placeholder:text-slate-300"
-                        />
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                      )}
+                      {onDeleteTask && (
+                        <button
+                          onClick={() => onDeleteTask(task.id)}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-rose-100 hover:text-rose-700"
+                          title="Excluir tarefa"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       )}
                     </div>
-                  );
-                })}
+                  </Cell>
+                </Row>
+              );
+            })}
+          </TableBody>
+        </Table>
 
-                {/* Actions Column */}
-                <div className="w-32 px-4 py-2 shrink-0">
-                  <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {titleDraft !== undefined && (
-                      <>
-                        <button
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => {
-                            if (cfTimers.current[titleKey]) { clearTimeout(cfTimers.current[titleKey]); delete cfTimers.current[titleKey]; }
-                            saveTaskField(task.id, { title: titleDraft });
-                            setCfDrafts(prev => { const n = { ...prev }; delete n[titleKey]; return n; });
-                          }}
-                          className="p-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-md transition-colors"
-                          title="Confirmar edição"
-                        >
-                          <CheckCircle2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => {
-                            if (cfTimers.current[titleKey]) { clearTimeout(cfTimers.current[titleKey]); delete cfTimers.current[titleKey]; }
-                            setCfDrafts(prev => { const n = { ...prev }; delete n[titleKey]; return n; });
-                          }}
-                          className="p-1.5 bg-slate-100 text-slate-500 hover:bg-slate-200 rounded-md transition-colors"
-                          title="Cancelar edição"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </>
-                    )}
-                    {onEditTask && (
-                      <button
-                        onClick={() => onEditTask(task)}
-                        className="p-1.5 hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 rounded-md transition-colors"
-                        title="Editar tarefa"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                    )}
-                    {onDeleteTask && (
-                      <button
-                        onClick={() => onDeleteTask(task.id)}
-                        className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-md transition-colors"
-                        title="Excluir tarefa"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
+        {filteredTasks.length === 0 && (
+          <div className="px-4 py-12 text-center text-sm text-slate-500">Nenhuma tarefa para os filtros atuais.</div>
+        )}
+      </div>
 
-              </div>
-            )
-          })}
-
-          {/* Add Task Row */}
-          <button
-            onClick={addTask}
-            className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors border-b border-slate-100 text-sm"
-          >
-            <Plus className="w-5 h-5 ml-1" />
-            <span>Adicionar tarefa...</span>
-          </button>
-        </div>
+      <div className="border-t border-slate-200 bg-white px-3 py-3">
+        <button
+          onClick={addTask}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50"
+        >
+          <Plus className="h-4 w-4" />
+          Adicionar tarefa
+        </button>
       </div>
     </div>
   );

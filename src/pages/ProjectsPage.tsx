@@ -210,9 +210,13 @@ const ProjectsPage = () => {
     const task = tasks.find((item) => item.id === taskId);
     if (!field || !task || !projectId) return;
 
+    const previousCustomFields = { ...(task.customFields ?? {}) };
     const nextCustomFields = { ...(task.customFields ?? {}) };
     delete nextCustomFields[fieldId];
     nextCustomFields[field.name] = value;
+
+    const currentValue = getFieldValue(taskId, fieldId);
+    const hasCurrentValue = currentValue !== '' && currentValue !== undefined && currentValue !== null;
 
     setTasks((previousTasks) =>
       previousTasks.map((currentTask) =>
@@ -226,17 +230,23 @@ const ProjectsPage = () => {
     );
 
     const payload = buildCustomFieldValuePayload(taskId, fieldId, field.type, value);
-    const currentValue = getFieldValue(taskId, fieldId);
-    const hasCurrentValue = currentValue !== '' && currentValue !== undefined && currentValue !== null;
     const request = hasCurrentValue ? customFieldValuesApi.update(payload, projectId) : customFieldValuesApi.create(payload, projectId);
 
     void (async () => {
       try {
         await request;
-        await refreshProjectData();
       } catch (error: any) {
         toast.error(error?.message ?? 'Erro ao salvar campo personalizado');
-        await refreshProjectData();
+        setTasks((previousTasks) =>
+          previousTasks.map((currentTask) =>
+            currentTask.id === taskId
+              ? {
+                ...currentTask,
+                customFields: previousCustomFields,
+              }
+              : currentTask
+          )
+        );
       }
     })();
   };
@@ -359,30 +369,28 @@ const ProjectsPage = () => {
         onRemoveCustomField={handleRemoveCustomField}
       >
         {isLoading ? (
-          <div className="px-6 py-8 text-sm text-slate-500">Carregando projeto...</div>
+          <div className="flex flex-1 items-center justify-center px-6 py-8 text-sm text-slate-500">Carregando projeto...</div>
         ) : !currentProject ? (
-          <div className="px-6 py-8 text-sm text-slate-500">Projeto nao encontrado.</div>
+          <div className="flex flex-1 items-center justify-center px-6 py-8 text-sm text-slate-500">Projeto nao encontrado.</div>
         ) : (
-          <div className="flex-1 overflow-auto bg-white">
-            <TaskTable
-              visibleTasks={tasks}
-              activeView={projectId ?? ''}
-              activeCustomFields={customFields}
-              getFieldValue={getFieldValue}
-              updateCustomValue={updateCustomValue}
-              toggleTaskCompletion={toggleTaskCompletion}
-              addTask={addTask}
-              projects={projects}
-              getTaskProjects={getTaskProjects}
-              addProjectToTask={() => undefined}
-              removeProjectFromTask={() => undefined}
-              updateTaskTitle={updateTaskTitle}
-              updateTaskDueDate={updateTaskDueDate}
-              updateTaskInline={updateTaskInline}
-              onEditTask={handleEditTask}
-              onDeleteTask={handleDeleteTask}
-            />
-          </div>
+          <TaskTable
+            visibleTasks={tasks}
+            activeView={projectId ?? ''}
+            activeCustomFields={customFields}
+            getFieldValue={getFieldValue}
+            updateCustomValue={updateCustomValue}
+            toggleTaskCompletion={toggleTaskCompletion}
+            addTask={addTask}
+            projects={projects}
+            getTaskProjects={getTaskProjects}
+            addProjectToTask={() => undefined}
+            removeProjectFromTask={() => undefined}
+            updateTaskTitle={updateTaskTitle}
+            updateTaskDueDate={updateTaskDueDate}
+            updateTaskInline={updateTaskInline}
+            onEditTask={handleEditTask}
+            onDeleteTask={handleDeleteTask}
+          />
         )}
 
         <AddTaskModal
