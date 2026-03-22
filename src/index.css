@@ -1,1 +1,188 @@
 @import "tailwindcss";
+
+:root {
+  font-family: "Manrope", "Avenir Next", "Segoe UI", sans-serif;
+  color: #0f172a;
+  background-color: #f3f5f8;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  --bg-canvas: #f3f5f8;
+  --bg-panel: #ffffff;
+  --bg-soft: #eef2f6;
+  --border-subtle: #d8e0e8;
+  --text-primary: #0f172a;
+  --text-muted: #516176;
+  --brand: #2f6fb2;
+  --brand-strong: #225587;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--text-primary);
+  background:
+    radial-gradient(1200px circle at 0 0, rgba(53, 113, 174, 0.12) 0%, transparent 55%),
+    radial-gradient(900px circle at 100% 100%, rgba(19, 153, 128, 0.1) 0%, transparent 45%),
+    var(--bg-canvas);
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.surface-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+}
+
+.surface-glass {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0.6));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: 18px;
+  box-shadow: 0 16px 35px rgba(15, 23, 42, 0.08), 0 1px 0 rgba(255, 255, 255, 0.85) inset;
+}
+
+.surface-soft {
+  background: var(--bg-soft);
+  border: 1px solid rgba(216, 224, 232, 0.8);
+}
+
+.field {
+  border: 1px solid #cfdae6;
+  border-radius: 12px;
+  background: #fdfefe;
+  color: #0f172a;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.field:focus-visible {
+  outline: none;
+  border-color: #5f8fbe;
+  box-shadow: 0 0 0 3px rgba(95, 143, 190, 0.2);
+  background: #ffffff;
+}
+
+.fc {
+  --fc-border-color: #e2e8f0;
+  --fc-page-bg-color: #ffffff;
+  --fc-neutral-bg-color: #f8fafc;
+  --fc-list-event-hover-bg-color: #f1f5f9;
+}
+
+.fc .fc-toolbar {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.fc .fc-toolbar-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.fc .fc-button {
+  border: 1px solid #d5dce5 !important;
+  background: #ffffff !important;
+  color: #334155 !important;
+  box-shadow: none !important;
+  text-transform: capitalize !important;
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  font-size: 0.8rem !important;
+  padding: 0.4rem 0.75rem !important;
+}
+
+.fc .fc-button:hover {
+  background: #f8fafc !important;
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active {
+  background: #2f6fb2 !important;
+  border-color: #2f6fb2 !important;
+  color: #ffffff !important;
+}
+
+.fc .fc-daygrid-day-number {
+  color: #334155;
+  font-size: 0.8rem;
+  padding: 6px;
+}
+
+.fc .fc-day-today {
+  background: rgba(47, 111, 178, 0.08) !important;
+}
+
+.fc .fc-col-header-cell-cushion {
+  color: #475569;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 10px 4px;
+}
+
+.fc .klip-fc-event {
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 1px 6px !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+}
+
+.fc .klip-fc-event.is-pending {
+  background: #dbeafe !important;
+  color: #1e3a8a !important;
+}
+
+.fc .klip-fc-event.is-completed {
+  background: #dcfce7 !important;
+  color: #166534 !important;
+  text-decoration: line-through;
+}
+
+.mobile-sheet-enter {
+  animation: mobileSheetIn 0.24s ease;
+}
+
+@keyframes mobileSheetIn {
+  from {
+    opacity: 0;
+    transform: translateX(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

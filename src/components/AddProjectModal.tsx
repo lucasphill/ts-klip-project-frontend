@@ -1,5 +1,5 @@
-import { useState, useEffect, type FC } from 'react';
-import { X } from 'lucide-react';
+import { useEffect, useState, type FC } from "react";
+import { X } from "lucide-react";
 
 interface Project {
   id?: string;
@@ -16,144 +16,134 @@ interface AddProjectModalProps {
   project?: Project | null;
 }
 
-const PRESET_COLORS = [
-  '#6366f1', // indigo
-  '#10b981', // emerald
-  '#ec4899', // pink
-  '#f59e0b', // amber
-  '#8b5cf6', // violet
-  '#3b82f6', // blue
-  '#ef4444', // red
-  '#14b8a6', // teal
-];
+const PRESET_COLORS = ["#2f6fb2", "#1f9d8f", "#d9772b", "#bb4f5c", "#7a6ac8", "#2f839f", "#708142", "#c15f2e"];
 
 const AddProjectModal: FC<AddProjectModalProps> = ({ isOpen, onClose, onSave, project }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<Project>({
-    name: '',
-    description: '',
+    name: "",
+    description: "",
     color: PRESET_COLORS[0],
-    owner_id: 'auth0|1', // Default current user
+    owner_id: "auth0|1",
   });
 
   useEffect(() => {
     if (project) {
       setFormData({
         name: project.name,
-        description: project.description || '',
+        description: project.description || "",
         color: project.color || PRESET_COLORS[0],
         owner_id: project.owner_id,
       });
-    } else {
-      setFormData({
-        name: '',
-        description: '',
-        color: PRESET_COLORS[0],
-        owner_id: 'auth0|1',
-      });
+      return;
     }
+
+    setFormData({
+      name: "",
+      description: "",
+      color: PRESET_COLORS[0],
+      owner_id: "auth0|1",
+    });
   }, [project, isOpen]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  if (!isOpen) return null;
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (!formData.name.trim()) return;
 
     setIsSubmitting(true);
     try {
-      await onSave({ ...formData, id: project?.id });
+      await onSave({
+        ...formData,
+        name: formData.name.trim(),
+        description: formData.description?.trim() || undefined,
+        id: project?.id,
+      });
       onClose();
     } catch {
-      // onSave já exibiu o toast de erro; modal permanece aberto
+      // onSave ja lida com o feedback de erro via toast.
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-200">
-          <h2 className="text-xl font-bold text-slate-900">
-            {project ? 'Editar Projeto' : 'Novo Projeto'}
-          </h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 px-3 py-4 backdrop-blur-sm">
+      <div className="surface-panel max-h-[95vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white">
+        <div className="flex items-start justify-between border-b border-slate-200 px-5 py-4 sm:px-6">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">{project ? "Editar projeto" : "Novo projeto"}</h2>
+            <p className="mt-1 text-sm text-slate-500">Defina nome, descricao e cor para organizar seu espaco.</p>
+          </div>
           <button
             onClick={onClose}
             disabled={isSubmitting}
-            className="text-slate-400 hover:text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label="Fechar modal"
           >
-            <X className="w-5 h-5" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Nome do Projeto *
-            </label>
+        <form onSubmit={handleSubmit} className="space-y-4 px-5 py-5 sm:px-6">
+          <div className="space-y-1.5">
+            <label className="text-sm font-semibold text-slate-700">Nome do projeto *</label>
             <input
               type="text"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Ex: Lançamento Website"
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              onChange={(event) => setFormData({ ...formData, name: event.target.value })}
+              placeholder="Ex: Roadmap Produto 2026"
+              className="field h-11 w-full px-3 text-sm"
               autoFocus
               required
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Descrição
-            </label>
+          <div className="space-y-1.5">
+            <label className="text-sm font-semibold text-slate-700">Descricao</label>
             <textarea
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Descreva o projeto..."
-              rows={3}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+              onChange={(event) => setFormData({ ...formData, description: event.target.value })}
+              placeholder="Contexto e objetivo principal do projeto."
+              rows={4}
+              className="field w-full resize-none px-3 py-2 text-sm"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Cor
-            </label>
-            <div className="flex gap-2 flex-wrap">
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700">Cor</label>
+            <div className="flex flex-wrap gap-2">
               {PRESET_COLORS.map((color) => (
                 <button
                   key={color}
                   type="button"
                   onClick={() => setFormData({ ...formData, color })}
-                  className={`w-10 h-10 rounded-lg transition-all ${formData.color === color
-                    ? 'ring-2 ring-slate-400 ring-offset-2 scale-110'
-                    : 'hover:scale-105'
-                    }`}
+                  className={`h-9 w-9 rounded-xl border transition-all ${
+                    formData.color === color ? "scale-110 border-slate-500 ring-2 ring-slate-300" : "border-slate-200 hover:scale-105"
+                  }`}
                   style={{ backgroundColor: color }}
+                  title={`Cor ${color}`}
                 />
               ))}
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex gap-3 pt-4">
+          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium"
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors font-medium"
+              className="inline-flex items-center justify-center rounded-xl bg-[#2f6fb2] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#225587] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting ? 'Salvando...' : (project?.id ? 'Salvar' : 'Criar Projeto')}
+              {isSubmitting ? "Salvando..." : project?.id ? "Salvar projeto" : "Criar projeto"}
             </button>
           </div>
         </form>

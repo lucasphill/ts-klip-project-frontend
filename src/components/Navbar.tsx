@@ -1,59 +1,66 @@
-import { LogOut } from "lucide-react";
+import { useEffect } from "react";
+import { LogOut, Menu } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
-const Navbar = () => {
+const Navbar = ({ onOpenSidebar }: { onOpenSidebar: () => void }) => {
   const { logout, user } = useAuth();
+  const location = useLocation();
 
+  const currentViewLabel =
+    location.pathname === "/"
+      ? "Inbox"
+      : location.pathname.startsWith("/calendar") || location.pathname.startsWith("/week")
+        ? "Calendario"
+        : "Projeto";
+
+  useEffect(() => {
+    document.title = `Visualizacao: ${currentViewLabel} | Klip`;
+  }, [currentViewLabel]);
 
   return (
-    <>
-      {/* GLOBAL TOP BAR */}
-      <nav className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-4 shrink-0 z-20 shadow-sm">
-
-        {/* Left: Logo */}
-        <a href="/">
+    <header className="sticky top-0 z-30 px-2 pt-2 pb-2 md:px-3 md:pt-3 md:pb-3">
+      <nav className="surface-glass flex h-16 items-center justify-between px-3 sm:px-4">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            onClick={onOpenSidebar}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 md:hidden"
+            aria-label="Abrir menu lateral"
           >
-            <div className="p-1.5 rounded-lg">
-              {/* <Home className="w-5 h-5 text-white" /> */}
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10" viewBox="0 0 191 191">
-                <g>
-                  <path d="M 75.00 29.77 L 75.00 160.00 L 71.75 159.90 C60.29,159.54 49.27,152.47 43.84,142.00 C41.51,137.53 41.50,137.27 41.22,96.10 L 41.21 95.49 C40.97,59.07 40.91,50.73 44.72,44.93 C45.88,43.17 47.38,41.65 49.35,39.65 C55.74,33.15 60.71,30.73 68.75,30.19 Z" fill="rgb(102,172,203)" />
-                  <path d="M 127.25 77.27 C116.94,87.28 103.44,100.40 97.25,106.43 L 86.00 117.39 L 86.00 71.41 L 97.00 61.50 C107.43,52.10 108.00,51.38 108.00,47.68 C108.00,42.45 111.39,36.71 116.00,34.12 C119.31,32.26 121.38,32.00 132.89,32.00 L 146.00 32.00 L 146.00 59.08 ZM 125.81 156.60 C122.88,158.08 118.30,159.33 114.45,159.69 L 108.00 160.29 L 108.00 131.56 L 102.75 126.25 L 97.50 120.93 L 106.02 112.72 C110.71,108.20 116.40,102.77 118.65,100.66 L 122.76 96.83 L 129.88 103.95 C133.80,107.87 138.19,113.41 139.63,116.27 C143.10,123.11 143.85,131.92 141.56,138.83 C139.41,145.28 132.30,153.31 125.81,156.60 Z" fill="rgb(238,128,91)" />
-                  <path d="M 0.00 95.50 L 0.00 0.00 L 95.50 0.00 L 191.00 0.00 L 191.00 95.50 L 191.00 191.00 L 95.50 191.00 L 0.00 191.00 L 0.00 95.50 ZM 75.00 94.88 L 75.00 29.77 L 68.75 30.19 C60.71,30.73 55.74,33.15 49.35,39.65 C40.86,48.28 40.89,48.04 41.22,96.10 C41.50,137.27 41.51,137.53 43.84,142.00 C49.27,152.47 60.29,159.54 71.75,159.90 L 75.00 160.00 L 75.00 94.88 ZM 125.81 156.60 C132.30,153.31 139.41,145.28 141.56,138.83 C143.85,131.92 143.10,123.11 139.63,116.27 C138.19,113.41 133.80,107.87 129.88,103.95 L 122.76 96.83 L 118.65 100.66 C116.40,102.77 110.71,108.20 106.02,112.72 L 97.50 120.93 L 102.75 126.25 L 108.00 131.56 L 108.00 145.93 L 108.00 160.29 L 114.45 159.69 C118.30,159.33 122.88,158.08 125.81,156.60 ZM 127.25 77.27 L 146.00 59.08 L 146.00 45.54 L 146.00 32.00 L 132.89 32.00 C121.38,32.00 119.31,32.26 116.00,34.12 C111.39,36.71 108.00,42.45 108.00,47.68 C108.00,51.38 107.43,52.10 97.00,61.50 L 86.00 71.41 L 86.00 94.40 L 86.00 117.39 L 97.25 106.43 C103.44,100.40 116.94,87.28 127.25,77.27 Z" fill="rgba(254, 254, 253, 0)" />
-                </g>
-              </svg>
-            </div>
-            <span className="font-bold text-slate-800 text-lg tracking-tight">Klip</span>
+            <Menu className="h-5 w-5" />
           </button>
-        </a>
+          <a href="/" className="flex items-center gap-2.5 rounded-xl p-1 transition-opacity hover:opacity-85">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-9 w-9" viewBox="0 0 191 191">
+              <g>
+                <path d="M 75.00 29.77 L 75.00 160.00 L 71.75 159.90 C60.29,159.54 49.27,152.47 43.84,142.00 C41.51,137.53 41.50,137.27 41.22,96.10 L 41.21 95.49 C40.97,59.07 40.91,50.73 44.72,44.93 C45.88,43.17 47.38,41.65 49.35,39.65 C55.74,33.15 60.71,30.73 68.75,30.19 Z" fill="rgb(81, 142, 196)" />
+                <path d="M 127.25 77.27 C116.94,87.28 103.44,100.40 97.25,106.43 L 86.00 117.39 L 86.00 71.41 L 97.00 61.50 C107.43,52.10 108.00,51.38 108.00,47.68 C108.00,42.45 111.39,36.71 116.00,34.12 C119.31,32.26 121.38,32.00 132.89,32.00 L 146.00 32.00 L 146.00 59.08 ZM 125.81 156.60 C122.88,158.08 118.30,159.33 114.45,159.69 L 108.00 160.29 L 108.00 131.56 L 102.75 126.25 L 97.50 120.93 L 106.02 112.72 C110.71,108.20 116.40,102.77 118.65,100.66 L 122.76 96.83 L 129.88 103.95 C133.80,107.87 138.19,113.41 139.63,116.27 C143.10,123.11 143.85,131.92 141.56,138.83 C139.41,145.28 132.30,153.31 125.81,156.60 Z" fill="rgb(235, 129, 86)" />
+              </g>
+            </svg>
+            <span className="text-lg font-bold tracking-tight text-slate-900">Klip</span>
+          </a>
+          <span className="hidden rounded-full border border-white/65 bg-white/60 px-3 py-1 text-xs font-semibold text-slate-600 backdrop-blur sm:inline-flex">
+            Visualizacao: {currentViewLabel}
+          </span>
+        </div>
 
-        {/* Right: User Profile (Auth0 Mock) */}
-        <div className="flex items-center gap-4">
-
-          <div className="h-6 w-px bg-slate-200 mx-1"></div>
-
-          <div className="flex items-center gap-3 pl-1">
-            <div className="text-right hidden sm:block">
-              <div className="text-sm font-semibold text-slate-700 leading-none">{user?.name?.split(' ').slice(0, 2).join(' ') || user?.name}</div>
-              <div className="text-xs text-slate-400 mt-1 leading-none">{user?.email}</div>
-            </div>
-            {/* <div className="relative group cursor-pointer">
-              <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-600 border border-indigo-200 flex items-center justify-center text-sm font-bold">
-                EE
-              </div>
-            </div> */}
-
-            <div className="h-6 w-px bg-slate-200 mx-1"></div>
-
-            <button onClick={logout} className="w-full text-left py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
-              <LogOut className="w-4 h-4" />
-            </button>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="hidden text-right sm:block">
+            <p className="max-w-[220px] truncate text-sm font-semibold text-slate-700">
+              {user?.name?.split(" ").slice(0, 2).join(" ") || user?.name}
+            </p>
+            <p className="max-w-[220px] truncate text-xs text-slate-500">{user?.email}</p>
           </div>
+          <button
+            onClick={logout}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-rose-600 transition-colors hover:bg-rose-50"
+            aria-label="Sair"
+            title="Sair"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
         </div>
       </nav>
-    </>
+    </header>
   );
 };
 
