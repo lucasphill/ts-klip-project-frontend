@@ -4,7 +4,7 @@ import './index.css'
 import App from './App.tsx'
 import { LoadingProvider } from './contexts/LoadingContext.tsx'
 import { Auth0Provider } from '@auth0/auth0-react'
-import { Analytics } from "@vercel/analytics/next"
+import { Analytics } from "@vercel/analytics/react"
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
