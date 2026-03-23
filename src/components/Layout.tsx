@@ -3,14 +3,16 @@ import { Toaster } from "sonner";
 import Footer from "./Footer";
 import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
+import { useTheme } from "../contexts/ThemeContext";
 
 const Layout: FC<{ children: ReactNode }> = ({ children }) => {
   const [isDesktopSidebarExpanded, setIsDesktopSidebarExpanded] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const { theme } = useTheme();
 
   return (
     <div className="flex min-h-screen w-full flex-col text-slate-800">
-      <Toaster position="top-center" richColors />
+      <Toaster position="top-center" richColors theme={theme} />
       <Navbar onOpenSidebar={() => setIsMobileSidebarOpen(true)} />
       <div className="flex min-h-0 flex-1 overflow-hidden px-2 pb-2 md:px-3 md:pb-3">
         <div className="surface-panel relative flex min-h-0 w-full overflow-hidden">

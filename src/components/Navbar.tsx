@@ -1,10 +1,12 @@
 import { useEffect } from "react";
-import { LogOut, Menu } from "lucide-react";
+import { LogOut, Menu, Moon, Sun } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useTheme } from "../contexts/ThemeContext";
 
 const Navbar = ({ onOpenSidebar }: { onOpenSidebar: () => void }) => {
   const { logout, user } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const location = useLocation();
 
   const currentViewLabel =
@@ -47,6 +49,17 @@ const Navbar = ({ onOpenSidebar }: { onOpenSidebar: () => void }) => {
             </p>
             <p className="max-w-[220px] truncate text-xs text-slate-500">{user?.email}</p>
           </div>
+          <button
+            onClick={toggleTheme}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-800"
+            aria-label={isDark ? "Ativar modo claro" : "Ativar modo escuro"}
+            title={isDark ? "Ativar modo claro" : "Ativar modo escuro"}
+          >
+            {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            {/* <span className="hidden text-xs font-semibold sm:inline">
+              {isDark ? "Claro" : "Escuro"}
+            </span> */}
+          </button>
           <button
             onClick={logout}
             className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-rose-600 transition-colors hover:bg-rose-50"
