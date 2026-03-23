@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   ArrowUpDown,
-  Calendar,
+  CircleHelp,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
@@ -14,6 +14,9 @@ import {
   X,
   XCircle,
 } from "lucide-react";
+import DatePickerField from "./DatePickerField";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -103,6 +106,7 @@ const TaskTable = ({
   const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "pending">("all");
   const [columnSearch, setColumnSearch] = useState<Record<string, string>>({});
   const [areFiltersExpanded, setAreFiltersExpanded] = useState(false);
+  const [projectSelectVersion, setProjectSelectVersion] = useState<Record<string, number>>({});
   const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({
     column: "dueDate",
     direction: "ascending",
@@ -150,6 +154,13 @@ const TaskTable = ({
 
   const setColumnSearchValue = (columnKey: string, value: string) => {
     setColumnSearch((previous) => ({ ...previous, [columnKey]: value }));
+  };
+
+  const resetProjectSelect = (taskId: string) => {
+    setProjectSelectVersion((previous) => ({
+      ...previous,
+      [taskId]: (previous[taskId] ?? 0) + 1,
+    }));
   };
 
   const filteredTasks = useMemo(() => {
@@ -350,11 +361,12 @@ const TaskTable = ({
 
     if (field.type === "date") {
       return (
-        <input
-          type="date"
+        <DatePickerField
           value={String(fieldValue ?? "")}
-          onChange={(event) => updateCustomValue(task.id, field.id, event.target.value)}
-          className="field h-9 w-full bg-white px-2 text-sm"
+          onChange={(nextDate) => updateCustomValue(task.id, field.id, nextDate)}
+          className="w-full"
+          buttonClassName="field h-9 bg-white text-sm"
+          placeholder="Sem data"
         />
       );
     }
@@ -569,6 +581,10 @@ const TaskTable = ({
               const titleDraft = cfDrafts[titleKey];
               const titleValue = titleDraft !== undefined ? titleDraft : getTitle(task);
               const isEditing = editingTaskId === task.id || titleDraft !== undefined;
+              const taskProjects = getTaskProjects(task.id);
+              const availableProjects = projects.filter(
+                (project) => !taskProjects.find((taskProject) => taskProject.id === project.id)
+              );
 
               return (
                 <Row
@@ -627,7 +643,7 @@ const TaskTable = ({
                   {activeView === "all" && (
                     <Cell className="border-b border-slate-100 px-3 py-2">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        {getTaskProjects(task.id).map((project) => {
+                        {taskProjects.map((project) => {
                           const colorDot = getColorDotProps(project.color);
 
                           return (
@@ -647,41 +663,62 @@ const TaskTable = ({
                           );
                         })}
 
-                        <div className="relative inline-flex">
-                          <button className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-slate-300 text-slate-400 hover:text-slate-700">
-                            <Plus className="h-3.5 w-3.5" />
-                          </button>
-                          <select
-                            className="absolute inset-0 cursor-pointer opacity-0"
-                            value=""
-                            onChange={(event) => addProjectToTask(task.id, event.target.value)}
+                        <div className="inline-flex items-center gap-1">
+                          <Select
+                            key={`${task.id}-${projectSelectVersion[task.id] ?? 0}`}
+                            onValueChange={(projectId) => {
+                              addProjectToTask(task.id, projectId);
+                              resetProjectSelect(task.id);
+                            }}
                           >
-                            <option value="" disabled>
-                              Adicionar...
-                            </option>
-                            {projects
-                              .filter((project) => !getTaskProjects(task.id).find((taskProject) => taskProject.id === project.id))
-                              .map((project) => (
-                                <option key={project.id} value={project.id}>
+                            <SelectTrigger
+                              size="sm"
+                              className="h-7 w-7 justify-center border-dashed border-slate-300 bg-white p-0 text-slate-700 [&_svg.pointer-events-none]:hidden"
+                              disabled={availableProjects.length === 0}
+                              aria-label="Adicionar projeto"
+                            >
+                              <Plus className="h-3.5 w-3.5 ml-1.5 text-slate-500" />
+                              <span className="sr-only">
+                                {availableProjects.length > 0 ? "Adicionar projeto" : "Sem projetos disponiveis"}
+                              </span>
+                              <SelectValue className="hidden" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableProjects.map((project) => (
+                                <SelectItem key={project.id} value={project.id}>
                                   {project.name}
-                                </option>
+                                </SelectItem>
                               ))}
-                          </select>
+                            </SelectContent>
+                          </Select>
+
+                          <HoverCard openDelay={150}>
+                            <HoverCardTrigger asChild>
+                              <button
+                                type="button"
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                                aria-label="Ajuda sobre vinculo de projetos"
+                              >
+                                <CircleHelp className="h-3.5 w-3.5" />
+                              </button>
+                            </HoverCardTrigger>
+                            <HoverCardContent className="w-72">
+                              Vincule a tarefa a mais de um projeto para facilitar filtros e acompanhamento entre times.
+                            </HoverCardContent>
+                          </HoverCard>
                         </div>
                       </div>
                     </Cell>
                   )}
 
                   <Cell className="border-b border-slate-100 px-3 py-2">
-                    <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1.5">
-                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                      <input
-                        type="date"
-                        value={getDueDate(task)}
-                        onChange={(event) => saveTaskField(task.id, { dueDate: event.target.value })}
-                        className="w-full bg-transparent text-sm text-slate-700 outline-none"
-                      />
-                    </div>
+                    <DatePickerField
+                      value={getDueDate(task)}
+                      onChange={(nextDate) => saveTaskField(task.id, { dueDate: nextDate })}
+                      className="w-full"
+                      buttonClassName="field h-9 bg-white text-sm"
+                      placeholder="Sem prazo"
+                    />
                   </Cell>
 
                   {safeCustomFields.map((field) => (

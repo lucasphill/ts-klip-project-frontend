@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import type { CreateProjectDto, CreateTaskDto, GetProjectsDto } from "../types/apiTypes";
-import { projectsApi, tasksApi } from "../services/api";
+import { projectsApi, projectsTasksApi, tasksApi } from "../services/api";
 import { useTasksContext } from "../contexts/TasksContext";
 import { useProjectsContext } from "../contexts/ProjectsContext";
 import NavItem from "./NavItem";
@@ -77,10 +77,16 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
     onCloseMobile();
   };
 
-  const handleSaveTask = async (task: CreateTaskDto): Promise<void> => {
+  const handleSaveTask = async (task: CreateTaskDto, selectedProjectIds: string[] = []): Promise<void> => {
     try {
       const response = await tasksApi.create(task);
-      appendTask(response.data);
+      const createdTask = response.data;
+      await Promise.all(
+        Array.from(new Set(selectedProjectIds.filter(Boolean))).map((projectId) =>
+          projectsTasksApi.assign(projectId, createdTask.id)
+        )
+      );
+      appendTask(createdTask);
       toast.success(`Tarefa criada com sucesso: ${task.title}`);
     } catch (error: any) {
       toast.error(error?.message ?? "Erro ao criar tarefa");
@@ -304,7 +310,12 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
         </div>
       </aside>
 
-      <AddTaskModal isOpen={showNewTaskModal} onClose={() => setShowNewTaskModal(false)} onSave={handleSaveTask} />
+      <AddTaskModal
+        isOpen={showNewTaskModal}
+        onClose={() => setShowNewTaskModal(false)}
+        onSave={handleSaveTask}
+        projects={projects}
+      />
       <AddProjectModal
         isOpen={showNewProjectModal}
         onClose={() => {

@@ -26,6 +26,7 @@ const MonthViewPage = () => {
   const [projectTasks, setProjectTasks] = useState<{ project_id: string; task_id: string }[]>([]);
   const [showEditTaskModal, setShowEditTaskModal] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<(CreateTaskDto & { id?: string }) | null>(null);
+  const [taskProjectIds, setTaskProjectIds] = useState<string[]>([]);
   const [visibleRange, setVisibleRange] = useState<{
     start: Date;
     end: Date;
@@ -103,6 +104,7 @@ const MonthViewPage = () => {
       notes: "",
       parentTaskId: "",
     });
+    setTaskProjectIds([]);
     setShowEditTaskModal(true);
   };
 
@@ -118,6 +120,7 @@ const MonthViewPage = () => {
       notes: (task as any).notes ?? "",
       parentTaskId: (task as any).parentTaskId ?? "",
     });
+    setTaskProjectIds(getTaskProjects(task.id).map((project) => project.id));
     setShowEditTaskModal(true);
   };
 
@@ -224,6 +227,38 @@ const MonthViewPage = () => {
     })();
   };
 
+  const syncTaskProjects = async (taskId: string, nextProjectIds: string[]) => {
+    const normalizedNextProjectIds = Array.from(new Set(nextProjectIds.filter(Boolean)));
+    const currentProjectIds = projectTasks
+      .filter((projectTask) => projectTask.task_id === taskId)
+      .map((projectTask) => projectTask.project_id);
+
+    const projectsToAssign = normalizedNextProjectIds.filter((projectId) => !currentProjectIds.includes(projectId));
+    const projectsToUnassign = currentProjectIds.filter((projectId) => !normalizedNextProjectIds.includes(projectId));
+
+    if (projectsToAssign.length === 0 && projectsToUnassign.length === 0) {
+      return;
+    }
+
+    try {
+      await Promise.all([
+        ...projectsToAssign.map((projectId) => projectsTasksApi.assign(projectId, taskId)),
+        ...projectsToUnassign.map((projectId) => projectsTasksApi.unassign(projectId, taskId)),
+      ]);
+
+      setProjectTasks((previous) => [
+        ...previous.filter((projectTask) => projectTask.task_id !== taskId),
+        ...normalizedNextProjectIds.map((projectId) => ({ project_id: projectId, task_id: taskId })),
+      ]);
+    } catch (error: any) {
+      toast.error(error?.message ?? "Erro ao atualizar projetos da tarefa");
+      if (projects.length > 0) {
+        await loadProjectTaskAssignments(projects);
+      }
+      throw error;
+    }
+  };
+
   const removeProjectFromTask = (taskId: string, projectId: string) => {
     const exists = projectTasks.some((projectTask) => projectTask.task_id === taskId && projectTask.project_id === projectId);
     if (!exists) return;
@@ -254,24 +289,28 @@ const MonthViewPage = () => {
       notes: (task as any).notes ?? "",
       parentTaskId: (task as any).parentTaskId ?? "",
     });
+    setTaskProjectIds(getTaskProjects(task.id).map((project) => project.id));
     setShowEditTaskModal(true);
   };
 
-  const handleDeleteTask = (taskId: string) => {
-    if (!confirm("Tem certeza que deseja excluir esta tarefa?")) return;
+  const handleDeleteTask = async (taskId: string): Promise<boolean> => {
+    if (!confirm("Tem certeza que deseja excluir esta tarefa?")) return false;
 
-    void (async () => {
-      try {
-        await tasksApi.remove(taskId);
-        removeTaskLocal(taskId);
-        setProjectTasks((previous) => previous.filter((projectTask) => projectTask.task_id !== taskId));
-      } catch (error: any) {
-        toast.error(error?.message ?? "Erro ao excluir tarefa");
-      }
-    })();
+    try {
+      await tasksApi.remove(taskId);
+      removeTaskLocal(taskId);
+      setProjectTasks((previous) => previous.filter((projectTask) => projectTask.task_id !== taskId));
+      return true;
+    } catch (error: any) {
+      toast.error(error?.message ?? "Erro ao excluir tarefa");
+      return false;
+    }
   };
 
-  const handleSaveTask = async (task: CreateTaskDto & { id?: string }): Promise<void> => {
+  const handleSaveTask = async (
+    task: CreateTaskDto & { id?: string },
+    selectedProjectIds: string[] = []
+  ): Promise<void> => {
     const payload = {
       title: task.title ?? "",
       dueDate: task.dueDate ?? "",
@@ -284,6 +323,7 @@ const MonthViewPage = () => {
       updateTaskLocal(task.id, task);
       try {
         await tasksApi.update(task.id, payload);
+        await syncTaskProjects(task.id, selectedProjectIds);
       } catch (error: any) {
         toast.error(error?.message ?? "Erro ao atualizar tarefa");
         throw error;
@@ -293,7 +333,9 @@ const MonthViewPage = () => {
 
     try {
       const response = await tasksApi.create(payload);
-      appendTask(response.data);
+      const createdTask = response.data;
+      await syncTaskProjects(createdTask.id, selectedProjectIds);
+      appendTask(createdTask);
     } catch (error: any) {
       toast.error(error?.message ?? "Erro ao criar tarefa");
       throw error;
@@ -385,9 +427,13 @@ const MonthViewPage = () => {
           onClose={() => {
             setShowEditTaskModal(false);
             setTaskToEdit(null);
+            setTaskProjectIds([]);
           }}
           onSave={handleSaveTask}
+          onDelete={handleDeleteTask}
           task={taskToEdit}
+          projects={projects}
+          initialProjectIds={taskProjectIds}
         />
       </TaskViewLayout>
     </>
