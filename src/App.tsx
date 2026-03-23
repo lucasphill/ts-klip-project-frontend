@@ -66,7 +66,7 @@ const AppRoutes = () => {
         }
       />
       <Route
-        path="/:projectId"
+        path="/project/:projectId"
         element={
           <ProtectedRoute>
             <Layout>
