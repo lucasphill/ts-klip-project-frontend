@@ -18,6 +18,7 @@ import type {
   CreateTaskDto,
   CustomFieldValue,
   GetCustomFieldDefinitionDto,
+  GetProjectsDto,
   GetTasksDto,
   GetTasksWithCustomFieldsDto,
 } from '../types/apiTypes';
@@ -103,11 +104,35 @@ const ProjectsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showEditTaskModal, setShowEditTaskModal] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<(CreateTaskDto & { id?: string }) | null>(null);
+  const [projectTasks, setProjectTasks] = useState<{ project_id: string; task_id: string }[]>([]);
+  const [taskProjectIds, setTaskProjectIds] = useState<string[]>([]);
 
   const currentProject = useMemo(
     () => projects.find((project) => project.id === projectId) ?? null,
     [projectId, projects]
   );
+
+  const loadProjectTaskAssignments = async (projectsList: GetProjectsDto[]) => {
+    try {
+      const promises = projectsList.map((project) => projectsTasksApi.getByProject(project.id));
+      const results = await Promise.all(promises);
+      const assignments: { project_id: string; task_id: string }[] = [];
+
+      results.forEach((result, index) => {
+        const currentProjectId = projectsList[index].id;
+        const tasksForProject = result?.data ?? [];
+        tasksForProject.forEach((task: GetTasksDto) => {
+          if (task?.id) {
+            assignments.push({ project_id: currentProjectId, task_id: task.id });
+          }
+        });
+      });
+
+      setProjectTasks(assignments);
+    } catch (error) {
+      console.error('Erro ao carregar vinculos projeto-tarefa', error);
+    }
+  };
 
   const refreshProjectData = async () => {
     if (!projectId) {
@@ -120,10 +145,11 @@ const ProjectsPage = () => {
     setIsLoading(true);
 
     try {
-      const [, projectFieldsResponse] = await Promise.all([
+      const [projectsList, projectFieldsResponse] = await Promise.all([
         fetchProjects(),
         projectsCustomFieldDefinitionsApi.getByProject(projectId),
       ]);
+      await loadProjectTaskAssignments(projectsList);
 
       let projectTasks: ProjectTask[] = [];
 
@@ -181,6 +207,7 @@ const ProjectsPage = () => {
       notes: '',
       parentTaskId: '',
     });
+    setTaskProjectIds(currentProject ? [currentProject.id] : []);
     setShowEditTaskModal(true);
   };
 
@@ -203,7 +230,43 @@ const ProjectsPage = () => {
     return '';
   };
 
-  const getTaskProjects = (_taskId: string) => (currentProject ? [currentProject] : []);
+  const getTaskProjects = (taskId: string) => {
+    const projectIds = projectTasks
+      .filter((projectTask) => projectTask.task_id === taskId)
+      .map((projectTask) => projectTask.project_id);
+
+    const relatedProjects = projects.filter((project) => projectIds.includes(project.id));
+
+    if (relatedProjects.length === 0 && currentProject) {
+      return [currentProject];
+    }
+
+    return relatedProjects;
+  };
+
+  const syncTaskProjects = async (taskId: string, nextProjectIds: string[]) => {
+    const normalizedNextProjectIds = Array.from(new Set(nextProjectIds.filter(Boolean)));
+    const currentProjectIds = projectTasks
+      .filter((projectTask) => projectTask.task_id === taskId)
+      .map((projectTask) => projectTask.project_id);
+
+    const projectsToAssign = normalizedNextProjectIds.filter((projectId) => !currentProjectIds.includes(projectId));
+    const projectsToUnassign = currentProjectIds.filter((projectId) => !normalizedNextProjectIds.includes(projectId));
+
+    if (projectsToAssign.length === 0 && projectsToUnassign.length === 0) {
+      return;
+    }
+
+    await Promise.all([
+      ...projectsToAssign.map((projectId) => projectsTasksApi.assign(projectId, taskId)),
+      ...projectsToUnassign.map((projectId) => projectsTasksApi.unassign(projectId, taskId)),
+    ]);
+
+    setProjectTasks((previous) => [
+      ...previous.filter((projectTask) => projectTask.task_id !== taskId),
+      ...normalizedNextProjectIds.map((projectId) => ({ project_id: projectId, task_id: taskId })),
+    ]);
+  };
 
   const updateCustomValue = (taskId: string, fieldId: string, value: CustomFieldValue) => {
     const field = customFields.find((item) => item.id === fieldId);
@@ -265,29 +328,34 @@ const ProjectsPage = () => {
 
   const handleEditTask = (task: ProjectTask) => {
     setTaskToEdit(task);
+    setTaskProjectIds(getTaskProjects(task.id).map((project) => project.id));
     setShowEditTaskModal(true);
   };
 
-  const handleDeleteTask = (taskId: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta tarefa?')) return;
+  const handleDeleteTask = async (taskId: string): Promise<boolean> => {
+    if (!confirm('Tem certeza que deseja excluir esta tarefa?')) return false;
 
-    void (async () => {
-      try {
-        await tasksApi.remove(taskId);
-        setTasks((previousTasks) => previousTasks.filter((task) => task.id !== taskId));
-        toast.success('Tarefa excluida com sucesso');
-      } catch (error: any) {
-        toast.error(error?.message ?? 'Erro ao excluir tarefa');
-      }
-    })();
+    try {
+      await tasksApi.remove(taskId);
+      setTasks((previousTasks) => previousTasks.filter((task) => task.id !== taskId));
+      toast.success('Tarefa excluida com sucesso');
+      return true;
+    } catch (error: any) {
+      toast.error(error?.message ?? 'Erro ao excluir tarefa');
+      return false;
+    }
   };
 
-  const handleSaveTask = async (task: CreateTaskDto & { id?: string }): Promise<void> => {
+  const handleSaveTask = async (
+    task: CreateTaskDto & { id?: string },
+    selectedProjectIds: string[] = []
+  ): Promise<void> => {
     if (!projectId) return;
 
     try {
       if (task.id) {
         await tasksApi.update(task.id, toTaskPayload(task));
+        await syncTaskProjects(task.id, selectedProjectIds);
         setTasks((previousTasks) =>
           previousTasks.map((currentTask) =>
             currentTask.id === task.id ? { ...currentTask, ...task } : currentTask
@@ -297,7 +365,10 @@ const ProjectsPage = () => {
       } else {
         const createdTaskResponse = await tasksApi.create(toTaskPayload(task));
         const createdTask = createdTaskResponse.data;
-        await projectsTasksApi.assign(projectId, createdTask.id);
+        const normalizedSelectedProjectIds = Array.from(new Set(selectedProjectIds.filter(Boolean)));
+        const targetProjectIds =
+          normalizedSelectedProjectIds.length > 0 ? normalizedSelectedProjectIds : [projectId];
+        await syncTaskProjects(createdTask.id, targetProjectIds);
         toast.success('Tarefa criada com sucesso');
         await refreshProjectData();
       }
@@ -397,9 +468,13 @@ const ProjectsPage = () => {
           onClose={() => {
             setShowEditTaskModal(false);
             setTaskToEdit(null);
+            setTaskProjectIds([]);
           }}
           onSave={handleSaveTask}
+          onDelete={handleDeleteTask}
           task={taskToEdit}
+          projects={projects}
+          initialProjectIds={taskProjectIds}
         />
       </TaskViewLayout>
     </>
