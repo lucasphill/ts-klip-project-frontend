@@ -46,7 +46,15 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
   const { appendTask } = useTasksContext();
   const { projects, fetchProjects, removeProjectLocal } = useProjectsContext();
 
-  const activeTab = location.pathname === "/" ? "home" : location.pathname.slice(1);
+  const activeProjectId = location.pathname.startsWith("/project/")
+    ? location.pathname.split("/")[2] ?? ""
+    : "";
+  const activeTab =
+    location.pathname === "/"
+      ? "home"
+      : location.pathname.startsWith("/project/")
+        ? activeProjectId
+        : location.pathname.slice(1);
   const isExpanded = isDesktopExpanded || isMobileOpen;
 
   const [showNewTaskModal, setShowNewTaskModal] = useState(false);
@@ -211,11 +219,11 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
                     <div
                       role="button"
                       tabIndex={0}
-                      onClick={() => handleNavigate(`/${project.id}`)}
+                      onClick={() => handleNavigate(`/project/${project.id}`)}
                       onKeyDown={(event) => {
                         if (event.key === "Enter" || event.key === " ") {
                           event.preventDefault();
-                          handleNavigate(`/${project.id}`);
+                          handleNavigate(`/project/${project.id}`);
                         }
                       }}
                       className={`flex w-full items-center rounded-xl px-2.5 py-2 text-sm transition-all ${isExpanded ? "justify-between" : "justify-center"
