@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { TasksProvider } from './contexts/TasksContext';
 import { ProjectsProvider } from './contexts/ProjectsContext';
 import { useLoading } from './contexts/LoadingContext';
+import { Analytics } from '@vercel/analytics/react';
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { isAuthenticated, loading, login } = useAuth();
@@ -98,15 +99,18 @@ const AppRoutes = () => {
 
 const App = () => {
   return (
-    <AuthProvider>
-      <Router>
-        <ProjectsProvider>
-          <TasksProvider>
-            <AppRoutes />
-          </TasksProvider>
-        </ProjectsProvider>
-      </Router>
-    </AuthProvider>
+    <>
+      <Analytics />
+      <AuthProvider>
+        <Router>
+          <ProjectsProvider>
+            <TasksProvider>
+              <AppRoutes />
+            </TasksProvider>
+          </ProjectsProvider>
+        </Router>
+      </AuthProvider>
+    </>
   )
 }
 
