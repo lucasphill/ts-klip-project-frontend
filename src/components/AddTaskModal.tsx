@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import type { CreateTaskDto, GetProjectsDto } from "../types/apiTypes";
+import type { ParentTaskOption } from "../lib/taskHierarchy";
 
 interface AddTaskModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ interface AddTaskModalProps {
   task?: (CreateTaskDto & { id?: string }) | null;
   projects?: GetProjectsDto[];
   initialProjectIds?: string[];
+  parentTaskOptions?: ParentTaskOption[];
 }
 
 const normalizeDate = (value?: string) => {
@@ -34,6 +36,7 @@ const AddTaskModal: FC<AddTaskModalProps> = ({
   task,
   projects = [],
   initialProjectIds,
+  parentTaskOptions = [],
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -85,6 +88,11 @@ const AddTaskModal: FC<AddTaskModalProps> = ({
         .map((projectId) => projects.find((project) => project.id === projectId))
         .filter((project): project is GetProjectsDto => Boolean(project)),
     [projects, selectedProjectIds]
+  );
+
+  const selectedParentTask = useMemo(
+    () => parentTaskOptions.find((parentTask) => parentTask.id === formData.parentTaskId),
+    [formData.parentTaskId, parentTaskOptions]
   );
 
   const handleSubmit = async (event: FormEvent) => {
@@ -183,6 +191,62 @@ const AddTaskModal: FC<AddTaskModalProps> = ({
                 buttonClassName="field h-11 bg-white text-sm"
                 placeholder="Selecione o prazo"
               />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-semibold text-slate-700">Tarefa pai</Label>
+                <HoverCard openDelay={150}>
+                  <HoverCardTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="Ajuda sobre subtarefas"
+                      className="inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                    >
+                      <CircleHelp className="h-4 w-4" />
+                    </button>
+                  </HoverCardTrigger>
+                  <HoverCardContent className="w-72">
+                    Opcional. Defina uma tarefa pai para transformar este item em subtarefa sem alterar o layout atual da lista.
+                  </HoverCardContent>
+                </HoverCard>
+              </div>
+
+              <Select
+                value={formData.parentTaskId?.trim() || "__none"}
+                onValueChange={(value) =>
+                  setFormData((previous) => ({
+                    ...previous,
+                    parentTaskId: value === "__none" ? "" : value,
+                  }))
+                }
+              >
+                <SelectTrigger
+                  className="field h-11 bg-white text-sm"
+                  disabled={parentTaskOptions.length === 0}
+                  aria-label="Selecionar tarefa pai"
+                >
+                  <SelectValue placeholder="Sem tarefa pai" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">Sem tarefa pai</SelectItem>
+                  {parentTaskOptions.map((parentTask) => (
+                    <SelectItem key={parentTask.id} value={parentTask.id}>
+                      <span style={{ paddingLeft: `${parentTask.depth * 12}px` }}>{parentTask.title}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {parentTaskOptions.length === 0 ? (
+                <p className="text-xs text-slate-500">Nenhuma tarefa disponivel para ser usada como pai nesta visualizacao.</p>
+              ) : selectedParentTask ? (
+                <p className="text-xs text-sky-700">
+                  Esta tarefa sera criada como subtarefa de <span className="font-semibold">{selectedParentTask.title}</span>.
+                </p>
+              ) : (
+                <p className="text-xs text-slate-500">Deixe vazio para manter esta tarefa no nivel principal.</p>
+              )}
             </div>
 
             <div className="space-y-2">

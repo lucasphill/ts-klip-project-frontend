@@ -8,6 +8,7 @@ interface TasksContextValue {
   appendTask: (task: GetTasksDto) => void;
   updateTaskLocal: (taskId: string, updates: Partial<GetTasksDto>) => void;
   removeTaskLocal: (taskId: string) => void;
+  removeTasksLocal: (taskIds: string[]) => void;
 }
 
 const TasksContext = createContext<TasksContextValue | null>(null);
@@ -82,8 +83,20 @@ export const TasksProvider = ({ children }: { children: ReactNode }) => {
     });
   }, []);
 
+  const removeTasksLocal = useCallback((taskIds: string[]) => {
+    const idsToRemove = new Set(taskIds.filter(Boolean));
+    if (idsToRemove.size === 0) return;
+
+    setTasks((prev) => {
+      const nextTasks = prev.filter((task) => !idsToRemove.has(task.id));
+      tasksRef.current = nextTasks;
+      hasFetchedOnceRef.current = true;
+      return nextTasks;
+    });
+  }, []);
+
   return (
-    <TasksContext.Provider value={{ tasks, fetchTasks, appendTask, updateTaskLocal, removeTaskLocal }}>
+    <TasksContext.Provider value={{ tasks, fetchTasks, appendTask, updateTaskLocal, removeTaskLocal, removeTasksLocal }}>
       {children}
     </TasksContext.Provider>
   );

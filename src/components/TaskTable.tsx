@@ -5,6 +5,7 @@ import {
   CircleHelp,
   CheckCircle2,
   ChevronDown,
+  ChevronRight,
   ChevronUp,
   Circle,
   Filter,
@@ -33,6 +34,7 @@ import type {
   GetProjectsDto,
   GetTasksDto,
 } from "../types/apiTypes";
+import { normalizeParentTaskId } from "../lib/taskHierarchy";
 
 type TaskTableTask = GetTasksDto & {
   customFields?: Record<string, CustomFieldValue>;
@@ -55,6 +57,7 @@ interface TaskTableProps {
   updateTaskInline?: (taskId: string, updates: { title?: string; dueDate?: string }) => void;
   onEditTask?: (task: TaskTableTask) => void;
   onDeleteTask?: (taskId: string) => void;
+  onAddSubtask?: (task: TaskTableTask) => void;
   hideAddTaskButton?: boolean;
 }
 
@@ -65,10 +68,20 @@ type StoredTaskTableState = {
   statusFilter?: TaskStatusFilter;
   sortColumn?: string;
   sortDirection?: SortDescriptor["direction"];
+  collapsedTaskIds?: string[];
+};
+
+type FlattenedTaskRow = {
+  task: TaskTableTask;
+  depth: number;
+  hasChildren: boolean;
+  childCount: number;
+  isExpanded: boolean;
+  hasHiddenParent: boolean;
 };
 
 const TASK_TABLE_STORAGE_PREFIX = "klip:task-table-state";
-const TASK_TABLE_STORAGE_VERSION = 1;
+const TASK_TABLE_STORAGE_VERSION = 2;
 
 const DEFAULT_STATUS_FILTER: TaskStatusFilter = "all";
 const DEFAULT_SORT_DESCRIPTOR: SortDescriptor = {
@@ -87,6 +100,7 @@ const parseStoredTaskTableState = (rawValue: string | null) => {
     return {
       statusFilter: DEFAULT_STATUS_FILTER,
       sortDescriptor: DEFAULT_SORT_DESCRIPTOR,
+      collapsedTaskIds: [],
     };
   }
 
@@ -99,6 +113,9 @@ const parseStoredTaskTableState = (rawValue: string | null) => {
       typeof parsed.sortColumn === "string" && parsed.sortColumn.trim().length > 0
         ? parsed.sortColumn
         : String(DEFAULT_SORT_DESCRIPTOR.column);
+    const collapsedTaskIds = Array.isArray(parsed.collapsedTaskIds)
+      ? parsed.collapsedTaskIds.filter((taskId): taskId is string => typeof taskId === "string" && taskId.trim().length > 0)
+      : [];
 
     return {
       statusFilter,
@@ -106,11 +123,13 @@ const parseStoredTaskTableState = (rawValue: string | null) => {
         column,
         direction,
       } satisfies SortDescriptor,
+      collapsedTaskIds,
     };
   } catch {
     return {
       statusFilter: DEFAULT_STATUS_FILTER,
       sortDescriptor: DEFAULT_SORT_DESCRIPTOR,
+      collapsedTaskIds: [],
     };
   }
 };
@@ -156,6 +175,7 @@ const TaskTable = ({
   updateTaskInline,
   onEditTask,
   onDeleteTask,
+  onAddSubtask,
   hideAddTaskButton = false,
 }: TaskTableProps) => {
   const location = useLocation();
@@ -167,6 +187,7 @@ const TaskTable = ({
   const [areFiltersExpanded, setAreFiltersExpanded] = useState(false);
   const [projectSelectVersion, setProjectSelectVersion] = useState<Record<string, number>>({});
   const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>(DEFAULT_SORT_DESCRIPTOR);
+  const [collapsedTaskIds, setCollapsedTaskIds] = useState<string[]>([]);
   const skipNextTableStatePersist = useRef(false);
 
   const tableStateStorageKey = useMemo(
@@ -189,6 +210,7 @@ const TaskTable = ({
     const parsedState = parseStoredTaskTableState(stored);
     setStatusFilter(parsedState.statusFilter);
     setSortDescriptor(parsedState.sortDescriptor);
+    setCollapsedTaskIds(parsedState.collapsedTaskIds);
   }, [tableStateStorageKey]);
 
   useEffect(() => {
@@ -204,10 +226,11 @@ const TaskTable = ({
       statusFilter,
       sortColumn: String(sortDescriptor.column ?? DEFAULT_SORT_DESCRIPTOR.column),
       sortDirection: sortDescriptor.direction ?? DEFAULT_SORT_DESCRIPTOR.direction,
+      collapsedTaskIds,
     };
 
     window.localStorage.setItem(tableStateStorageKey, JSON.stringify(payload));
-  }, [statusFilter, sortDescriptor, tableStateStorageKey]);
+  }, [collapsedTaskIds, statusFilter, sortDescriptor, tableStateStorageKey]);
 
   const safeCustomFields = Array.isArray(activeCustomFields) ? activeCustomFields : [];
 
@@ -254,18 +277,83 @@ const TaskTable = ({
     }));
   };
 
-  const filteredTasks = useMemo(() => {
-    let taskList = [...visibleTasks];
+  const toggleTaskCollapsed = (taskId: string) => {
+    setCollapsedTaskIds((previous) =>
+      previous.includes(taskId)
+        ? previous.filter((currentTaskId) => currentTaskId !== taskId)
+        : [...previous, taskId]
+    );
+  };
 
-    if (statusFilter === "completed") {
-      taskList = taskList.filter((task) => getIsCompleted(task));
-    }
+  const visibleRows = useMemo(() => {
+    const taskMap = new Map(visibleTasks.map((task) => [task.id, task]));
+    const childrenByParentId = new Map<string, TaskTableTask[]>();
+    const rootTasks: TaskTableTask[] = [];
 
-    if (statusFilter === "pending") {
-      taskList = taskList.filter((task) => !getIsCompleted(task));
-    }
+    visibleTasks.forEach((task) => {
+      const parentTaskId = normalizeParentTaskId(task.parentTaskId);
 
-    taskList = taskList.filter((task) => {
+      if (parentTaskId && parentTaskId !== task.id && taskMap.has(parentTaskId)) {
+        const children = childrenByParentId.get(parentTaskId) ?? [];
+        children.push(task);
+        childrenByParentId.set(parentTaskId, children);
+        return;
+      }
+
+      rootTasks.push(task);
+    });
+
+    const hasActiveFilters =
+      statusFilter !== DEFAULT_STATUS_FILTER
+      || Object.values(columnSearch).some((value) => value.trim().length > 0);
+
+    const directionFactor = sortDescriptor.direction === "descending" ? -1 : 1;
+    const sortColumn = String(sortDescriptor.column ?? "dueDate");
+
+    const compareTasks = (left: TaskTableTask, right: TaskTableTask) => {
+      if (sortColumn === "status") {
+        return (Number(getIsCompleted(left)) - Number(getIsCompleted(right))) * directionFactor;
+      }
+
+      if (sortColumn === "task") {
+        return compareText(getTitle(left), getTitle(right)) * directionFactor;
+      }
+
+      if (sortColumn === "projects") {
+        const leftProjects = getTaskProjects(left.id).map((project) => project.name).join(" ");
+        const rightProjects = getTaskProjects(right.id).map((project) => project.name).join(" ");
+        return compareText(leftProjects, rightProjects) * directionFactor;
+      }
+
+      if (sortColumn === "dueDate") {
+        return compareText(getDueDate(left), getDueDate(right)) * directionFactor;
+      }
+
+      if (sortColumn.startsWith("cf-")) {
+        const fieldId = sortColumn.replace("cf-", "");
+        const field = safeCustomFields.find((item) => item.id === fieldId);
+        if (!field) return 0;
+        return compareText(getCustomFieldValueLabel(left, field), getCustomFieldValueLabel(right, field)) * directionFactor;
+      }
+
+      if (sortColumn === "createdAt") {
+        return compareText(getCreatedAt(left), getCreatedAt(right)) * directionFactor;
+      }
+
+      return 0;
+    };
+
+    const sortTasks = (tasks: TaskTableTask[]) => [...tasks].sort(compareTasks);
+
+    const matchesTaskFilters = (task: TaskTableTask) => {
+      if (statusFilter === "completed" && !getIsCompleted(task)) {
+        return false;
+      }
+
+      if (statusFilter === "pending" && getIsCompleted(task)) {
+        return false;
+      }
+
       const taskQuery = (columnSearch.task ?? "").trim();
       const projectsQuery = (columnSearch.projects ?? "").trim();
       const dueDateQuery = (columnSearch.dueDate ?? "").trim();
@@ -298,46 +386,86 @@ const TaskTable = ({
       }
 
       return true;
+    };
+
+    const matchedTaskIds = hasActiveFilters
+      ? new Set(visibleTasks.filter(matchesTaskFilters).map((task) => task.id))
+      : new Set(visibleTasks.map((task) => task.id));
+
+    const ancestorTaskIds = new Set<string>();
+
+    if (hasActiveFilters) {
+      matchedTaskIds.forEach((taskId) => {
+        const visitedTaskIds = new Set<string>();
+        let currentTask = taskMap.get(taskId);
+
+        while (currentTask) {
+          const parentTaskId = normalizeParentTaskId(currentTask.parentTaskId);
+          if (!parentTaskId || visitedTaskIds.has(parentTaskId) || !taskMap.has(parentTaskId)) {
+            break;
+          }
+
+          ancestorTaskIds.add(parentTaskId);
+          visitedTaskIds.add(parentTaskId);
+          currentTask = taskMap.get(parentTaskId);
+        }
+      });
+    }
+
+    const contextualTaskIds = hasActiveFilters
+      ? new Set([...matchedTaskIds, ...ancestorTaskIds])
+      : new Set(visibleTasks.map((task) => task.id));
+
+    const autoExpandedTaskIds = ancestorTaskIds;
+    const collapsedTaskIdsSet = new Set(collapsedTaskIds);
+    const rows: FlattenedTaskRow[] = [];
+    const visitedTaskIds = new Set<string>();
+
+    const visitTask = (task: TaskTableTask, depth: number) => {
+      if (visitedTaskIds.has(task.id)) return;
+      visitedTaskIds.add(task.id);
+
+      const allChildren = sortTasks(childrenByParentId.get(task.id) ?? []);
+      const visibleChildren = hasActiveFilters
+        ? allChildren.filter((childTask) => contextualTaskIds.has(childTask.id))
+        : allChildren;
+      const isExpanded =
+        visibleChildren.length > 0
+        && (!collapsedTaskIdsSet.has(task.id) || autoExpandedTaskIds.has(task.id));
+      const parentTaskId = normalizeParentTaskId(task.parentTaskId);
+
+      rows.push({
+        task,
+        depth,
+        hasChildren: allChildren.length > 0,
+        childCount: allChildren.length,
+        isExpanded,
+        hasHiddenParent: Boolean(parentTaskId && !taskMap.has(parentTaskId)),
+      });
+
+      if (!isExpanded) return;
+
+      visibleChildren.forEach((childTask) => {
+        if (hasActiveFilters && !contextualTaskIds.has(childTask.id)) return;
+        visitTask(childTask, depth + 1);
+      });
+    };
+
+    sortTasks(rootTasks).forEach((task) => {
+      if (hasActiveFilters && !contextualTaskIds.has(task.id)) return;
+      visitTask(task, 0);
     });
 
-    const directionFactor = sortDescriptor.direction === "descending" ? -1 : 1;
-    const sortColumn = String(sortDescriptor.column ?? "dueDate");
-
-    taskList.sort((left, right) => {
-      if (sortColumn === "status") {
-        return (Number(getIsCompleted(left)) - Number(getIsCompleted(right))) * directionFactor;
-      }
-
-      if (sortColumn === "task") {
-        return compareText(getTitle(left), getTitle(right)) * directionFactor;
-      }
-
-      if (sortColumn === "projects") {
-        const leftProjects = getTaskProjects(left.id).map((project) => project.name).join(" ");
-        const rightProjects = getTaskProjects(right.id).map((project) => project.name).join(" ");
-        return compareText(leftProjects, rightProjects) * directionFactor;
-      }
-
-      if (sortColumn === "dueDate") {
-        return compareText(getDueDate(left), getDueDate(right)) * directionFactor;
-      }
-
-      if (sortColumn.startsWith("cf-")) {
-        const fieldId = sortColumn.replace("cf-", "");
-        const field = safeCustomFields.find((item) => item.id === fieldId);
-        if (!field) return 0;
-        return compareText(getCustomFieldValueLabel(left, field), getCustomFieldValueLabel(right, field)) * directionFactor;
-      }
-
-      if (sortColumn === "createdAt") {
-        return compareText(getCreatedAt(left), getCreatedAt(right)) * directionFactor;
-      }
-
-      return 0;
+    sortTasks(visibleTasks).forEach((task) => {
+      if (visitedTaskIds.has(task.id)) return;
+      const parentTaskId = normalizeParentTaskId(task.parentTaskId);
+      if (parentTaskId && parentTaskId !== task.id && taskMap.has(parentTaskId)) return;
+      if (hasActiveFilters && !contextualTaskIds.has(task.id)) return;
+      visitTask(task, 0);
     });
 
-    return taskList;
-  }, [visibleTasks, statusFilter, columnSearch, sortDescriptor, safeCustomFields]);
+    return rows;
+  }, [activeView, collapsedTaskIds, columnSearch, getTaskProjects, safeCustomFields, sortDescriptor, statusFilter, visibleTasks]);
 
   const saveTaskField = (taskId: string, updates: { title?: string; dueDate?: string }) => {
     if (updateTaskInline) {
@@ -500,7 +628,7 @@ const TaskTable = ({
       <div className="border-b border-slate-200 bg-white/90 p-4 backdrop-blur">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <p className="text-sm text-slate-500">
-            Mostrando <span className="font-semibold text-slate-700">{filteredTasks.length}</span> tarefas
+            Mostrando <span className="font-semibold text-slate-700">{visibleRows.length}</span> tarefas
           </p>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -667,7 +795,7 @@ const TaskTable = ({
           </TableHeader>
 
           <TableBody>
-            {filteredTasks.map((task) => {
+            {visibleRows.map(({ task, depth, hasChildren, childCount, isExpanded, hasHiddenParent }) => {
               const titleKey = `${task.id}::__title`;
               const titleDraft = cfDrafts[titleKey];
               const titleValue = titleDraft !== undefined ? titleDraft : getTitle(task);
@@ -681,9 +809,9 @@ const TaskTable = ({
                 <Row
                   id={task.id}
                   key={task.id}
-                  className={`group transition-colors ${isEditing ? "bg-sky-50/70" : "hover:bg-slate-50"}`}
+                  className={`group transition-colors ${depth > 0 ? "bg-slate-50/60" : ""} ${isEditing ? "bg-sky-50/70" : "hover:bg-slate-50"}`}
                 >
-                  <Cell className="border-b border-slate-100 px-3 py-2">
+                  <Cell className={`border-b border-slate-100 px-3 ${depth > 0 ? "py-1.5" : "py-2"}`}>
                     <button
                       onClick={() => toggleTaskCompletion(task.id)}
                       className="text-slate-400 transition-colors hover:text-emerald-600"
@@ -696,43 +824,86 @@ const TaskTable = ({
                     </button>
                   </Cell>
 
-                  <Cell className="border-b border-slate-100 px-3 py-2">
-                    <input
-                      type="text"
-                      value={titleValue}
-                      placeholder="Escreva uma tarefa..."
-                      onFocus={() => setEditingTaskId(task.id)}
-                      onBlur={() => {
-                        setEditingTaskId(null);
-                        if (cfTimers.current[titleKey]) {
-                          clearTimeout(cfTimers.current[titleKey]);
-                          delete cfTimers.current[titleKey];
-                        }
-                        commitDraft(titleKey, (nextValue) => saveTaskField(task.id, { title: nextValue }));
-                      }}
-                      onChange={(event) => {
-                        queueDraftCommit(titleKey, event.target.value, (nextValue) => saveTaskField(task.id, { title: nextValue }));
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === "Escape") {
-                          event.preventDefault();
-                          cancelDraft(titleKey);
-                          setEditingTaskId(null);
-                          event.currentTarget.blur();
-                        }
+                  <Cell className={`border-b border-slate-100 px-3 ${depth > 0 ? "py-1.5" : "py-2"}`}>
+                    <div className="flex items-center gap-2" style={{ paddingLeft: `${depth * 20}px` }}>
+                      <div className={`flex shrink-0 items-center justify-center ${depth > 0 ? "h-8 w-5" : "h-9 w-5"}`}>
+                        {hasChildren ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleTaskCollapsed(task.id)}
+                            className="inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                            aria-label={isExpanded ? "Recolher subtarefas" : "Expandir subtarefas"}
+                            title={isExpanded ? "Recolher subtarefas" : "Expandir subtarefas"}
+                          >
+                            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          </button>
+                        ) : (
+                          <span className="block h-6 w-6" aria-hidden="true" />
+                        )}
+                      </div>
 
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          event.currentTarget.blur();
-                        }
-                      }}
-                      className={`w-full rounded-lg border border-transparent bg-transparent px-2 py-1 text-sm outline-none transition-colors focus:border-slate-300 focus:bg-white ${getIsCompleted(task) ? "text-slate-400 line-through" : "text-slate-800"
-                        }`}
-                    />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={titleValue}
+                            placeholder="Escreva uma tarefa..."
+                            onFocus={() => setEditingTaskId(task.id)}
+                            onBlur={() => {
+                              setEditingTaskId(null);
+                              if (cfTimers.current[titleKey]) {
+                                clearTimeout(cfTimers.current[titleKey]);
+                                delete cfTimers.current[titleKey];
+                              }
+                              commitDraft(titleKey, (nextValue) => saveTaskField(task.id, { title: nextValue }));
+                            }}
+                            onChange={(event) => {
+                              queueDraftCommit(titleKey, event.target.value, (nextValue) => saveTaskField(task.id, { title: nextValue }));
+                            }}
+                            onKeyDown={(event) => {
+                              if (event.key === "Escape") {
+                                event.preventDefault();
+                                cancelDraft(titleKey);
+                                setEditingTaskId(null);
+                                event.currentTarget.blur();
+                              }
+
+                              if (event.key === "Enter") {
+                                event.preventDefault();
+                                event.currentTarget.blur();
+                              }
+                            }}
+                            className={`min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-2 py-1 text-sm outline-none transition-colors focus:border-slate-300 focus:bg-white ${depth > 0 ? "h-8 text-[13px]" : ""} ${getIsCompleted(task) ? "text-slate-400 line-through" : "text-slate-800"
+                              }`}
+                          />
+
+                          <div className="flex shrink-0 flex-wrap items-center gap-1">
+                            {depth > 0 && (
+                              <span className="inline-flex rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-700">
+                                Subtarefa
+                              </span>
+                            )}
+                            {childCount > 0 && (
+                              <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                                {childCount} {childCount === 1 ? "subtarefa" : "subtarefas"}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {hasHiddenParent && (
+                          <div className="px-2">
+                            <span className="text-[11px] font-medium text-amber-700">
+                              Tarefa pai fora desta visualizacao
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </Cell>
 
                   {activeView === "all" && (
-                    <Cell className="border-b border-slate-100 px-3 py-2">
+                    <Cell className={`border-b border-slate-100 px-3 ${depth > 0 ? "py-1.5" : "py-2"}`}>
                       <div className="flex flex-wrap items-center gap-1.5">
                         {taskProjects.map((project) => {
                           const colorDot = getColorDotProps(project.color);
@@ -802,23 +973,23 @@ const TaskTable = ({
                     </Cell>
                   )}
 
-                  <Cell className="border-b border-slate-100 px-3 py-2">
+                  <Cell className={`border-b border-slate-100 px-3 ${depth > 0 ? "py-1.5" : "py-2"}`}>
                     <DatePickerField
                       value={getDueDate(task)}
                       onChange={(nextDate) => saveTaskField(task.id, { dueDate: nextDate })}
                       className="w-full"
-                      buttonClassName="field h-9 bg-white text-sm"
+                      buttonClassName={`field bg-white text-sm ${depth > 0 ? "h-8" : "h-9"}`}
                       placeholder="Sem prazo"
                     />
                   </Cell>
 
                   {safeCustomFields.map((field) => (
-                    <Cell key={field.id} className="border-b border-slate-100 px-3 py-2">
+                    <Cell key={field.id} className={`border-b border-slate-100 px-3 ${depth > 0 ? "py-1.5" : "py-2"}`}>
                       {renderCustomFieldEditor(task, field)}
                     </Cell>
                   ))}
 
-                  <Cell className="border-b border-slate-100 px-3 py-2">
+                  <Cell className={`border-b border-slate-100 px-3 ${depth > 0 ? "py-1.5" : "py-2"}`}>
                     <div className="flex items-center justify-center gap-1">
                       {titleDraft !== undefined && (
                         <>
@@ -839,6 +1010,15 @@ const TaskTable = ({
                             <X className="h-4 w-4" />
                           </button>
                         </>
+                      )}
+                      {onAddSubtask && (
+                        <button
+                          onClick={() => onAddSubtask(task)}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-sky-100 hover:text-sky-700"
+                          title="Adicionar subtarefa"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
                       )}
                       {onEditTask && (
                         <button
@@ -866,7 +1046,7 @@ const TaskTable = ({
           </TableBody>
         </Table>
 
-        {filteredTasks.length === 0 && (
+        {visibleRows.length === 0 && (
           <div className="px-4 py-12 text-center text-sm text-slate-500">Nenhuma tarefa para os filtros atuais.</div>
         )}
       </div>

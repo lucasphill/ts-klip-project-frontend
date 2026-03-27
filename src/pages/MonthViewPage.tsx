@@ -10,6 +10,7 @@ import TaskTable from "../components/TaskTable";
 import TaskViewLayout from "../components/TaskViewLayout";
 import { useTasksContext } from "../contexts/TasksContext";
 import { useProjectsContext } from "../contexts/ProjectsContext";
+import { buildParentTaskOptions, getDescendantTaskIds } from "../lib/taskHierarchy";
 import { projectsTasksApi, tasksApi } from "../services/api";
 import type { CreateTaskDto, CustomFieldValue, GetProjectsDto, GetTasksDto } from "../types/apiTypes";
 
@@ -21,7 +22,7 @@ const toDateString = (date: Date): string => {
 };
 
 const MonthViewPage = () => {
-  const { tasks, fetchTasks, appendTask, updateTaskLocal, removeTaskLocal } = useTasksContext();
+  const { tasks, fetchTasks, appendTask, updateTaskLocal, removeTasksLocal } = useTasksContext();
   const { projects, fetchProjects } = useProjectsContext();
   const [projectTasks, setProjectTasks] = useState<{ project_id: string; task_id: string }[]>([]);
   const [showEditTaskModal, setShowEditTaskModal] = useState(false);
@@ -36,6 +37,10 @@ const MonthViewPage = () => {
     end: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
     title: new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
   });
+  const availableParentTasks = useMemo(
+    () => buildParentTaskOptions(tasks, taskToEdit?.id),
+    [taskToEdit?.id, tasks]
+  );
 
   const loadProjectTaskAssignments = async (projectsList: GetProjectsDto[]) => {
     try {
@@ -96,32 +101,34 @@ const MonthViewPage = () => {
     [tasks, visibleRange]
   );
 
+  const openTaskModal = (taskDraft: CreateTaskDto & { id?: string }, selectedProjectIds: string[] = []) => {
+    setTaskToEdit(taskDraft);
+    setTaskProjectIds(selectedProjectIds);
+    setShowEditTaskModal(true);
+  };
+
   const openCreateTaskModal = (dueDate?: string) => {
-    setTaskToEdit({
+    openTaskModal({
       title: "",
       isCompleted: false,
       dueDate,
       notes: "",
       parentTaskId: "",
     });
-    setTaskProjectIds([]);
-    setShowEditTaskModal(true);
   };
 
   const handleEventClick = (arg: EventClickArg) => {
     const task = tasks.find((item) => item.id === arg.event.id);
     if (!task) return;
 
-    setTaskToEdit({
+    openTaskModal({
       id: task.id,
       title: task.title ?? "",
       dueDate: task.dueDate ?? "",
       isCompleted: task.isCompleted ?? false,
       notes: (task as any).notes ?? "",
       parentTaskId: (task as any).parentTaskId ?? "",
-    });
-    setTaskProjectIds(getTaskProjects(task.id).map((project) => project.id));
-    setShowEditTaskModal(true);
+    }, getTaskProjects(task.id).map((project) => project.id));
   };
 
   const handleDayCellDidMount = (arg: DayCellMountArg) => {
@@ -281,25 +288,46 @@ const MonthViewPage = () => {
   const updateCustomValue = (_taskId: string, _fieldId: string, _value: CustomFieldValue) => { };
 
   const handleEditTask = (task: GetTasksDto) => {
-    setTaskToEdit({
+    openTaskModal({
       id: task.id,
       title: task.title ?? "",
       dueDate: task.dueDate ?? "",
       isCompleted: task.isCompleted ?? false,
       notes: (task as any).notes ?? "",
       parentTaskId: (task as any).parentTaskId ?? "",
-    });
-    setTaskProjectIds(getTaskProjects(task.id).map((project) => project.id));
-    setShowEditTaskModal(true);
+    }, getTaskProjects(task.id).map((project) => project.id));
+  };
+
+  const handleAddSubtask = (task: GetTasksDto) => {
+    openTaskModal(
+      {
+        title: "",
+        isCompleted: false,
+        dueDate: "",
+        notes: "",
+        parentTaskId: task.id,
+      },
+      getTaskProjects(task.id).map((project) => project.id)
+    );
   };
 
   const handleDeleteTask = async (taskId: string): Promise<boolean> => {
-    if (!confirm("Tem certeza que deseja excluir esta tarefa?")) return false;
+    const descendantTaskIds = getDescendantTaskIds(tasks, taskId);
+    const taskIdsToRemove = [taskId, ...descendantTaskIds];
+    const confirmationMessage =
+      descendantTaskIds.length > 0
+        ? `Esta tarefa possui ${descendantTaskIds.length} subtarefa(s). Ao excluir a tarefa pai, todas as tarefas filho tambem serao excluidas. Deseja continuar?`
+        : "Tem certeza que deseja excluir esta tarefa?";
+
+    if (!confirm(confirmationMessage)) return false;
 
     try {
       await tasksApi.remove(taskId);
-      removeTaskLocal(taskId);
-      setProjectTasks((previous) => previous.filter((projectTask) => projectTask.task_id !== taskId));
+      removeTasksLocal(taskIdsToRemove);
+      setProjectTasks((previous) =>
+        previous.filter((projectTask) => !taskIdsToRemove.includes(projectTask.task_id))
+      );
+      toast.success(descendantTaskIds.length > 0 ? "Tarefa e subtarefas excluidas" : "Tarefa excluida");
       return true;
     } catch (error: any) {
       toast.error(error?.message ?? "Erro ao excluir tarefa");
@@ -417,6 +445,7 @@ const MonthViewPage = () => {
                 updateTaskInline={updateTaskInline}
                 onEditTask={handleEditTask}
                 onDeleteTask={handleDeleteTask}
+                onAddSubtask={handleAddSubtask}
               />
             </div>
           </div>
@@ -434,6 +463,7 @@ const MonthViewPage = () => {
           task={taskToEdit}
           projects={projects}
           initialProjectIds={taskProjectIds}
+          parentTaskOptions={availableParentTasks}
         />
       </TaskViewLayout>
     </>
