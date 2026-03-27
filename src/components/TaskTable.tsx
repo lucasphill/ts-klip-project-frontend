@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useLocation } from "react-router-dom";
 import {
   ArrowUpDown,
   CircleHelp,
@@ -57,6 +58,63 @@ interface TaskTableProps {
   hideAddTaskButton?: boolean;
 }
 
+type TaskStatusFilter = "all" | "completed" | "pending";
+
+type StoredTaskTableState = {
+  version?: number;
+  statusFilter?: TaskStatusFilter;
+  sortColumn?: string;
+  sortDirection?: SortDescriptor["direction"];
+};
+
+const TASK_TABLE_STORAGE_PREFIX = "klip:task-table-state";
+const TASK_TABLE_STORAGE_VERSION = 1;
+
+const DEFAULT_STATUS_FILTER: TaskStatusFilter = "all";
+const DEFAULT_SORT_DESCRIPTOR: SortDescriptor = {
+  column: "dueDate",
+  direction: "ascending",
+};
+
+const isStatusFilter = (value: unknown): value is TaskStatusFilter =>
+  value === "all" || value === "completed" || value === "pending";
+
+const isSortDirection = (value: unknown): value is SortDescriptor["direction"] =>
+  value === "ascending" || value === "descending";
+
+const parseStoredTaskTableState = (rawValue: string | null) => {
+  if (!rawValue) {
+    return {
+      statusFilter: DEFAULT_STATUS_FILTER,
+      sortDescriptor: DEFAULT_SORT_DESCRIPTOR,
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue) as StoredTaskTableState;
+
+    const statusFilter = isStatusFilter(parsed.statusFilter) ? parsed.statusFilter : DEFAULT_STATUS_FILTER;
+    const direction = isSortDirection(parsed.sortDirection) ? parsed.sortDirection : DEFAULT_SORT_DESCRIPTOR.direction;
+    const column =
+      typeof parsed.sortColumn === "string" && parsed.sortColumn.trim().length > 0
+        ? parsed.sortColumn
+        : String(DEFAULT_SORT_DESCRIPTOR.column);
+
+    return {
+      statusFilter,
+      sortDescriptor: {
+        column,
+        direction,
+      } satisfies SortDescriptor,
+    };
+  } catch {
+    return {
+      statusFilter: DEFAULT_STATUS_FILTER,
+      sortDescriptor: DEFAULT_SORT_DESCRIPTOR,
+    };
+  }
+};
+
 const getColorDotProps = (color?: string): { className: string; style?: CSSProperties } | null => {
   if (!color) return null;
 
@@ -100,23 +158,56 @@ const TaskTable = ({
   onDeleteTask,
   hideAddTaskButton = false,
 }: TaskTableProps) => {
+  const location = useLocation();
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [cfDrafts, setCfDrafts] = useState<Record<string, string>>({});
   const cfTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-  const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "pending">("all");
+  const [statusFilter, setStatusFilter] = useState<TaskStatusFilter>(DEFAULT_STATUS_FILTER);
   const [columnSearch, setColumnSearch] = useState<Record<string, string>>({});
   const [areFiltersExpanded, setAreFiltersExpanded] = useState(false);
   const [projectSelectVersion, setProjectSelectVersion] = useState<Record<string, number>>({});
-  const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({
-    column: "dueDate",
-    direction: "ascending",
-  });
+  const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>(DEFAULT_SORT_DESCRIPTOR);
+  const skipNextTableStatePersist = useRef(false);
+
+  const tableStateStorageKey = useMemo(
+    () =>
+      `${TASK_TABLE_STORAGE_PREFIX}:v${TASK_TABLE_STORAGE_VERSION}:${location.pathname}:${activeView}`,
+    [location.pathname, activeView]
+  );
 
   useEffect(() => {
     return () => {
       Object.values(cfTimers.current).forEach((timer) => clearTimeout(timer));
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    skipNextTableStatePersist.current = true;
+    const stored = window.localStorage.getItem(tableStateStorageKey);
+    const parsedState = parseStoredTaskTableState(stored);
+    setStatusFilter(parsedState.statusFilter);
+    setSortDescriptor(parsedState.sortDescriptor);
+  }, [tableStateStorageKey]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    if (skipNextTableStatePersist.current) {
+      skipNextTableStatePersist.current = false;
+      return;
+    }
+
+    const payload: StoredTaskTableState = {
+      version: TASK_TABLE_STORAGE_VERSION,
+      statusFilter,
+      sortColumn: String(sortDescriptor.column ?? DEFAULT_SORT_DESCRIPTOR.column),
+      sortDirection: sortDescriptor.direction ?? DEFAULT_SORT_DESCRIPTOR.direction,
+    };
+
+    window.localStorage.setItem(tableStateStorageKey, JSON.stringify(payload));
+  }, [statusFilter, sortDescriptor, tableStateStorageKey]);
 
   const safeCustomFields = Array.isArray(activeCustomFields) ? activeCustomFields : [];
 
@@ -418,7 +509,7 @@ const TaskTable = ({
               <select
                 className="bg-transparent text-sm text-slate-700 outline-none"
                 value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value as "all" | "completed" | "pending")}
+                onChange={(event) => setStatusFilter(event.target.value as TaskStatusFilter)}
               >
                 <option value="all">Todas</option>
                 <option value="completed">Concluidas</option>
@@ -436,9 +527,9 @@ const TaskTable = ({
 
             <button
               onClick={() => {
-                setStatusFilter("all");
+                setStatusFilter(DEFAULT_STATUS_FILTER);
                 setColumnSearch({});
-                setSortDescriptor({ column: "dueDate", direction: "ascending" });
+                setSortDescriptor(DEFAULT_SORT_DESCRIPTOR);
               }}
               className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-50"
             >
