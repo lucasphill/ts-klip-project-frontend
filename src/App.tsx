@@ -1,22 +1,67 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { toast } from 'sonner';
 
 import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
 import ProjectsPage from './pages/ProjectsPage';
 import MonthViewPage from './pages/MonthViewPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { TasksProvider } from './contexts/TasksContext';
-import { ProjectsProvider } from './contexts/ProjectsContext';
+import { TasksProvider, useTasksContext } from './contexts/TasksContext';
+import { ProjectsProvider, useProjectsContext } from './contexts/ProjectsContext';
 import { useLoading } from './contexts/LoadingContext';
 import { Analytics } from '@vercel/analytics/react';
 
-const ProtectedRoute = ({ children }: { children: ReactNode }) => {
+const BootstrapGate = ({ children }: { children: ReactNode }) => {
+  const { isAuthenticated } = useAuth();
+  const { fetchProjects } = useProjectsContext();
+  const { fetchTasks } = useTasksContext();
+  const { setLoading } = useLoading();
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setIsReady(false);
+      return;
+    }
+
+    let isMounted = true;
+    setLoading(true, 'bootstrap');
+
+    void (async () => {
+      const results = await Promise.allSettled([fetchProjects(), fetchTasks()]);
+      const failedResult = results.find((result) => result.status === 'rejected');
+
+      if (failedResult?.status === 'rejected') {
+        const error = failedResult.reason as any;
+        toast.error(error?.message ?? 'Erro ao carregar dados iniciais');
+      }
+
+      if (isMounted) {
+        setIsReady(true);
+      }
+      setLoading(false, 'bootstrap');
+    })();
+
+    return () => {
+      isMounted = false;
+      setLoading(false, 'bootstrap');
+    };
+  }, [fetchProjects, fetchTasks, isAuthenticated, setLoading]);
+
+  if (!isReady) {
+    return null;
+  }
+
+  return <>{children}</>;
+};
+
+const AuthenticatedApp = () => {
   const { isAuthenticated, loading, login } = useAuth();
   const { setLoading } = useLoading();
 
   useEffect(() => {
-    setLoading(loading);
+    setLoading(loading, 'auth');
   }, [loading, setLoading]);
 
   useEffect(() => {
@@ -29,73 +74,66 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
     return null; // vai redirecionar via login()
   }
 
-  return <>{children}</>;
-};
-
-const AppRoutes = () => {
   return (
-    <Routes>
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
+    <BootstrapGate>
+      <Routes>
+        <Route
+          path="/"
+          element={
             <Layout>
               <HomePage />
             </Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/calendar"
-        element={
-          <ProtectedRoute>
+          }
+        />
+        <Route
+          path="/calendar"
+          element={
             <Layout>
               <MonthViewPage />
             </Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/week"
-        element={
-          <ProtectedRoute>
+          }
+        />
+        <Route
+          path="/week"
+          element={
             <Layout>
               <MonthViewPage />
             </Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/project/:projectId"
-        element={
-          <ProtectedRoute>
+          }
+        />
+        <Route
+          path="/project/:projectId"
+          element={
             <Layout>
               <ProjectsPage />
             </Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="*"
-        element={
-          <div className="flex min-h-screen items-center justify-center px-4">
-            <div className="surface-panel max-w-md rounded-2xl bg-white p-8 text-center">
-              <h1 className="text-5xl font-bold text-slate-900">404</h1>
-              <p className="mt-2 text-sm text-slate-500">Pagina nao encontrada.</p>
-              <a
-                href="/"
-                className="mt-5 inline-flex items-center justify-center rounded-xl bg-[#2f6fb2] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#225587]"
-              >
-                Voltar para a home
-              </a>
+          }
+        />
+        <Route
+          path="*"
+          element={
+            <div className="flex min-h-screen items-center justify-center px-4">
+              <div className="surface-panel max-w-md rounded-2xl bg-white p-8 text-center">
+                <h1 className="text-5xl font-bold text-slate-900">404</h1>
+                <p className="mt-2 text-sm text-slate-500">Pagina nao encontrada.</p>
+                <a
+                  href="/"
+                  className="mt-5 inline-flex items-center justify-center rounded-xl bg-[#2f6fb2] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#225587]"
+                >
+                  Voltar para a home
+                </a>
+              </div>
             </div>
-          </div>
-        }
-      />
-    </Routes>
+          }
+        />
+      </Routes>
+    </BootstrapGate>
+  );
+};
 
-  )
-}
+const AppRoutes = () => {
+  return <AuthenticatedApp />;
+};
 
 const App = () => {
   return (

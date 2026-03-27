@@ -1,29 +1,46 @@
-import { createContext, useContext, useState, type ReactNode, type FC } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode, type FC } from 'react';
 
 interface LoadingContextType {
   isLoading: boolean;
-  setLoading: (loading: boolean) => void;
-  withLoading: <T>(promise: Promise<T>) => Promise<T>;
+  setLoading: (loading: boolean, source?: string) => void;
+  withLoading: <T>(promise: Promise<T>, source?: string) => Promise<T>;
 }
 
 const LoadingContext = createContext<LoadingContextType | undefined>(undefined);
 
 export const LoadingProvider: FC<{ children: ReactNode }> = ({ children }) => {
-  const [isLoading, setIsLoading] = useState(false);
+  const [activeSources, setActiveSources] = useState<Record<string, boolean>>({});
 
-  const setLoading = (loading: boolean) => {
-    setIsLoading(loading);
-  };
+  const setLoading = useCallback((loading: boolean, source = 'default') => {
+    setActiveSources((previous) => {
+      if (loading) {
+        if (previous[source]) {
+          return previous;
+        }
+        return { ...previous, [source]: true };
+      }
 
-  const withLoading = async <T,>(promise: Promise<T>): Promise<T> => {
-    setIsLoading(true);
+      if (!previous[source]) {
+        return previous;
+      }
+
+      const nextSources = { ...previous };
+      delete nextSources[source];
+      return nextSources;
+    });
+  }, []);
+
+  const withLoading = useCallback(async <T,>(promise: Promise<T>, source = 'default'): Promise<T> => {
+    setLoading(true, source);
     try {
       const result = await promise;
       return result;
     } finally {
-      setIsLoading(false);
+      setLoading(false, source);
     }
-  };
+  }, [setLoading]);
+
+  const isLoading = useMemo(() => Object.keys(activeSources).length > 0, [activeSources]);
 
   return (
     <LoadingContext.Provider value={{ isLoading, setLoading, withLoading }}>

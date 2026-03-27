@@ -1,20 +1,16 @@
 import { useEffect, useState } from "react";
 import type { HealthStatus } from "../types/types";
 import { healthApi } from "../services/api";
-import { useLoading } from "../contexts/LoadingContext";
 
 const Footer = () => {
   const [health, setHealth] = useState<HealthStatus | null>(null);
-  const { setLoading } = useLoading();
 
   useEffect(() => {
-    setLoading(true);
     healthApi
       .getHealth()
       .then(setHealth)
       .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [setLoading]);
+  }, []);
 
   const apiStatusIsHealthy = health?.status === "Healthy";
 
