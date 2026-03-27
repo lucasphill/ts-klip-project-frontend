@@ -104,7 +104,7 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
         await projectsApi.create(project);
         toast.success(`Projeto criado: ${project.name}`);
       }
-      await fetchProjects();
+      await fetchProjects({ force: true });
       setProjectToEdit(null);
     } catch (error: any) {
       toast.error(error?.message ?? "Erro ao salvar projeto");
