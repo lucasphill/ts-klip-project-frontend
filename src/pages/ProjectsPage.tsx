@@ -5,6 +5,7 @@ import TaskTable from '../components/TaskTable';
 import AddTaskModal from '../components/AddTaskModal';
 import TaskViewLayout from '../components/TaskViewLayout';
 import { useProjectsContext } from '../contexts/ProjectsContext';
+import { buildParentTaskOptions, getDescendantTaskIds } from '../lib/taskHierarchy';
 import {
   customFieldDefinitionsApi,
   customFieldValuesApi,
@@ -111,6 +112,10 @@ const ProjectsPage = () => {
     () => projects.find((project) => project.id === projectId) ?? null,
     [projectId, projects]
   );
+  const availableParentTasks = useMemo(
+    () => buildParentTaskOptions(tasks, taskToEdit?.id),
+    [taskToEdit?.id, tasks]
+  );
 
   const loadProjectTaskAssignments = async (projectsList: GetProjectsDto[]) => {
     try {
@@ -199,16 +204,20 @@ const ProjectsPage = () => {
     void persistTaskUpdate(taskId, { isCompleted: !(task.isCompleted ?? false) });
   };
 
+  const openTaskModal = (taskDraft: CreateTaskDto & { id?: string }, selectedProjectIds: string[] = []) => {
+    setTaskToEdit(taskDraft);
+    setTaskProjectIds(selectedProjectIds);
+    setShowEditTaskModal(true);
+  };
+
   const addTask = () => {
-    setTaskToEdit({
+    openTaskModal({
       title: '',
       isCompleted: false,
       dueDate: '',
       notes: '',
       parentTaskId: '',
-    });
-    setTaskProjectIds(currentProject ? [currentProject.id] : []);
-    setShowEditTaskModal(true);
+    }, currentProject ? [currentProject.id] : []);
   };
 
   const getFieldValue = (taskId: string, fieldId: string) => {
@@ -327,18 +336,37 @@ const ProjectsPage = () => {
   };
 
   const handleEditTask = (task: ProjectTask) => {
-    setTaskToEdit(task);
-    setTaskProjectIds(getTaskProjects(task.id).map((project) => project.id));
-    setShowEditTaskModal(true);
+    openTaskModal(task, getTaskProjects(task.id).map((project) => project.id));
+  };
+
+  const handleAddSubtask = (task: ProjectTask) => {
+    openTaskModal(
+      {
+        title: '',
+        isCompleted: false,
+        dueDate: '',
+        notes: '',
+        parentTaskId: task.id,
+      },
+      getTaskProjects(task.id).map((project) => project.id)
+    );
   };
 
   const handleDeleteTask = async (taskId: string): Promise<boolean> => {
-    if (!confirm('Tem certeza que deseja excluir esta tarefa?')) return false;
+    const descendantTaskIds = getDescendantTaskIds(tasks, taskId);
+    const taskIdsToRemove = [taskId, ...descendantTaskIds];
+    const confirmationMessage =
+      descendantTaskIds.length > 0
+        ? `Esta tarefa possui ${descendantTaskIds.length} subtarefa(s). Ao excluir a tarefa pai, todas as tarefas filho tambem serao excluidas. Deseja continuar?`
+        : 'Tem certeza que deseja excluir esta tarefa?';
+
+    if (!confirm(confirmationMessage)) return false;
 
     try {
       await tasksApi.remove(taskId);
-      setTasks((previousTasks) => previousTasks.filter((task) => task.id !== taskId));
-      toast.success('Tarefa excluida com sucesso');
+      setTasks((previousTasks) => previousTasks.filter((task) => !taskIdsToRemove.includes(task.id)));
+      setProjectTasks((previous) => previous.filter((projectTask) => !taskIdsToRemove.includes(projectTask.task_id)));
+      toast.success(descendantTaskIds.length > 0 ? 'Tarefa e subtarefas excluidas' : 'Tarefa excluida com sucesso');
       return true;
     } catch (error: any) {
       toast.error(error?.message ?? 'Erro ao excluir tarefa');
@@ -460,6 +488,7 @@ const ProjectsPage = () => {
             updateTaskInline={updateTaskInline}
             onEditTask={handleEditTask}
             onDeleteTask={handleDeleteTask}
+            onAddSubtask={handleAddSubtask}
           />
         )}
 
@@ -475,6 +504,7 @@ const ProjectsPage = () => {
           task={taskToEdit}
           projects={projects}
           initialProjectIds={taskProjectIds}
+          parentTaskOptions={availableParentTasks}
         />
       </TaskViewLayout>
     </>

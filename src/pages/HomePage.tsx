@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import TaskTable from "../components/TaskTable";
 import AddTaskModal from "../components/AddTaskModal";
@@ -7,14 +7,20 @@ import { tasksApi, projectsTasksApi } from "../services/api";
 import type { GetProjectsDto, GetTasksDto, CreateTaskDto } from "../types/apiTypes";
 import { useTasksContext } from "../contexts/TasksContext";
 import { useProjectsContext } from "../contexts/ProjectsContext";
+import { buildParentTaskOptions, getDescendantTaskIds } from "../lib/taskHierarchy";
 
 const HomePage = () => {
-  const { tasks, fetchTasks, appendTask, updateTaskLocal, removeTaskLocal } = useTasksContext();
+  const { tasks, fetchTasks, appendTask, updateTaskLocal, removeTasksLocal } = useTasksContext();
   const { projects, fetchProjects } = useProjectsContext();
   const [projectTasks, setProjectTasks] = useState<any[]>([]);
   const [showEditTaskModal, setShowEditTaskModal] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<any>(null);
   const [taskProjectIds, setTaskProjectIds] = useState<string[]>([]);
+
+  const availableParentTasks = useMemo(
+    () => buildParentTaskOptions(tasks, taskToEdit?.id),
+    [tasks, taskToEdit?.id]
+  );
 
   const loadProjectTaskAssignments = async (projectsList: GetProjectsDto[]) => {
     try {
@@ -92,17 +98,20 @@ const HomePage = () => {
     })();
   };
 
+  const openTaskModal = (taskDraft: CreateTaskDto & { id?: string }, selectedProjectIds: string[] = []) => {
+    setTaskToEdit(taskDraft);
+    setTaskProjectIds(selectedProjectIds);
+    setShowEditTaskModal(true);
+  };
+
   const addTask = () => {
-    const draftTask = {
+    openTaskModal({
       title: "",
       isCompleted: false,
       dueDate: "",
       notes: "",
       parentTaskId: "",
-    } as any;
-    setTaskToEdit(draftTask);
-    setTaskProjectIds([]);
-    setShowEditTaskModal(true);
+    });
   };
 
   const syncTaskProjects = async (taskId: string, nextProjectIds: string[]) => {
@@ -195,18 +204,39 @@ const HomePage = () => {
   };
 
   const handleEditTask = (task: any) => {
-    setTaskToEdit(task);
-    setTaskProjectIds(getTaskProjects(task.id).map((project) => project.id));
-    setShowEditTaskModal(true);
+    openTaskModal(task, getTaskProjects(task.id).map((project) => project.id));
+  };
+
+  const handleAddSubtask = (task: GetTasksDto) => {
+    openTaskModal(
+      {
+        title: "",
+        isCompleted: false,
+        dueDate: "",
+        notes: "",
+        parentTaskId: task.id,
+      },
+      getTaskProjects(task.id).map((project) => project.id)
+    );
   };
 
   const handleDeleteTask = async (taskId: string): Promise<boolean> => {
-    if (!confirm("Tem certeza que deseja excluir esta tarefa?")) return false;
+    const descendantTaskIds = getDescendantTaskIds(tasks, taskId);
+    const taskIdsToRemove = [taskId, ...descendantTaskIds];
+    const confirmationMessage =
+      descendantTaskIds.length > 0
+        ? `Esta tarefa possui ${descendantTaskIds.length} subtarefa(s). Ao excluir a tarefa pai, todas as tarefas filho tambem serao excluidas. Deseja continuar?`
+        : "Tem certeza que deseja excluir esta tarefa?";
+
+    if (!confirm(confirmationMessage)) return false;
 
     try {
       await tasksApi.remove(taskId);
-      removeTaskLocal(taskId);
-      toast.success("Tarefa excluida");
+      removeTasksLocal(taskIdsToRemove);
+      setProjectTasks((previous) =>
+        previous.filter((projectTask) => !taskIdsToRemove.includes(projectTask.task_id))
+      );
+      toast.success(descendantTaskIds.length > 0 ? "Tarefa e subtarefas excluidas" : "Tarefa excluida");
       return true;
     } catch (error: any) {
       toast.error(error?.message ?? "Erro ao excluir tarefa");
@@ -230,7 +260,7 @@ const HomePage = () => {
         const response = await tasksApi.create(payload);
         const created: GetTasksDto = response.data;
         await syncTaskProjects(created.id, selectedProjectIds);
-        removeTaskLocal(task.id);
+        removeTasksLocal([task.id]);
         appendTask(created);
         toast.success("Tarefa criada com sucesso");
       } catch (error: any) {
@@ -286,6 +316,7 @@ const HomePage = () => {
           updateTaskInline={updateTaskInline}
           onEditTask={handleEditTask}
           onDeleteTask={handleDeleteTask}
+          onAddSubtask={handleAddSubtask}
         />
 
         <AddTaskModal
@@ -300,6 +331,7 @@ const HomePage = () => {
           task={taskToEdit}
           projects={projects}
           initialProjectIds={taskProjectIds}
+          parentTaskOptions={availableParentTasks}
         />
       </TaskViewLayout>
     </>
