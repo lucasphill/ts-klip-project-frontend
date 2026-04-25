@@ -103,7 +103,12 @@ const TaskViewLayout: FC<TaskViewLayoutProps & { children: ReactNode }> = ({
               >
                 {getFieldIcon(field.type)}
                 {field.name}
-                {canAddCustomField && onRemoveCustomField && (
+                {field.isUniversal && (
+                  <span className="rounded-full bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700">
+                    Universal
+                  </span>
+                )}
+                {canAddCustomField && onRemoveCustomField && !field.isUniversal && (
                   <button
                     onClick={() => void handleRemoveField(field)}
                     className="rounded-full p-0.5 text-slate-500 hover:bg-rose-100 hover:text-rose-700"

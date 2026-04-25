@@ -5,6 +5,7 @@ import TaskTable from '../components/TaskTable';
 import AddTaskModal from '../components/AddTaskModal';
 import TaskViewLayout from '../components/TaskViewLayout';
 import { useProjectsContext } from '../contexts/ProjectsContext';
+import { useUniversalCustomFields } from '../contexts/UniversalCustomFieldsContext';
 import { buildParentTaskOptions, getDescendantTaskIds } from '../lib/taskHierarchy';
 import {
   customFieldDefinitionsApi,
@@ -62,11 +63,22 @@ const normalizeFieldKey = (value: string) =>
 
 const normalizeCustomField = (field: GetCustomFieldDefinitionDto): GetCustomFieldDefinitionDto => ({
   ...field,
+  isUniversal: Boolean(field.isUniversal),
   options: normalizeFieldOptions(field.options),
 });
 
 const areSameOptions = (left: string[], right: string[]) =>
   left.length === right.length && left.every((option, index) => option === right[index]);
+
+const mergeCustomFields = (...collections: GetCustomFieldDefinitionDto[][]) => {
+  const fieldsById = new Map<string, GetCustomFieldDefinitionDto>();
+
+  collections.flat().forEach((field) => {
+    fieldsById.set(field.id, field);
+  });
+
+  return Array.from(fieldsById.values());
+};
 
 const toTaskPayload = (task: CreateTaskDto) => ({
   title: task.title.trim(),
@@ -100,6 +112,7 @@ const buildCustomFieldValuePayload = (
 const ProjectsPage = () => {
   const { projectId } = useParams();
   const { projects, fetchProjects } = useProjectsContext();
+  const { fetchUniversalCustomFields } = useUniversalCustomFields();
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
   const [customFields, setCustomFields] = useState<GetCustomFieldDefinitionDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -150,8 +163,9 @@ const ProjectsPage = () => {
     setIsLoading(true);
 
     try {
-      const [projectsList, projectFieldsResponse] = await Promise.all([
+      const [projectsList, fetchedUniversalFields, projectFieldsResponse] = await Promise.all([
         fetchProjects(),
+        fetchUniversalCustomFields(),
         projectsCustomFieldDefinitionsApi.getByProject(projectId),
       ]);
       await loadProjectTaskAssignments(projectsList);
@@ -167,7 +181,12 @@ const ProjectsPage = () => {
       }
 
       setTasks(projectTasks);
-      setCustomFields((projectFieldsResponse.data ?? []).map(normalizeCustomField));
+      setCustomFields(
+        mergeCustomFields(
+          fetchedUniversalFields,
+          (projectFieldsResponse.data ?? []).map(normalizeCustomField),
+        )
+      );
     } catch (error: any) {
       toast.error(error?.message ?? 'Erro ao carregar o projeto');
     } finally {
@@ -177,7 +196,7 @@ const ProjectsPage = () => {
 
   useEffect(() => {
     void refreshProjectData();
-  }, [projectId]);
+  }, [fetchProjects, fetchUniversalCustomFields, projectId]);
 
   const persistTaskUpdate = async (taskId: string, updates: Partial<ProjectTask>) => {
     const existingTask = tasks.find((task) => task.id === taskId);
@@ -302,7 +321,9 @@ const ProjectsPage = () => {
     );
 
     const payload = buildCustomFieldValuePayload(taskId, fieldId, field.type, value);
-    const request = hasCurrentValue ? customFieldValuesApi.update(payload, projectId) : customFieldValuesApi.create(payload, projectId);
+    const request = hasCurrentValue
+      ? customFieldValuesApi.update(payload, field.isUniversal ? undefined : projectId)
+      : customFieldValuesApi.create(payload, field.isUniversal ? undefined : projectId);
 
     void (async () => {
       try {
@@ -431,12 +452,16 @@ const ProjectsPage = () => {
         throw new Error('Nao foi possivel localizar o campo criado para vincular ao projeto.');
       }
 
-      await projectsCustomFieldDefinitionsApi.assign(projectId, matchingField.id);
-      setCustomFields((previousFields) => {
-        const nextFields = previousFields.filter((item) => item.id !== matchingField.id);
-        return [...nextFields, matchingField];
-      });
-      toast.success('Campo personalizado adicionado ao projeto');
+      if (!matchingField.isUniversal) {
+        await projectsCustomFieldDefinitionsApi.assign(projectId, matchingField.id);
+      } else {
+        await fetchUniversalCustomFields({ force: true });
+      }
+
+      setCustomFields((previousFields) =>
+        mergeCustomFields(previousFields, [matchingField])
+      );
+      toast.success(matchingField.isUniversal ? 'Campo universal criado com sucesso' : 'Campo personalizado adicionado ao projeto');
     } catch (error: any) {
       toast.error(error?.message ?? 'Erro ao criar campo personalizado');
       throw error;
@@ -445,6 +470,7 @@ const ProjectsPage = () => {
 
   const handleRemoveCustomField = async (field: GetCustomFieldDefinitionDto) => {
     if (!projectId) return;
+    if (field.isUniversal) return;
 
     try {
       await projectsCustomFieldDefinitionsApi.unassign(projectId, field.id);

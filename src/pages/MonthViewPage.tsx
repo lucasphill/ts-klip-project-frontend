@@ -10,9 +10,10 @@ import TaskTable from "../components/TaskTable";
 import TaskViewLayout from "../components/TaskViewLayout";
 import { useTasksContext } from "../contexts/TasksContext";
 import { useProjectsContext } from "../contexts/ProjectsContext";
+import { useUniversalCustomFields } from "../contexts/UniversalCustomFieldsContext";
 import { buildParentTaskOptions, getDescendantTaskIds } from "../lib/taskHierarchy";
-import { projectsTasksApi, tasksApi } from "../services/api";
-import type { CreateTaskDto, CustomFieldValue, GetProjectsDto, GetTasksDto } from "../types/apiTypes";
+import { customFieldValuesApi, projectsTasksApi, tasksApi } from "../services/api";
+import type { CreateTaskDto, CustomFieldValue, GetCustomFieldDefinitionDto, GetProjectsDto, GetTasksDto } from "../types/apiTypes";
 
 const toDateString = (date: Date): string => {
   const year = date.getFullYear();
@@ -21,9 +22,51 @@ const toDateString = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
+const normalizeFieldKey = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toLowerCase();
+
+const getTaskFieldValue = (
+  task: { customFields?: Record<string, CustomFieldValue> } | undefined,
+  field: GetCustomFieldDefinitionDto | undefined
+) => {
+  if (!task || !field) return '';
+  if (task.customFields?.[field.id] !== undefined) return task.customFields[field.id];
+  if (task.customFields?.[field.name] !== undefined) return task.customFields[field.name];
+
+  if (task.customFields) {
+    const normalizedTargetKey = normalizeFieldKey(field.name);
+    const matchingEntry = Object.entries(task.customFields).find(([key]) => normalizeFieldKey(key) === normalizedTargetKey);
+    if (matchingEntry) return matchingEntry[1];
+  }
+
+  return '';
+};
+
+const buildCustomFieldValuePayload = (
+  taskId: string,
+  customFieldId: string,
+  fieldType: GetCustomFieldDefinitionDto['type'],
+  value: CustomFieldValue
+) => {
+  const payload: any = { taskId, customFieldId };
+
+  if (fieldType === 'number') {
+    payload.valueNumber = value === undefined || value === null || value === '' ? undefined : Number(value);
+    return payload;
+  }
+
+  payload.valueText = value === undefined || value === null ? '' : String(value);
+  return payload;
+};
+
 const MonthViewPage = () => {
   const { tasks, fetchTasks, appendTask, updateTaskLocal, removeTasksLocal } = useTasksContext();
   const { projects, fetchProjects } = useProjectsContext();
+  const { universalCustomFields } = useUniversalCustomFields();
   const [projectTasks, setProjectTasks] = useState<{ project_id: string; task_id: string }[]>([]);
   const [showEditTaskModal, setShowEditTaskModal] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<(CreateTaskDto & { id?: string }) | null>(null);
@@ -284,8 +327,41 @@ const MonthViewPage = () => {
     })();
   };
 
-  const getFieldValue = (_taskId: string, _fieldId: string) => "";
-  const updateCustomValue = (_taskId: string, _fieldId: string, _value: CustomFieldValue) => { };
+  const getFieldValue = (taskId: string, fieldId: string) => {
+    const task = tasks.find((item) => item.id === taskId);
+    const field = universalCustomFields.find((item) => item.id === fieldId);
+    return getTaskFieldValue(task, field);
+  };
+
+  const updateCustomValue = (taskId: string, fieldId: string, value: CustomFieldValue) => {
+    const field = universalCustomFields.find((item) => item.id === fieldId);
+    const task = tasks.find((item) => item.id === taskId);
+    if (!field || !task) return;
+
+    const previousCustomFields = { ...(task.customFields ?? {}) };
+    const nextCustomFields = { ...(task.customFields ?? {}) };
+    delete nextCustomFields[field.id];
+    nextCustomFields[field.name] = value;
+
+    const currentValue = getTaskFieldValue(task, field);
+    const hasCurrentValue = currentValue !== '' && currentValue !== undefined && currentValue !== null;
+
+    updateTaskLocal(taskId, { customFields: nextCustomFields });
+
+    const payload = buildCustomFieldValuePayload(taskId, fieldId, field.type, value);
+    const request = hasCurrentValue
+      ? customFieldValuesApi.update(payload)
+      : customFieldValuesApi.create(payload);
+
+    void (async () => {
+      try {
+        await request;
+      } catch (error: any) {
+        toast.error(error?.message ?? 'Erro ao salvar campo personalizado');
+        updateTaskLocal(taskId, { customFields: previousCustomFields });
+      }
+    })();
+  };
 
   const handleEditTask = (task: GetTasksDto) => {
     openTaskModal({
@@ -431,7 +507,7 @@ const MonthViewPage = () => {
               <TaskTable
                 activeView="all"
                 visibleTasks={monthTasks}
-                activeCustomFields={[]}
+                activeCustomFields={universalCustomFields}
                 projects={projects}
                 getFieldValue={getFieldValue}
                 updateCustomValue={updateCustomValue}

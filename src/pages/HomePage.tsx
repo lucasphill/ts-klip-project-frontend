@@ -3,15 +3,59 @@ import { toast } from "sonner";
 import TaskTable from "../components/TaskTable";
 import AddTaskModal from "../components/AddTaskModal";
 import TaskViewLayout from "../components/TaskViewLayout";
-import { tasksApi, projectsTasksApi } from "../services/api";
+import { customFieldValuesApi, tasksApi, projectsTasksApi } from "../services/api";
 import type { GetProjectsDto, GetTasksDto, CreateTaskDto } from "../types/apiTypes";
 import { useTasksContext } from "../contexts/TasksContext";
 import { useProjectsContext } from "../contexts/ProjectsContext";
+import { useUniversalCustomFields } from "../contexts/UniversalCustomFieldsContext";
 import { buildParentTaskOptions, getDescendantTaskIds } from "../lib/taskHierarchy";
+import type { CustomFieldValue, GetCustomFieldDefinitionDto } from "../types/apiTypes";
+
+const normalizeFieldKey = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toLowerCase();
+
+const getTaskFieldValue = (
+  task: { customFields?: Record<string, CustomFieldValue> } | undefined,
+  field: GetCustomFieldDefinitionDto | undefined
+) => {
+  if (!task || !field) return '';
+  if (task.customFields?.[field.id] !== undefined) return task.customFields[field.id];
+  if (task.customFields?.[field.name] !== undefined) return task.customFields[field.name];
+
+  if (task.customFields) {
+    const normalizedTargetKey = normalizeFieldKey(field.name);
+    const matchingEntry = Object.entries(task.customFields).find(([key]) => normalizeFieldKey(key) === normalizedTargetKey);
+    if (matchingEntry) return matchingEntry[1];
+  }
+
+  return '';
+};
+
+const buildCustomFieldValuePayload = (
+  taskId: string,
+  customFieldId: string,
+  fieldType: GetCustomFieldDefinitionDto['type'],
+  value: CustomFieldValue
+) => {
+  const payload: any = { taskId, customFieldId };
+
+  if (fieldType === 'number') {
+    payload.valueNumber = value === undefined || value === null || value === '' ? undefined : Number(value);
+    return payload;
+  }
+
+  payload.valueText = value === undefined || value === null ? '' : String(value);
+  return payload;
+};
 
 const HomePage = () => {
   const { tasks, fetchTasks, appendTask, updateTaskLocal, removeTasksLocal } = useTasksContext();
   const { projects, fetchProjects } = useProjectsContext();
+  const { universalCustomFields } = useUniversalCustomFields();
   const [projectTasks, setProjectTasks] = useState<any[]>([]);
   const [showEditTaskModal, setShowEditTaskModal] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<any>(null);
@@ -203,6 +247,42 @@ const HomePage = () => {
     void persistTaskUpdate(taskId, updates);
   };
 
+  const getFieldValue = (taskId: string, fieldId: string) => {
+    const task = tasks.find((item) => item.id === taskId);
+    const field = universalCustomFields.find((item) => item.id === fieldId);
+    return getTaskFieldValue(task, field);
+  };
+
+  const updateCustomValue = (taskId: string, fieldId: string, value: CustomFieldValue) => {
+    const field = universalCustomFields.find((item) => item.id === fieldId);
+    const task = tasks.find((item) => item.id === taskId);
+    if (!field || !task) return;
+
+    const previousCustomFields = { ...(task.customFields ?? {}) };
+    const nextCustomFields = { ...(task.customFields ?? {}) };
+    delete nextCustomFields[field.id];
+    nextCustomFields[field.name] = value;
+
+    const currentValue = getTaskFieldValue(task, field);
+    const hasCurrentValue = currentValue !== '' && currentValue !== undefined && currentValue !== null;
+
+    updateTaskLocal(taskId, { customFields: nextCustomFields });
+
+    const payload = buildCustomFieldValuePayload(taskId, fieldId, field.type, value);
+    const request = hasCurrentValue
+      ? customFieldValuesApi.update(payload)
+      : customFieldValuesApi.create(payload);
+
+    void (async () => {
+      try {
+        await request;
+      } catch (error: any) {
+        toast.error(error?.message ?? 'Erro ao salvar campo personalizado');
+        updateTaskLocal(taskId, { customFields: previousCustomFields });
+      }
+    })();
+  };
+
   const handleEditTask = (task: any) => {
     openTaskModal(task, getTaskProjects(task.id).map((project) => project.id));
   };
@@ -305,6 +385,9 @@ const HomePage = () => {
         <TaskTable
           visibleTasks={tasks}
           activeView="all"
+          activeCustomFields={universalCustomFields}
+          getFieldValue={getFieldValue}
+          updateCustomValue={updateCustomValue}
           toggleTaskCompletion={toggleTaskCompletion}
           addTask={addTask}
           projects={projects}

@@ -1,22 +1,25 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
 import { tasksApi } from '../services/api';
-import type { GetTasksDto } from '../types/apiTypes';
+import type { GetTasksDto, GetTasksWithCustomFieldsDto } from '../types/apiTypes';
+
+type TaskWithCustomFields = GetTasksDto & Pick<GetTasksWithCustomFieldsDto, 'customFields'>;
 
 interface TasksContextValue {
-  tasks: GetTasksDto[];
+  tasks: TaskWithCustomFields[];
   fetchTasks: (options?: { force?: boolean }) => Promise<void>;
-  appendTask: (task: GetTasksDto) => void;
-  updateTaskLocal: (taskId: string, updates: Partial<GetTasksDto>) => void;
+  appendTask: (task: GetTasksDto | GetTasksWithCustomFieldsDto) => void;
+  updateTaskLocal: (taskId: string, updates: Partial<TaskWithCustomFields>) => void;
   removeTaskLocal: (taskId: string) => void;
   removeTasksLocal: (taskIds: string[]) => void;
 }
 
 const TasksContext = createContext<TasksContextValue | null>(null);
 
-const normalizeDueDate = (task: GetTasksDto): GetTasksDto => {
+const normalizeDueDate = (task: GetTasksDto | GetTasksWithCustomFieldsDto): TaskWithCustomFields => {
   const rawDueDate = (task as any).dueDate ?? (task as any).due_date;
   return {
     ...task,
+    customFields: 'customFields' in task ? task.customFields ?? {} : {},
     dueDate:
       typeof rawDueDate === 'string' && rawDueDate.trim()
         ? rawDueDate.split('T')[0]
@@ -25,8 +28,8 @@ const normalizeDueDate = (task: GetTasksDto): GetTasksDto => {
 };
 
 export const TasksProvider = ({ children }: { children: ReactNode }) => {
-  const [tasks, setTasks] = useState<GetTasksDto[]>([]);
-  const tasksRef = useRef<GetTasksDto[]>([]);
+  const [tasks, setTasks] = useState<TaskWithCustomFields[]>([]);
+  const tasksRef = useRef<TaskWithCustomFields[]>([]);
   const hasFetchedOnceRef = useRef(false);
   const fetchPromiseRef = useRef<Promise<void> | null>(null);
 
@@ -42,7 +45,7 @@ export const TasksProvider = ({ children }: { children: ReactNode }) => {
     }
 
     fetchPromiseRef.current = tasksApi
-      .getAll()
+      .getAllWithCustomFields()
       .then((response) => {
         const normalizedTasks = (response.data ?? []).map(normalizeDueDate);
         tasksRef.current = normalizedTasks;
@@ -56,7 +59,7 @@ export const TasksProvider = ({ children }: { children: ReactNode }) => {
     return fetchPromiseRef.current;
   }, []);
 
-  const appendTask = useCallback((task: GetTasksDto) => {
+  const appendTask = useCallback((task: GetTasksDto | GetTasksWithCustomFieldsDto) => {
     setTasks((prev) => {
       const nextTasks = [...prev, normalizeDueDate(task)];
       tasksRef.current = nextTasks;
@@ -65,9 +68,9 @@ export const TasksProvider = ({ children }: { children: ReactNode }) => {
     });
   }, []);
 
-  const updateTaskLocal = useCallback((taskId: string, updates: Partial<GetTasksDto>) => {
+  const updateTaskLocal = useCallback((taskId: string, updates: Partial<TaskWithCustomFields>) => {
     setTasks((prev) => {
-      const nextTasks = prev.map((task) => (task.id === taskId ? { ...task, ...updates } : task));
+      const nextTasks = prev.map((task) => (task.id === taskId ? normalizeDueDate({ ...task, ...updates }) : task));
       tasksRef.current = nextTasks;
       hasFetchedOnceRef.current = true;
       return nextTasks;
