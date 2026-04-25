@@ -3,12 +3,14 @@ import { X } from "lucide-react";
 import type { CreateCustomFieldDefinitionDto, CustomFieldType } from "../types/apiTypes";
 
 type FieldDraft = {
+  isUniversal: boolean;
   name: string;
   type: string;
   optionsString: string;
 };
 
 const initialDraft: FieldDraft = {
+  isUniversal: false,
   name: "",
   type: "text",
   optionsString: "",
@@ -35,6 +37,7 @@ const AddCustomFieldModal: FC<{
     setIsSubmitting(true);
     try {
       await onCreate({
+        isUniversal: field.isUniversal,
         name: field.name.trim(),
         type: field.type as CustomFieldType,
         options: field.type === "enum" ? field.optionsString.trim() || undefined : undefined,
@@ -127,6 +130,16 @@ const AddCustomFieldModal: FC<{
               {isSubmitting ? "Salvando..." : "Criar campo"}
             </button>
           </div>
+
+          <label className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+            <input
+              type="checkbox"
+              checked={field.isUniversal}
+              onChange={(event) => setField({ ...field, isUniversal: event.target.checked })}
+              className="h-4 w-4 rounded border-slate-300 text-[#2f6fb2]"
+            />
+            <span className="text-sm font-medium text-slate-700">Campo universal para todas as tarefas</span>
+          </label>
         </div>
       </div>
     </div>

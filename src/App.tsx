@@ -9,6 +9,7 @@ import MonthViewPage from './pages/MonthViewPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { TasksProvider, useTasksContext } from './contexts/TasksContext';
 import { ProjectsProvider, useProjectsContext } from './contexts/ProjectsContext';
+import { UniversalCustomFieldsProvider, useUniversalCustomFields } from './contexts/UniversalCustomFieldsContext';
 import { useLoading } from './contexts/LoadingContext';
 import { Analytics } from '@vercel/analytics/react';
 
@@ -16,6 +17,7 @@ const BootstrapGate = ({ children }: { children: ReactNode }) => {
   const { isAuthenticated } = useAuth();
   const { fetchProjects } = useProjectsContext();
   const { fetchTasks } = useTasksContext();
+  const { fetchUniversalCustomFields } = useUniversalCustomFields();
   const { setLoading } = useLoading();
   const [isReady, setIsReady] = useState(false);
 
@@ -29,7 +31,7 @@ const BootstrapGate = ({ children }: { children: ReactNode }) => {
     setLoading(true, 'bootstrap');
 
     void (async () => {
-      const results = await Promise.allSettled([fetchProjects(), fetchTasks()]);
+      const results = await Promise.allSettled([fetchProjects(), fetchTasks(), fetchUniversalCustomFields()]);
       const failedResult = results.find((result) => result.status === 'rejected');
 
       if (failedResult?.status === 'rejected') {
@@ -47,7 +49,7 @@ const BootstrapGate = ({ children }: { children: ReactNode }) => {
       isMounted = false;
       setLoading(false, 'bootstrap');
     };
-  }, [fetchProjects, fetchTasks, isAuthenticated, setLoading]);
+  }, [fetchProjects, fetchTasks, fetchUniversalCustomFields, isAuthenticated, setLoading]);
 
   if (!isReady) {
     return null;
@@ -142,9 +144,11 @@ const App = () => {
       <AuthProvider>
         <Router>
           <ProjectsProvider>
-            <TasksProvider>
-              <AppRoutes />
-            </TasksProvider>
+            <UniversalCustomFieldsProvider>
+              <TasksProvider>
+                <AppRoutes />
+              </TasksProvider>
+            </UniversalCustomFieldsProvider>
           </ProjectsProvider>
         </Router>
       </AuthProvider>
