@@ -8,28 +8,28 @@
 :root {
   font-family: "Manrope", "Avenir Next", "Segoe UI", sans-serif;
   color: #0f172a;
-  background-color: #f3f5f8;
+  background-color: #f5f5f5;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 
-  --bg-canvas: #f3f5f8;
+  --bg-canvas: #f5f5f5;
   --bg-panel: #ffffff;
-  --bg-soft: #eef2f6;
-  --bg-soft-strong: #e4ebf3;
+  --bg-soft: #efefef;
+  --bg-soft-strong: #e5e5e5;
   --bg-overlay: rgba(15, 23, 42, 0.45);
-  --border-subtle: #d8e0e8;
-  --border-muted: #c7d2df;
+  --border-subtle: #e2e2e2;
+  --border-muted: #d0d0d0;
   --text-primary: #0f172a;
   --text-secondary: #334155;
   --text-muted: #516176;
   --text-faint: #94a3b8;
   --brand: #2f6fb2;
   --brand-strong: #225587;
-  --panel-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
-  --glass-1: rgba(255, 255, 255, 0.76);
-  --glass-2: rgba(255, 255, 255, 0.6);
-  --glass-border: rgba(255, 255, 255, 0.78);
-  --glass-shadow: 0 16px 35px rgba(15, 23, 42, 0.08), 0 1px 0 rgba(255, 255, 255, 0.85) inset;
+  --panel-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --glass-1: rgba(255, 255, 255, 0.96);
+  --glass-2: rgba(255, 255, 255, 0.88);
+  --glass-border: rgba(226, 226, 226, 0.9);
+  --glass-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   --field-bg: #fdfefe;
   --field-focus-bg: #ffffff;
   --field-border: #cfdae6;
@@ -69,30 +69,30 @@
 }
 
 :root.dark {
-  color: #e2e8f0;
-  background-color: #0b1220;
+  color: #ececec;
+  background-color: #141414;
 
-  --bg-canvas: #0b1220;
-  --bg-panel: #111c2f;
-  --bg-soft: #16243b;
-  --bg-soft-strong: #1f2f49;
-  --bg-overlay: rgba(2, 6, 23, 0.62);
-  --border-subtle: #2b3d5c;
-  --border-muted: #3a4c6d;
-  --text-primary: #e2e8f0;
-  --text-secondary: #cbd5e1;
-  --text-muted: #9fb0c9;
-  --text-faint: #7387a7;
+  --bg-canvas: #141414;
+  --bg-panel: #1c1c1c;
+  --bg-soft: #242424;
+  --bg-soft-strong: #2c2c2c;
+  --bg-overlay: rgba(0, 0, 0, 0.6);
+  --border-subtle: #2f2f2f;
+  --border-muted: #3a3a3a;
+  --text-primary: #ececec;
+  --text-secondary: #c9c9c9;
+  --text-muted: #8a8a8a;
+  --text-faint: #666666;
   --brand: #4a86c7;
   --brand-strong: #6fa3dc;
-  --panel-shadow: 0 14px 38px rgba(2, 6, 23, 0.42);
-  --glass-1: rgba(17, 28, 47, 0.86);
-  --glass-2: rgba(17, 28, 47, 0.7);
-  --glass-border: rgba(91, 117, 157, 0.34);
-  --glass-shadow: 0 20px 40px rgba(2, 6, 23, 0.45), 0 1px 0 rgba(148, 163, 184, 0.08) inset;
-  --field-bg: #13233b;
-  --field-focus-bg: #162943;
-  --field-border: #334964;
+  --panel-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  --glass-1: rgba(28, 28, 28, 0.96);
+  --glass-2: rgba(28, 28, 28, 0.85);
+  --glass-border: rgba(60, 60, 60, 0.8);
+  --glass-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  --field-bg: #1e1e1e;
+  --field-focus-bg: #252525;
+  --field-border: #333333;
   --field-focus: #6ea8dd;
 }
 
@@ -112,10 +112,7 @@ body {
   margin: 0;
   min-height: 100vh;
   color: var(--text-primary);
-  background:
-    radial-gradient(1200px circle at 0 0, rgba(53, 113, 174, 0.16) 0%, transparent 55%),
-    radial-gradient(900px circle at 100% 100%, rgba(19, 153, 128, 0.14) 0%, transparent 45%),
-    var(--bg-canvas);
+  background: var(--bg-canvas);
 }
 
 a {
@@ -132,17 +129,15 @@ textarea {
 .surface-panel {
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
-  border-radius: 18px;
+  border-radius: 8px;
   box-shadow: var(--panel-shadow);
 }
 
 .surface-glass {
-  background: linear-gradient(135deg, var(--glass-1), var(--glass-2));
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--glass-border);
-  border-radius: 18px;
-  box-shadow: var(--glass-shadow);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0;
+  box-shadow: var(--panel-shadow);
 }
 
 .surface-soft {
@@ -155,7 +150,10 @@ textarea {
   border-radius: 12px;
   background: var(--field-bg);
   color: var(--text-primary);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
 }
 
 .field:focus-visible {
@@ -411,7 +409,7 @@ textarea {
 
 @theme inline {
   --font-heading: var(--font-sans);
-  --font-sans: 'Geist Variable', sans-serif;
+  --font-sans: "Geist Variable", sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);

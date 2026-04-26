@@ -250,12 +250,16 @@ const TaskTable = ({
       .filter(Boolean);
   };
 
+  const normalizeFieldSentinel = (value: CustomFieldValue): CustomFieldValue =>
+    value === '(vazio)' ? '' : value;
+
   const getResolvedFieldValue = (task: TaskTableTask, field: GetCustomFieldDefinitionDto): CustomFieldValue => {
     if (getFieldValue) {
       return getFieldValue(task.id, field.id);
     }
 
-    return task.customFields?.[field.id] ?? task.customFields?.[field.name] ?? "";
+    const raw = task.customFields?.[field.id] ?? task.customFields?.[field.name] ?? "";
+    return normalizeFieldSentinel(raw);
   };
 
   const getCustomFieldValueLabel = (task: TaskTableTask, field: GetCustomFieldDefinitionDto) => {

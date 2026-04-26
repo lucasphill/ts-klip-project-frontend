@@ -29,18 +29,23 @@ const normalizeFieldKey = (value: string) =>
     .replace(/[^a-zA-Z0-9]/g, '')
     .toLowerCase();
 
+const EMPTY_SENTINEL = '(vazio)';
+
 const getTaskFieldValue = (
   task: { customFields?: Record<string, CustomFieldValue> } | undefined,
   field: GetCustomFieldDefinitionDto | undefined
 ) => {
   if (!task || !field) return '';
-  if (task.customFields?.[field.id] !== undefined) return task.customFields[field.id];
-  if (task.customFields?.[field.name] !== undefined) return task.customFields[field.name];
+
+  const normalize = (v: CustomFieldValue) => (v === EMPTY_SENTINEL ? '' : v);
+
+  if (task.customFields?.[field.id] !== undefined) return normalize(task.customFields[field.id]);
+  if (task.customFields?.[field.name] !== undefined) return normalize(task.customFields[field.name]);
 
   if (task.customFields) {
     const normalizedTargetKey = normalizeFieldKey(field.name);
     const matchingEntry = Object.entries(task.customFields).find(([key]) => normalizeFieldKey(key) === normalizedTargetKey);
-    if (matchingEntry) return matchingEntry[1];
+    if (matchingEntry) return normalize(matchingEntry[1]);
   }
 
   return '';
@@ -349,15 +354,26 @@ const MonthViewPage = () => {
     updateTaskLocal(taskId, { customFields: nextCustomFields });
 
     const payload = buildCustomFieldValuePayload(taskId, fieldId, field.type, value);
-    const request = hasCurrentValue
-      ? customFieldValuesApi.update(payload)
-      : customFieldValuesApi.create(payload);
 
     void (async () => {
       try {
-        await request;
+        if (hasCurrentValue) {
+          await customFieldValuesApi.update(payload);
+        } else {
+          await customFieldValuesApi.create(payload);
+        }
       } catch (error: any) {
-        toast.error(error?.message ?? 'Erro ao salvar campo personalizado');
+        // If update failed because the record doesn't exist, fall back to create
+        if (hasCurrentValue && (error?.response?.status === 400 || error?.response?.status === 404)) {
+          try {
+            await customFieldValuesApi.create(payload);
+            return;
+          } catch (retryError: any) {
+            toast.error(retryError?.message ?? 'Erro ao salvar campo personalizado');
+          }
+        } else {
+          toast.error(error?.message ?? 'Erro ao salvar campo personalizado');
+        }
         updateTaskLocal(taskId, { customFields: previousCustomFields });
       }
     })();

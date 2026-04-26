@@ -11,6 +11,7 @@ type TaskViewLayoutProps = {
   color?: string;
   description: string;
   canAddCustomField: boolean;
+  canRemoveUniversalCustomField?: boolean;
   customFields?: GetCustomFieldDefinitionDto[];
   onCreateCustomField?: (field: CreateCustomFieldDefinitionDto) => void | Promise<void>;
   onRemoveCustomField?: (field: GetCustomFieldDefinitionDto) => void | Promise<void>;
@@ -50,6 +51,7 @@ const TaskViewLayout: FC<TaskViewLayoutProps & { children: ReactNode }> = ({
   color,
   description,
   canAddCustomField,
+  canRemoveUniversalCustomField = false,
   customFields = [],
   onCreateCustomField,
   onRemoveCustomField,
@@ -67,7 +69,10 @@ const TaskViewLayout: FC<TaskViewLayoutProps & { children: ReactNode }> = ({
 
   const handleRemoveField = async (field: GetCustomFieldDefinitionDto) => {
     if (!onRemoveCustomField) return;
-    if (!confirm(`Tem certeza que deseja remover o campo "${field.name}" deste projeto?`)) return;
+    const confirmationMessage = field.isUniversal
+      ? `Tem certeza que deseja remover o campo universal "${field.name}"?`
+      : `Tem certeza que deseja remover o campo "${field.name}" deste projeto?`;
+    if (!confirm(confirmationMessage)) return;
     await onRemoveCustomField(field);
   };
 
@@ -108,11 +113,11 @@ const TaskViewLayout: FC<TaskViewLayoutProps & { children: ReactNode }> = ({
                     Universal
                   </span>
                 )}
-                {canAddCustomField && onRemoveCustomField && !field.isUniversal && (
+                {canAddCustomField && onRemoveCustomField && (!field.isUniversal || canRemoveUniversalCustomField) && (
                   <button
                     onClick={() => void handleRemoveField(field)}
                     className="rounded-full p-0.5 text-slate-500 hover:bg-rose-100 hover:text-rose-700"
-                    title={`Remover campo ${field.name}`}
+                    title={field.isUniversal ? `Remover campo universal ${field.name}` : `Remover campo ${field.name}`}
                   >
                     <X className="h-3 w-3" />
                   </button>

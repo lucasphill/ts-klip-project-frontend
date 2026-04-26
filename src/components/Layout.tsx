@@ -14,8 +14,8 @@ const Layout: FC<{ children: ReactNode }> = ({ children }) => {
     <div className="flex min-h-screen w-full flex-col text-slate-800">
       <Toaster position="top-center" richColors theme={theme} />
       <Navbar onOpenSidebar={() => setIsMobileSidebarOpen(true)} />
-      <div className="flex min-h-0 flex-1 overflow-hidden px-2 pb-2 md:px-3 md:pb-3">
-        <div className="surface-panel relative flex min-h-0 w-full overflow-hidden">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <div className="relative flex min-h-0 w-full overflow-hidden">
           <Sidebar
             isDesktopExpanded={isDesktopSidebarExpanded}
             isMobileOpen={isMobileSidebarOpen}
@@ -27,10 +27,8 @@ const Layout: FC<{ children: ReactNode }> = ({ children }) => {
           </main>
         </div>
       </div>
-      <div className="px-2 pb-2 md:px-3 md:pb-3">
-        <div className="surface-panel px-4 py-2 md:px-6">
-          <Footer />
-        </div>
+      <div className="border-t border-slate-200 bg-white px-4 py-2 md:px-6">
+        <Footer />
       </div>
     </div>
   );

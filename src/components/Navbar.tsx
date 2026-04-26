@@ -21,8 +21,8 @@ const Navbar = ({ onOpenSidebar }: { onOpenSidebar: () => void }) => {
   }, [currentViewLabel]);
 
   return (
-    <header className="sticky top-0 z-30 px-2 pt-2 pb-2 md:px-3 md:pt-3 md:pb-3">
-      <nav className="surface-glass flex h-16 items-center justify-between px-3 sm:px-4">
+    <header className="sticky top-0 z-30">
+      <nav className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-3 sm:px-4">
         <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={onOpenSidebar}

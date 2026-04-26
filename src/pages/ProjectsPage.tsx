@@ -239,19 +239,22 @@ const ProjectsPage = () => {
     }, currentProject ? [currentProject.id] : []);
   };
 
+  const normalizeFieldSentinel = (value: CustomFieldValue): CustomFieldValue =>
+    value === '(vazio)' ? '' : value;
+
   const getFieldValue = (taskId: string, fieldId: string) => {
     const task = tasks.find((item) => item.id === taskId);
     const field = customFields.find((item) => item.id === fieldId);
 
     if (!task) return '';
-    if (task.customFields?.[fieldId] !== undefined) return task.customFields[fieldId];
-    if (field && task.customFields?.[field.name] !== undefined) return task.customFields[field.name];
+    if (task.customFields?.[fieldId] !== undefined) return normalizeFieldSentinel(task.customFields[fieldId]);
+    if (field && task.customFields?.[field.name] !== undefined) return normalizeFieldSentinel(task.customFields[field.name]);
 
     if (field && task.customFields) {
       const normalizedTargetKey = normalizeFieldKey(field.name);
       const matchingEntry = Object.entries(task.customFields).find(([key]) => normalizeFieldKey(key) === normalizedTargetKey);
       if (matchingEntry) {
-        return matchingEntry[1];
+        return normalizeFieldSentinel(matchingEntry[1]);
       }
     }
 
@@ -473,7 +476,7 @@ const ProjectsPage = () => {
     if (field.isUniversal) return;
 
     try {
-      await projectsCustomFieldDefinitionsApi.unassign(projectId, field.id);
+      await customFieldDefinitionsApi.remove(field.id);
       setCustomFields((previousFields) => previousFields.filter((item) => item.id !== field.id));
       toast.success('Campo removido do projeto');
     } catch (error: any) {

@@ -141,7 +141,7 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
 
       <aside
         className={`
-          fixed inset-y-0 left-0 z-40 flex h-full flex-col border-r border-slate-200/70 bg-white/95 shadow-2xl backdrop-blur md:relative md:z-20 md:shadow-none
+          fixed inset-y-0 left-0 z-40 flex h-full flex-col border-r border-slate-200/70 bg-white shadow-lg md:relative md:z-20 md:shadow-none
           ${isExpanded ? "w-[18.5rem]" : "w-[5.4rem]"}
           ${isMobileOpen ? "translate-x-0 mobile-sheet-enter" : "-translate-x-full md:translate-x-0"}
           transition-all duration-300
