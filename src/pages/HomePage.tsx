@@ -7,7 +7,6 @@ import { customFieldDefinitionsApi, customFieldValuesApi, tasksApi, projectsTask
 import type { GetProjectsDto, GetTasksDto, CreateTaskDto } from "../types/apiTypes";
 import { useTasksContext } from "../contexts/TasksContext";
 import { useProjectsContext } from "../contexts/ProjectsContext";
-import { useUniversalCustomFields } from "../contexts/UniversalCustomFieldsContext";
 import { buildParentTaskOptions, getDescendantTaskIds } from "../lib/taskHierarchy";
 import type { CreateCustomFieldDefinitionDto, CustomFieldValue, GetCustomFieldDefinitionDto } from "../types/apiTypes";
 
@@ -434,9 +433,6 @@ const HomePage = () => {
         <TaskTable
           visibleTasks={tasks}
           activeView="all"
-          activeCustomFields={universalCustomFields}
-          getFieldValue={getFieldValue}
-          updateCustomValue={updateCustomValue}
           toggleTaskCompletion={toggleTaskCompletion}
           addTask={addTask}
           projects={projects}

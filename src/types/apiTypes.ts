@@ -34,7 +34,6 @@ export interface CreateCustomFieldDefinitionDto {
   name: string;
   type: CustomFieldType;
   options?: string | string[]; // API aceita string; frontend pode manipular como array
-  isUniversal: boolean;
 }
 
 export interface CreateCustomFieldValueDto {
@@ -72,7 +71,6 @@ export interface GetProjectsDto {
 export interface GetCustomFieldDefinitionDto {
   createdAt: string;
   id: string;
-  isUniversal: boolean;
   name: string;
   options?: string | string[] | null;
   type: CustomFieldType;

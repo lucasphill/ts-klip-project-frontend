@@ -10,10 +10,9 @@ import TaskTable from "../components/TaskTable";
 import TaskViewLayout from "../components/TaskViewLayout";
 import { useTasksContext } from "../contexts/TasksContext";
 import { useProjectsContext } from "../contexts/ProjectsContext";
-import { useUniversalCustomFields } from "../contexts/UniversalCustomFieldsContext";
 import { buildParentTaskOptions, getDescendantTaskIds } from "../lib/taskHierarchy";
-import { customFieldValuesApi, projectsTasksApi, tasksApi } from "../services/api";
-import type { CreateTaskDto, CustomFieldValue, GetCustomFieldDefinitionDto, GetProjectsDto, GetTasksDto } from "../types/apiTypes";
+import { projectsTasksApi, tasksApi } from "../services/api";
+import type { CreateTaskDto, CustomFieldValue, GetProjectsDto, GetTasksDto } from "../types/apiTypes";
 
 const toDateString = (date: Date): string => {
   const year = date.getFullYear();
@@ -71,7 +70,6 @@ const buildCustomFieldValuePayload = (
 const MonthViewPage = () => {
   const { tasks, fetchTasks, appendTask, updateTaskLocal, removeTasksLocal } = useTasksContext();
   const { projects, fetchProjects } = useProjectsContext();
-  const { universalCustomFields } = useUniversalCustomFields();
   const [projectTasks, setProjectTasks] = useState<{ project_id: string; task_id: string }[]>([]);
   const [showEditTaskModal, setShowEditTaskModal] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<(CreateTaskDto & { id?: string }) | null>(null);
@@ -523,7 +521,7 @@ const MonthViewPage = () => {
               <TaskTable
                 activeView="all"
                 visibleTasks={monthTasks}
-                activeCustomFields={universalCustomFields}
+                activeCustomFields={[]}
                 projects={projects}
                 getFieldValue={getFieldValue}
                 updateCustomValue={updateCustomValue}
