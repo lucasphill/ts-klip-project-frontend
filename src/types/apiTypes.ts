@@ -12,11 +12,11 @@ export interface HealthResponseDto {
 }
 //#endregion
 
-export type CustomFieldType = 'text' | 'number' | 'date' | 'boolean' | 'enum';
+export type CustomFieldType = "text" | "number" | "date" | "boolean" | "enum";
 export type CustomFieldValue = string | number | boolean | null | undefined;
 
 //#region Create Models
-export interface CreateTaskDto{
+export interface CreateTaskDto {
   title: string;
   dueDate?: string;
   isCompleted?: boolean;
@@ -24,7 +24,7 @@ export interface CreateTaskDto{
   parentTaskId?: string;
 }
 
-export interface CreateProjectDto{
+export interface CreateProjectDto {
   name: string;
   description?: string;
   color?: string;
@@ -34,6 +34,7 @@ export interface CreateCustomFieldDefinitionDto {
   name: string;
   type: CustomFieldType;
   options?: string | string[]; // API aceita string; frontend pode manipular como array
+  isUniversal?: boolean;
 }
 
 export interface CreateCustomFieldValueDto {
@@ -56,8 +57,19 @@ export interface GetTasksDto {
   createdAt: string;
 }
 
-export interface GetTasksWithCustomFieldsDto extends GetTasksDto  {
-  customFields?: Record<string, CustomFieldValue>;
+export interface GetTaskCustomFieldValueDto {
+  customFieldId: string;
+  name: string;
+  type: CustomFieldType;
+  options?: string | null;
+  isUniversal: boolean;
+  valueText?: string | null;
+  valueNumber?: number | null;
+  selectedOptionId?: string | null;
+}
+
+export interface GetTasksWithCustomFieldsDto extends GetTasksDto {
+  customFields?: GetTaskCustomFieldValueDto[];
 }
 
 export interface GetProjectsDto {
@@ -71,6 +83,7 @@ export interface GetProjectsDto {
 export interface GetCustomFieldDefinitionDto {
   createdAt: string;
   id: string;
+  isUniversal: boolean;
   name: string;
   options?: string | string[] | null;
   type: CustomFieldType;

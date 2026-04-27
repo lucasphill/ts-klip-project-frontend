@@ -1,5 +1,5 @@
 import { useEffect, useState, type FC } from "react";
-import { X } from "lucide-react";
+import { FolderKanban, Globe, X } from "lucide-react";
 import type { CreateCustomFieldDefinitionDto, CustomFieldType, GetCustomFieldDefinitionDto } from "../types/apiTypes";
 
 const toOptionsString = (options?: string | string[] | null): string => {
@@ -13,22 +13,36 @@ type CustomFieldFormModalProps = {
   onClose: () => void;
   onSave: (field: CreateCustomFieldDefinitionDto) => void | Promise<void>;
   initialData?: GetCustomFieldDefinitionDto | null;
+  defaultIsUniversal?: boolean;
+  lockScope?: boolean;
 };
 
-const CustomFieldFormModal: FC<CustomFieldFormModalProps> = ({ isOpen, onClose, onSave, initialData }) => {
+const CustomFieldFormModal: FC<CustomFieldFormModalProps> = ({
+  isOpen,
+  onClose,
+  onSave,
+  initialData,
+  defaultIsUniversal = true,
+  lockScope = false,
+}) => {
   const isEditing = !!initialData;
-  const [field, setField] = useState({ name: "", type: "text", optionsString: "" });
+  const [field, setField] = useState({ name: "", type: "text", optionsString: "", isUniversal: defaultIsUniversal });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setField(
         initialData
-          ? { name: initialData.name, type: initialData.type, optionsString: toOptionsString(initialData.options) }
-          : { name: "", type: "text", optionsString: "" }
+          ? {
+            name: initialData.name,
+            type: initialData.type,
+            optionsString: toOptionsString(initialData.options),
+            isUniversal: initialData.isUniversal,
+          }
+          : { name: "", type: "text", optionsString: "", isUniversal: defaultIsUniversal }
       );
     }
-  }, [isOpen, initialData]);
+  }, [isOpen, initialData, defaultIsUniversal]);
 
   if (!isOpen) return null;
 
@@ -40,6 +54,7 @@ const CustomFieldFormModal: FC<CustomFieldFormModalProps> = ({ isOpen, onClose, 
         name: field.name.trim(),
         type: field.type as CustomFieldType,
         options: field.type === "enum" ? field.optionsString.trim() || undefined : undefined,
+        isUniversal: field.isUniversal,
       });
       onClose();
     } catch {
@@ -72,6 +87,44 @@ const CustomFieldFormModal: FC<CustomFieldFormModalProps> = ({ isOpen, onClose, 
         </div>
 
         <div className="space-y-4 px-5 py-5">
+          {/* Scope selector */}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">Escopo</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                disabled={lockScope}
+                onClick={() => setField({ ...field, isUniversal: true })}
+                className={`flex items-start gap-3 rounded-lg border p-3 text-left transition-colors ${field.isUniversal
+                    ? "border-[var(--brand)] bg-[var(--brand)]/5 ring-1 ring-[var(--brand)]"
+                    : "border-[var(--border-subtle)] hover:border-[var(--text-muted)] hover:bg-[var(--bg-soft)]"
+                  } ${lockScope ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
+              >
+                <Globe className={`mt-0.5 h-4 w-4 shrink-0 ${field.isUniversal ? "text-[var(--brand)]" : "text-[var(--text-muted)]"}`} />
+                <div>
+                  <p className={`text-xs font-semibold ${field.isUniversal ? "text-[var(--brand)]" : "text-[var(--text-primary)]"}`}>Universal</p>
+                  <p className="mt-0.5 text-[11px] leading-tight text-[var(--text-faint)]">Aplicado a todas as tarefas automaticamente</p>
+                </div>
+              </button>
+              <button
+                type="button"
+                disabled={lockScope}
+                onClick={() => setField({ ...field, isUniversal: false })}
+                className={`flex items-start gap-3 rounded-lg border p-3 text-left transition-colors ${!field.isUniversal
+                    ? "border-[var(--brand)] bg-[var(--brand)]/5 ring-1 ring-[var(--brand)]"
+                    : "border-[var(--border-subtle)] hover:border-[var(--text-muted)] hover:bg-[var(--bg-soft)]"
+                  } ${lockScope ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
+              >
+                <FolderKanban className={`mt-0.5 h-4 w-4 shrink-0 ${!field.isUniversal ? "text-[var(--brand)]" : "text-[var(--text-muted)]"}`} />
+                <div>
+                  <p className={`text-xs font-semibold ${!field.isUniversal ? "text-[var(--brand)]" : "text-[var(--text-primary)]"}`}>Por projeto</p>
+                  <p className="mt-0.5 text-[11px] leading-tight text-[var(--text-faint)]">Vinculado manualmente a projetos específicos</p>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Field properties */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="space-y-1.5">
               <label className="block text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">Nome</label>

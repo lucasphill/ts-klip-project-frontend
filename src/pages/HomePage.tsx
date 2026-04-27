@@ -3,11 +3,46 @@ import { toast } from "sonner";
 import TaskTable from "../components/TaskTable";
 import AddTaskModal from "../components/AddTaskModal";
 import TaskViewLayout from "../components/TaskViewLayout";
-import { tasksApi, projectsTasksApi } from "../services/api";
-import type { GetProjectsDto, GetTasksDto, CreateTaskDto } from "../types/apiTypes";
+import { tasksApi, projectsTasksApi, customFieldDefinitionsApi, customFieldValuesApi } from "../services/api";
+import type {
+  CreateCustomFieldValueDto,
+  CustomFieldValue,
+  GetCustomFieldDefinitionDto,
+  GetProjectsDto,
+  GetTaskCustomFieldValueDto,
+  GetTasksDto,
+  GetTasksWithCustomFieldsDto,
+  CreateTaskDto,
+} from "../types/apiTypes";
 import { useTasksContext } from "../contexts/TasksContext";
 import { useProjectsContext } from "../contexts/ProjectsContext";
 import { buildParentTaskOptions, getDescendantTaskIds } from "../lib/taskHierarchy";
+
+const normalizeFieldOptions = (options?: string | string[] | null): string[] => {
+  if (Array.isArray(options)) return options.map((o) => o.trim()).filter(Boolean);
+  return String(options ?? "").split(",").map((o) => o.trim()).filter(Boolean);
+};
+
+const normalizeCustomField = (field: GetCustomFieldDefinitionDto): GetCustomFieldDefinitionDto => ({
+  ...field,
+  options: normalizeFieldOptions(field.options),
+});
+
+const buildCustomFieldValuePayload = (
+  taskId: string,
+  fieldId: string,
+  fieldType: GetCustomFieldDefinitionDto["type"],
+  value: CustomFieldValue
+): CreateCustomFieldValueDto => {
+  const payload: CreateCustomFieldValueDto = { taskId, customFieldId: fieldId };
+  if (fieldType === "number") {
+    payload.valueNumber =
+      value === undefined || value === null || value === "" ? undefined : Number(value);
+  } else {
+    payload.valueText = value === undefined || value === null ? "" : String(value);
+  }
+  return payload;
+};
 
 const HomePage = () => {
   const { tasks, fetchTasks, appendTask, updateTaskLocal, removeTasksLocal } = useTasksContext();
@@ -16,6 +51,8 @@ const HomePage = () => {
   const [showEditTaskModal, setShowEditTaskModal] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<any>(null);
   const [taskProjectIds, setTaskProjectIds] = useState<string[]>([]);
+  const [universalFieldDefs, setUniversalFieldDefs] = useState<GetCustomFieldDefinitionDto[]>([]);
+  const [tasksWithFields, setTasksWithFields] = useState<GetTasksWithCustomFieldsDto[]>([]);
 
   const availableParentTasks = useMemo(
     () => buildParentTaskOptions(tasks, taskToEdit?.id),
@@ -42,12 +79,91 @@ const HomePage = () => {
     }
   };
 
+  const loadUniversalData = async () => {
+    try {
+      const [defsRes, withFieldsRes] = await Promise.all([
+        customFieldDefinitionsApi.getAll(),
+        tasksApi.getAllWithCustomFields(),
+      ]);
+      setUniversalFieldDefs(
+        (defsRes.data ?? []).filter((f) => f.isUniversal).map(normalizeCustomField)
+      );
+      setTasksWithFields(withFieldsRes.data ?? []);
+    } catch (error: any) {
+      console.error("Erro ao carregar campos personalizados universais", error);
+    }
+  };
+
+  const getFieldValue = (taskId: string, fieldId: string): CustomFieldValue => {
+    const task = tasksWithFields.find((t) => t.id === taskId);
+    if (!task?.customFields) return "";
+    const entry = task.customFields.find((cf) => cf.customFieldId === fieldId);
+    if (!entry) return "";
+    return entry.valueNumber !== null && entry.valueNumber !== undefined
+      ? entry.valueNumber
+      : (entry.valueText ?? "");
+  };
+
+  const updateCustomValue = (taskId: string, fieldId: string, value: CustomFieldValue) => {
+    const field = universalFieldDefs.find((f) => f.id === fieldId);
+    if (!field) return;
+
+    const taskEntry = tasksWithFields.find((t) => t.id === taskId);
+    const existing = taskEntry?.customFields?.find((cf) => cf.customFieldId === fieldId);
+    const hasValue =
+      existing !== undefined &&
+      ((existing.valueText !== null && existing.valueText !== undefined && existing.valueText !== "") ||
+        (existing.valueNumber !== null && existing.valueNumber !== undefined));
+
+    const newEntry: GetTaskCustomFieldValueDto = {
+      customFieldId: fieldId,
+      name: field.name,
+      type: field.type,
+      options: Array.isArray(field.options) ? field.options.join(",") : (field.options ?? null),
+      isUniversal: true,
+      valueText: field.type === "number" ? null : (value === undefined || value === null ? "" : String(value)),
+      valueNumber:
+        field.type === "number"
+          ? value === "" || value === undefined || value === null ? null : Number(value)
+          : null,
+      selectedOptionId: null,
+    };
+
+    setTasksWithFields((prev) =>
+      prev.map((t) => {
+        if (t.id !== taskId) return t;
+        const fields = t.customFields ?? [];
+        return {
+          ...t,
+          customFields: existing
+            ? fields.map((cf) => (cf.customFieldId === fieldId ? newEntry : cf))
+            : [...fields, newEntry],
+        };
+      })
+    );
+
+    const payload = buildCustomFieldValuePayload(taskId, fieldId, field.type, value);
+    void (async () => {
+      try {
+        if (hasValue) {
+          await customFieldValuesApi.update(payload);
+        } else {
+          await customFieldValuesApi.create(payload);
+        }
+      } catch (error: any) {
+        toast.error(error?.message ?? "Erro ao salvar campo personalizado");
+        void loadUniversalData();
+      }
+    })();
+  };
+
   useEffect(() => {
     fetchProjects()
       .then((projectsList) => loadProjectTaskAssignments(projectsList))
       .catch((error: any) => toast.error(error?.message ?? "Erro ao buscar projetos"));
 
     fetchTasks().catch((error: any) => toast.error(error?.message ?? "Erro ao buscar tarefas"));
+    void loadUniversalData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -304,6 +420,9 @@ const HomePage = () => {
         <TaskTable
           visibleTasks={tasks}
           activeView="all"
+          activeCustomFields={universalFieldDefs}
+          getFieldValue={getFieldValue}
+          updateCustomValue={updateCustomValue}
           toggleTaskCompletion={toggleTaskCompletion}
           addTask={addTask}
           projects={projects}
