@@ -375,7 +375,6 @@ const MonthViewPage = () => {
       <TaskViewLayout
         title="Calendario"
         description="Visualize suas tarefas no mes e clique nos eventos para editar rapidamente."
-        canAddCustomField={false}
       >
         <section className="flex min-h-0 flex-1 flex-col overflow-auto bg-white pt-4 sm:pt-6">
           <div className="px-4 sm:px-6">

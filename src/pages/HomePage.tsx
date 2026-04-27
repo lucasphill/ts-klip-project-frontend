@@ -300,7 +300,6 @@ const HomePage = () => {
       <TaskViewLayout
         title="Todas as tarefas"
         description="Visualize e gerencie todas as suas tarefas aqui."
-        canAddCustomField={false}
       >
         <TaskTable
           visibleTasks={tasks}
