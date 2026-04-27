@@ -103,16 +103,16 @@ export const customFieldDefinitionsApi = {
 };
 
 export const customFieldValuesApi = {
-  create: async (data: CreateCustomFieldValueDto, projectId?: string) => {
+  create: async (data: CreateCustomFieldValueDto, projectId: string) => {
     const response = await api.post<ResponseModelDto<unknown>>(
-      projectId ? `/CustomFieldValues/${projectId}` : '/CustomFieldValues',
+      `/CustomFieldValues/${projectId}`,
       data,
     );
     return response.data;
   },
-  update: async (data: CreateCustomFieldValueDto, projectId?: string) => {
+  update: async (data: CreateCustomFieldValueDto, projectId: string) => {
     const response = await api.put<ResponseModelDto<unknown>>(
-      projectId ? `/CustomFieldValues/${projectId}` : '/CustomFieldValues',
+      `/CustomFieldValues/${projectId}`,
       data,
     );
     return response.data;
@@ -205,10 +205,6 @@ export const tasksApi = {
   },
   getAll: async () => {
     const response = await api.get<ResponseModelDto<GetTasksDto[]>>('/Tasks');
-    return response.data;
-  },
-  getWithCustomFields: async () => {
-    const response = await api.get<ResponseModelDto<GetTasksWithCustomFieldsDto[]>>('/Tasks/with-custom-fields');
     return response.data;
   },
   update: async (taskId: string, data: CreateTaskDto) => {
