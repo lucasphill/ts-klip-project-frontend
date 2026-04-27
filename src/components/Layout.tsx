@@ -11,25 +11,23 @@ const Layout: FC<{ children: ReactNode }> = ({ children }) => {
   const { theme } = useTheme();
 
   return (
-    <div className="flex min-h-screen w-full flex-col text-slate-800">
+    <div className="flex h-screen w-full flex-col overflow-hidden bg-[var(--bg-canvas)] text-[var(--text-primary)]">
       <Toaster position="top-center" richColors theme={theme} />
       <Navbar onOpenSidebar={() => setIsMobileSidebarOpen(true)} />
-      <div className="flex min-h-0 flex-1 overflow-hidden px-2 pb-2 md:px-3 md:pb-3">
-        <div className="surface-panel relative flex min-h-0 w-full overflow-hidden">
-          <Sidebar
-            isDesktopExpanded={isDesktopSidebarExpanded}
-            isMobileOpen={isMobileSidebarOpen}
-            onToggleDesktop={() => setIsDesktopSidebarExpanded((prev) => !prev)}
-            onCloseMobile={() => setIsMobileSidebarOpen(false)}
-          />
-          <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <Sidebar
+          isDesktopExpanded={isDesktopSidebarExpanded}
+          isMobileOpen={isMobileSidebarOpen}
+          onToggleDesktop={() => setIsDesktopSidebarExpanded((prev) => !prev)}
+          onCloseMobile={() => setIsMobileSidebarOpen(false)}
+        />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--bg-panel)]">
             {children}
           </main>
-        </div>
-      </div>
-      <div className="px-2 pb-2 md:px-3 md:pb-3">
-        <div className="surface-panel px-4 py-2 md:px-6">
-          <Footer />
+          <div className="border-t border-[var(--border-subtle)] bg-[var(--bg-panel)] px-5 py-2.5">
+            <Footer />
+          </div>
         </div>
       </div>
     </div>

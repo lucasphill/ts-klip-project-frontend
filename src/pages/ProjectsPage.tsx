@@ -7,14 +7,12 @@ import TaskViewLayout from '../components/TaskViewLayout';
 import { useProjectsContext } from '../contexts/ProjectsContext';
 import { buildParentTaskOptions, getDescendantTaskIds } from '../lib/taskHierarchy';
 import {
-  customFieldDefinitionsApi,
   customFieldValuesApi,
   projectsCustomFieldDefinitionsApi,
   projectsTasksApi,
   tasksApi,
 } from '../services/api';
 import type {
-  CreateCustomFieldDefinitionDto,
   CreateCustomFieldValueDto,
   CreateTaskDto,
   CustomFieldValue,
@@ -65,10 +63,7 @@ const normalizeCustomField = (field: GetCustomFieldDefinitionDto): GetCustomFiel
   options: normalizeFieldOptions(field.options),
 });
 
-const areSameOptions = (left: string[], right: string[]) =>
-  left.length === right.length && left.every((option, index) => option === right[index]);
-
-const toTaskPayload = (task: CreateTaskDto) => ({
+const toTaskPayload= (task: CreateTaskDto) => ({
   title: task.title.trim(),
   dueDate: task.dueDate ? `${task.dueDate}T00:00:00` : undefined,
   isCompleted: task.isCompleted ?? false,
@@ -406,65 +401,12 @@ const ProjectsPage = () => {
     }
   };
 
-  const handleCreateCustomField = async (field: CreateCustomFieldDefinitionDto) => {
-    if (!projectId) return;
-
-    const normalizedNewOptions = normalizeFieldOptions(field.options);
-
-    try {
-      await customFieldDefinitionsApi.create({
-        ...field,
-        options: normalizedNewOptions.length > 0 ? normalizedNewOptions.join(',') : undefined,
-      });
-
-      const allFieldsResponse = await customFieldDefinitionsApi.getAll();
-      const matchingField = (allFieldsResponse.data ?? [])
-        .map(normalizeCustomField)
-        .filter((item) =>
-          item.name.trim().toLowerCase() === field.name.trim().toLowerCase()
-          && item.type === field.type
-          && areSameOptions(normalizeFieldOptions(item.options), normalizedNewOptions)
-        )
-        .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())[0];
-
-      if (!matchingField) {
-        throw new Error('Nao foi possivel localizar o campo criado para vincular ao projeto.');
-      }
-
-      await projectsCustomFieldDefinitionsApi.assign(projectId, matchingField.id);
-      setCustomFields((previousFields) => {
-        const nextFields = previousFields.filter((item) => item.id !== matchingField.id);
-        return [...nextFields, matchingField];
-      });
-      toast.success('Campo personalizado adicionado ao projeto');
-    } catch (error: any) {
-      toast.error(error?.message ?? 'Erro ao criar campo personalizado');
-      throw error;
-    }
-  };
-
-  const handleRemoveCustomField = async (field: GetCustomFieldDefinitionDto) => {
-    if (!projectId) return;
-
-    try {
-      await projectsCustomFieldDefinitionsApi.unassign(projectId, field.id);
-      setCustomFields((previousFields) => previousFields.filter((item) => item.id !== field.id));
-      toast.success('Campo removido do projeto');
-    } catch (error: any) {
-      toast.error(error?.message ?? 'Erro ao remover campo personalizado');
-    }
-  };
-
   return (
     <>
       <TaskViewLayout
         title={currentProject?.name ?? 'Projeto'}
         description={currentProject?.description ?? 'Visualize e gerencie as tarefas deste projeto.'}
         color={currentProject?.color}
-        canAddCustomField={!!currentProject}
-        customFields={customFields}
-        onCreateCustomField={handleCreateCustomField}
-        onRemoveCustomField={handleRemoveCustomField}
       >
         {isLoading ? (
           <div className="flex flex-1 items-center justify-center px-6 py-8 text-sm text-slate-500">Carregando projeto...</div>
