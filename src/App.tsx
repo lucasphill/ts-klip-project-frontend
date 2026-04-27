@@ -6,6 +6,7 @@ import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
 import ProjectsPage from './pages/ProjectsPage';
 import MonthViewPage from './pages/MonthViewPage';
+import SettingsPage from './pages/SettingsPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { TasksProvider, useTasksContext } from './contexts/TasksContext';
 import { ProjectsProvider, useProjectsContext } from './contexts/ProjectsContext';
@@ -106,6 +107,14 @@ const AuthenticatedApp = () => {
           element={
             <Layout>
               <ProjectsPage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <Layout>
+              <SettingsPage />
             </Layout>
           }
         />
