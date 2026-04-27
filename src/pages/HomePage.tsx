@@ -3,16 +3,87 @@ import { toast } from "sonner";
 import TaskTable from "../components/TaskTable";
 import AddTaskModal from "../components/AddTaskModal";
 import TaskViewLayout from "../components/TaskViewLayout";
-import { tasksApi, projectsTasksApi } from "../services/api";
-import type { GetProjectsDto, GetTasksDto, CreateTaskDto } from "../types/apiTypes";
+import {
+  customFieldDefinitionsApi,
+  customFieldValuesApi,
+  tasksApi,
+  projectsTasksApi,
+} from "../services/api";
+import type {
+  CreateCustomFieldValueDto,
+  CreateTaskDto,
+  CustomFieldValue,
+  GetCustomFieldDefinitionDto,
+  GetProjectsDto,
+  GetTasksDto,
+} from "../types/apiTypes";
 import { useTasksContext } from "../contexts/TasksContext";
 import { useProjectsContext } from "../contexts/ProjectsContext";
 import { buildParentTaskOptions, getDescendantTaskIds } from "../lib/taskHierarchy";
+
+const normalizeFieldOptions = (options?: string | string[] | null) => {
+  if (Array.isArray(options)) {
+    return options.map((option) => option.trim()).filter(Boolean);
+  }
+
+  return String(options ?? "")
+    .split(",")
+    .map((option) => option.trim())
+    .filter(Boolean);
+};
+
+const normalizeFieldKey = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .toLowerCase();
+
+const normalizeCustomField = (field: GetCustomFieldDefinitionDto): GetCustomFieldDefinitionDto => ({
+  ...field,
+  isUniversal: Boolean(field.isUniversal),
+  options: normalizeFieldOptions(field.options),
+});
+
+const isBlankCustomFieldValue = (value: CustomFieldValue) =>
+  value === undefined || value === null || value === "";
+
+const normalizeCustomFieldValue = (value: CustomFieldValue): CustomFieldValue => {
+  if (typeof value === "string" && value.trim().toLowerCase() === "(vazio)") {
+    return "";
+  }
+
+  return value;
+};
+
+const buildCustomFieldValuePayload = (
+  taskId: string,
+  customFieldId: string,
+  fieldType: GetCustomFieldDefinitionDto["type"],
+  value: CustomFieldValue
+): CreateCustomFieldValueDto => {
+  const payload: CreateCustomFieldValueDto = {
+    taskId,
+    customFieldId,
+  };
+
+  if (fieldType === "number") {
+    payload.valueNumber = isBlankCustomFieldValue(value) ? undefined : Number(value);
+    return payload;
+  }
+
+  if (!isBlankCustomFieldValue(value)) {
+    payload.valueText = String(value);
+  }
+
+  return payload;
+};
 
 const HomePage = () => {
   const { tasks, fetchTasks, appendTask, updateTaskLocal, removeTasksLocal } = useTasksContext();
   const { projects, fetchProjects } = useProjectsContext();
   const [projectTasks, setProjectTasks] = useState<any[]>([]);
+  const [universalCustomFields, setUniversalCustomFields] = useState<GetCustomFieldDefinitionDto[]>([]);
   const [showEditTaskModal, setShowEditTaskModal] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<any>(null);
   const [taskProjectIds, setTaskProjectIds] = useState<string[]>([]);
@@ -48,6 +119,17 @@ const HomePage = () => {
       .catch((error: any) => toast.error(error?.message ?? "Erro ao buscar projetos"));
 
     fetchTasks().catch((error: any) => toast.error(error?.message ?? "Erro ao buscar tarefas"));
+
+    customFieldDefinitionsApi
+      .getAll()
+      .then((response) => {
+        setUniversalCustomFields(
+          (response.data ?? [])
+            .map(normalizeCustomField)
+            .filter((field) => field.isUniversal)
+        );
+      })
+      .catch((error: any) => toast.error(error?.message ?? "Erro ao buscar campos universais"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -191,6 +273,63 @@ const HomePage = () => {
     return projects.filter((project) => projectIds.includes(project.id));
   };
 
+  const getFieldValue = (taskId: string, fieldId: string) => {
+    const task = tasks.find((item) => item.id === taskId);
+    const field = universalCustomFields.find((item) => item.id === fieldId);
+
+    if (!task) return "";
+    if (task.customFields?.[fieldId] !== undefined) return normalizeCustomFieldValue(task.customFields[fieldId]);
+    if (field && task.customFields?.[field.name] !== undefined) return normalizeCustomFieldValue(task.customFields[field.name]);
+
+    if (field && task.customFields) {
+      const normalizedTargetKey = normalizeFieldKey(field.name);
+      const matchingEntry = Object.entries(task.customFields).find(([key]) => normalizeFieldKey(key) === normalizedTargetKey);
+      if (matchingEntry) {
+        return normalizeCustomFieldValue(matchingEntry[1]);
+      }
+    }
+
+    return "";
+  };
+
+  const updateCustomValue = (taskId: string, fieldId: string, value: CustomFieldValue) => {
+    const field = universalCustomFields.find((item) => item.id === fieldId);
+    const task = tasks.find((item) => item.id === taskId);
+    if (!field || !task) return;
+
+    const previousCustomFields = { ...(task.customFields ?? {}) };
+    const nextCustomFields = { ...(task.customFields ?? {}) };
+    delete nextCustomFields[fieldId];
+
+    const isNextValueBlank = isBlankCustomFieldValue(value);
+    if (isNextValueBlank) {
+      delete nextCustomFields[field.name];
+    } else {
+      nextCustomFields[field.name] = value;
+    }
+
+    const currentValue = getFieldValue(taskId, fieldId);
+    const hasCurrentValue = !isBlankCustomFieldValue(currentValue);
+
+    updateTaskLocal(taskId, { customFields: nextCustomFields });
+
+    if (isNextValueBlank && !hasCurrentValue) {
+      return;
+    }
+
+    const payload = buildCustomFieldValuePayload(taskId, fieldId, field.type, value);
+    const request = hasCurrentValue ? customFieldValuesApi.update(payload) : customFieldValuesApi.create(payload);
+
+    void (async () => {
+      try {
+        await request;
+      } catch (error: any) {
+        toast.error(error?.message ?? "Erro ao salvar campo personalizado");
+        updateTaskLocal(taskId, { customFields: previousCustomFields });
+      }
+    })();
+  };
+
   const updateTaskTitle = (taskId: string, title: string) => {
     void persistTaskUpdate(taskId, { title });
   };
@@ -304,6 +443,9 @@ const HomePage = () => {
         <TaskTable
           visibleTasks={tasks}
           activeView="all"
+          activeCustomFields={universalCustomFields}
+          getFieldValue={getFieldValue}
+          updateCustomValue={updateCustomValue}
           toggleTaskCompletion={toggleTaskCompletion}
           addTask={addTask}
           projects={projects}
