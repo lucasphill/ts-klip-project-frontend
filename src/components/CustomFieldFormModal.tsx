@@ -13,10 +13,12 @@ type CustomFieldFormModalProps = {
   onClose: () => void;
   onSave: (field: CreateCustomFieldDefinitionDto) => void | Promise<void>;
   initialData?: GetCustomFieldDefinitionDto | null;
+  scope: "universal" | "project";
 };
 
-const CustomFieldFormModal: FC<CustomFieldFormModalProps> = ({ isOpen, onClose, onSave, initialData }) => {
+const CustomFieldFormModal: FC<CustomFieldFormModalProps> = ({ isOpen, onClose, onSave, initialData, scope }) => {
   const isEditing = !!initialData;
+  const isUniversal = scope === "universal";
   const [field, setField] = useState({ name: "", type: "text", optionsString: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -40,6 +42,7 @@ const CustomFieldFormModal: FC<CustomFieldFormModalProps> = ({ isOpen, onClose, 
         name: field.name.trim(),
         type: field.type as CustomFieldType,
         options: field.type === "enum" ? field.optionsString.trim() || undefined : undefined,
+        isUniversal,
       });
       onClose();
     } catch {
@@ -58,7 +61,9 @@ const CustomFieldFormModal: FC<CustomFieldFormModalProps> = ({ isOpen, onClose, 
               {isEditing ? "Editar campo personalizado" : "Novo campo personalizado"}
             </h3>
             <p className="mt-0.5 text-sm text-[var(--text-muted)]">
-              {isEditing ? "Atualize as propriedades do campo." : "Adicione metadados para enriquecer as tarefas."}
+              {isEditing
+                ? `Atualize um campo ${isUniversal ? "universal" : "especifico de projeto"}.`
+                : `Crie um campo ${isUniversal ? "disponivel para todas as tarefas" : "para vincular ao projeto selecionado"}.`}
             </p>
           </div>
           <button

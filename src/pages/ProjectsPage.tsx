@@ -58,6 +58,17 @@ const normalizeFieldKey = (value: string) =>
     .replace(/[^a-zA-Z0-9]/g, '')
     .toLowerCase();
 
+const isBlankCustomFieldValue = (value: CustomFieldValue) =>
+  value === undefined || value === null || value === '';
+
+const normalizeCustomFieldValue = (value: CustomFieldValue): CustomFieldValue => {
+  if (typeof value === 'string' && value.trim().toLowerCase() === '(vazio)') {
+    return '';
+  }
+
+  return value;
+};
+
 const normalizeCustomField = (field: GetCustomFieldDefinitionDto): GetCustomFieldDefinitionDto => ({
   ...field,
   options: normalizeFieldOptions(field.options),
@@ -83,12 +94,14 @@ const buildCustomFieldValuePayload = (
   };
 
   if (fieldType === 'number') {
-    payload.valueNumber =
-      value === undefined || value === null || value === '' ? undefined : Number(value);
+    payload.valueNumber = isBlankCustomFieldValue(value) ? undefined : Number(value);
     return payload;
   }
 
-  payload.valueText = value === undefined || value === null ? '' : String(value);
+  if (!isBlankCustomFieldValue(value)) {
+    payload.valueText = String(value);
+  }
+
   return payload;
 };
 
@@ -220,14 +233,14 @@ const ProjectsPage = () => {
     const field = customFields.find((item) => item.id === fieldId);
 
     if (!task) return '';
-    if (task.customFields?.[fieldId] !== undefined) return task.customFields[fieldId];
-    if (field && task.customFields?.[field.name] !== undefined) return task.customFields[field.name];
+    if (task.customFields?.[fieldId] !== undefined) return normalizeCustomFieldValue(task.customFields[fieldId]);
+    if (field && task.customFields?.[field.name] !== undefined) return normalizeCustomFieldValue(task.customFields[field.name]);
 
     if (field && task.customFields) {
       const normalizedTargetKey = normalizeFieldKey(field.name);
       const matchingEntry = Object.entries(task.customFields).find(([key]) => normalizeFieldKey(key) === normalizedTargetKey);
       if (matchingEntry) {
-        return matchingEntry[1];
+        return normalizeCustomFieldValue(matchingEntry[1]);
       }
     }
 
@@ -280,10 +293,15 @@ const ProjectsPage = () => {
     const previousCustomFields = { ...(task.customFields ?? {}) };
     const nextCustomFields = { ...(task.customFields ?? {}) };
     delete nextCustomFields[fieldId];
-    nextCustomFields[field.name] = value;
+    const isNextValueBlank = isBlankCustomFieldValue(value);
+    if (isNextValueBlank) {
+      delete nextCustomFields[field.name];
+    } else {
+      nextCustomFields[field.name] = value;
+    }
 
     const currentValue = getFieldValue(taskId, fieldId);
-    const hasCurrentValue = currentValue !== '' && currentValue !== undefined && currentValue !== null;
+    const hasCurrentValue = !isBlankCustomFieldValue(currentValue);
 
     setTasks((previousTasks) =>
       previousTasks.map((currentTask) =>
@@ -295,6 +313,10 @@ const ProjectsPage = () => {
           : currentTask
       )
     );
+
+    if (isNextValueBlank && !hasCurrentValue) {
+      return;
+    }
 
     const payload = buildCustomFieldValuePayload(taskId, fieldId, field.type, value);
     const request = hasCurrentValue ? customFieldValuesApi.update(payload, projectId) : customFieldValuesApi.create(payload, projectId);

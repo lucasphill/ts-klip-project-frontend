@@ -1,19 +1,23 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
 import { tasksApi } from '../services/api';
-import type { GetTasksDto } from '../types/apiTypes';
+import type { CustomFieldValue, GetTasksDto } from '../types/apiTypes';
+
+type TasksContextTask = GetTasksDto & {
+  customFields?: Record<string, CustomFieldValue>;
+};
 
 interface TasksContextValue {
-  tasks: GetTasksDto[];
+  tasks: TasksContextTask[];
   fetchTasks: (options?: { force?: boolean }) => Promise<void>;
   appendTask: (task: GetTasksDto) => void;
-  updateTaskLocal: (taskId: string, updates: Partial<GetTasksDto>) => void;
+  updateTaskLocal: (taskId: string, updates: Partial<TasksContextTask>) => void;
   removeTaskLocal: (taskId: string) => void;
   removeTasksLocal: (taskIds: string[]) => void;
 }
 
 const TasksContext = createContext<TasksContextValue | null>(null);
 
-const normalizeDueDate = (task: GetTasksDto): GetTasksDto => {
+const normalizeDueDate = (task: TasksContextTask): TasksContextTask => {
   const rawDueDate = (task as any).dueDate ?? (task as any).due_date;
   return {
     ...task,
@@ -25,8 +29,8 @@ const normalizeDueDate = (task: GetTasksDto): GetTasksDto => {
 };
 
 export const TasksProvider = ({ children }: { children: ReactNode }) => {
-  const [tasks, setTasks] = useState<GetTasksDto[]>([]);
-  const tasksRef = useRef<GetTasksDto[]>([]);
+  const [tasks, setTasks] = useState<TasksContextTask[]>([]);
+  const tasksRef = useRef<TasksContextTask[]>([]);
   const hasFetchedOnceRef = useRef(false);
   const fetchPromiseRef = useRef<Promise<void> | null>(null);
 
@@ -41,8 +45,13 @@ export const TasksProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    fetchPromiseRef.current = tasksApi
-      .getAll()
+    fetchPromiseRef.current = (async () => {
+      try {
+        return await tasksApi.getWithCustomFields();
+      } catch {
+        return await tasksApi.getAll();
+      }
+    })()
       .then((response) => {
         const normalizedTasks = (response.data ?? []).map(normalizeDueDate);
         tasksRef.current = normalizedTasks;
