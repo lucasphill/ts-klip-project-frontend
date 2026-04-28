@@ -5,6 +5,8 @@ import TaskTable from '../components/TaskTable';
 import AddTaskModal from '../components/AddTaskModal';
 import TaskViewLayout from '../components/TaskViewLayout';
 import { useProjectsContext } from '../contexts/ProjectsContext';
+import { useTasksContext } from '../contexts/TasksContext';
+import { useCustomFieldDefinitionsContext } from '../contexts/CustomFieldDefinitionsContext';
 import { buildParentTaskOptions, getDescendantTaskIds } from '../lib/taskHierarchy';
 import {
   customFieldValuesApi,
@@ -55,6 +57,8 @@ const toTaskPayload= (task: CreateTaskDto) => ({
 const ProjectsPage = () => {
   const { projectId } = useParams();
   const { projects, fetchProjects } = useProjectsContext();
+  const { tasks: tasksWithUniversalCustomFields, updateTaskLocal } = useTasksContext();
+  const { universalCustomFields } = useCustomFieldDefinitionsContext();
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
   const [customFields, setCustomFields] = useState<GetCustomFieldDefinitionDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -71,6 +75,33 @@ const ProjectsPage = () => {
     () => buildParentTaskOptions(tasks, taskToEdit?.id),
     [taskToEdit?.id, tasks]
   );
+  const activeCustomFields = useMemo(() => {
+    const fieldsById = new Map<string, GetCustomFieldDefinitionDto>();
+
+    universalCustomFields.forEach((field) => fieldsById.set(field.id, field));
+    customFields.forEach((field) => {
+      if (!fieldsById.has(field.id)) {
+        fieldsById.set(field.id, field);
+      }
+    });
+
+    return Array.from(fieldsById.values());
+  }, [customFields, universalCustomFields]);
+  const visibleTasks = useMemo(() => {
+    const universalTaskMap = new Map(tasksWithUniversalCustomFields.map((task) => [task.id, task]));
+
+    return tasks.map((task) => {
+      const taskWithUniversalFields = universalTaskMap.get(task.id);
+
+      return {
+        ...task,
+        customFields: {
+          ...(taskWithUniversalFields?.customFields ?? {}),
+          ...(task.customFields ?? {}),
+        },
+      };
+    });
+  }, [tasks, tasksWithUniversalCustomFields]);
 
   const loadProjectTaskAssignments = async (projectsList: GetProjectsDto[]) => {
     try {
@@ -176,8 +207,8 @@ const ProjectsPage = () => {
   };
 
   const getFieldValue = (taskId: string, fieldId: string) => {
-    const task = tasks.find((item) => item.id === taskId);
-    const field = customFields.find((item) => item.id === fieldId);
+    const task = visibleTasks.find((item) => item.id === taskId);
+    const field = activeCustomFields.find((item) => item.id === fieldId);
 
     return getCustomFieldValueByDefinition(task, field);
   };
@@ -221,14 +252,21 @@ const ProjectsPage = () => {
   };
 
   const updateCustomValue = (taskId: string, fieldId: string, value: CustomFieldValue) => {
-    const field = customFields.find((item) => item.id === fieldId);
-    const task = tasks.find((item) => item.id === taskId);
-    if (!field || !task || !projectId) return;
+    const field = activeCustomFields.find((item) => item.id === fieldId);
+    const task = visibleTasks.find((item) => item.id === taskId);
+    if (!field || !task) return;
+    if (!field.isUniversal && !projectId) return;
 
     const previousCustomFields = { ...(task.customFields ?? {}) };
+    const previousGlobalCustomFields = {
+      ...(tasksWithUniversalCustomFields.find((item) => item.id === taskId)?.customFields ?? {}),
+    };
     const nextCustomFields = { ...(task.customFields ?? {}) };
+    const nextGlobalCustomFields = { ...previousGlobalCustomFields };
     delete nextCustomFields[fieldId];
     nextCustomFields[field.name] = value;
+    delete nextGlobalCustomFields[fieldId];
+    nextGlobalCustomFields[field.name] = value;
 
     const currentValue = getFieldValue(taskId, fieldId);
     const hasCurrentValue = currentValue !== '' && currentValue !== undefined && currentValue !== null;
@@ -244,8 +282,19 @@ const ProjectsPage = () => {
       )
     );
 
+    if (field.isUniversal) {
+      updateTaskLocal(taskId, { customFields: nextGlobalCustomFields });
+    }
+
+    if (!hasCurrentValue && (value === '' || value === undefined || value === null)) {
+      return;
+    }
+
     const payload = buildCustomFieldValuePayload(taskId, fieldId, field.type, value);
-    const request = hasCurrentValue ? customFieldValuesApi.update(payload, projectId) : customFieldValuesApi.create(payload, projectId);
+    const requestProjectId = field.isUniversal ? undefined : projectId;
+    const request = hasCurrentValue
+      ? customFieldValuesApi.update(payload, requestProjectId)
+      : customFieldValuesApi.create(payload, requestProjectId);
 
     void (async () => {
       try {
@@ -262,6 +311,9 @@ const ProjectsPage = () => {
               : currentTask
           )
         );
+        if (field.isUniversal) {
+          updateTaskLocal(taskId, { customFields: previousGlobalCustomFields });
+        }
       }
     })();
   };
@@ -362,9 +414,9 @@ const ProjectsPage = () => {
           <div className="flex flex-1 items-center justify-center px-6 py-8 text-sm text-slate-500">Projeto nao encontrado.</div>
         ) : (
           <TaskTable
-            visibleTasks={tasks}
+            visibleTasks={visibleTasks}
             activeView={projectId ?? ''}
-            activeCustomFields={customFields}
+            activeCustomFields={activeCustomFields}
             getFieldValue={getFieldValue}
             updateCustomValue={updateCustomValue}
             toggleTaskCompletion={toggleTaskCompletion}
