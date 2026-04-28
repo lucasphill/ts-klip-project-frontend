@@ -13,7 +13,6 @@ import {
   tasksApi,
 } from '../services/api';
 import type {
-  CreateCustomFieldValueDto,
   CreateTaskDto,
   CustomFieldValue,
   GetCustomFieldDefinitionDto,
@@ -21,6 +20,11 @@ import type {
   GetTasksDto,
   GetTasksWithCustomFieldsDto,
 } from '../types/apiTypes';
+import {
+  buildCustomFieldValuePayload,
+  getCustomFieldValueByDefinition,
+  normalizeCustomFieldDefinition,
+} from '../lib/customFields';
 
 type ProjectTask = GetTasksDto & {
   customFields?: Record<string, CustomFieldValue>;
@@ -40,29 +44,6 @@ const normalizeTask = (task: GetTasksDto | GetTasksWithCustomFieldsDto): Project
   customFields: 'customFields' in task ? task.customFields ?? {} : {},
 });
 
-const normalizeFieldOptions = (options?: string | string[] | null) => {
-  if (Array.isArray(options)) {
-    return options.map((option) => option.trim()).filter(Boolean);
-  }
-
-  return String(options ?? '')
-    .split(',')
-    .map((option) => option.trim())
-    .filter(Boolean);
-};
-
-const normalizeFieldKey = (value: string) =>
-  value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9]/g, '')
-    .toLowerCase();
-
-const normalizeCustomField = (field: GetCustomFieldDefinitionDto): GetCustomFieldDefinitionDto => ({
-  ...field,
-  options: normalizeFieldOptions(field.options),
-});
-
 const toTaskPayload= (task: CreateTaskDto) => ({
   title: task.title.trim(),
   dueDate: task.dueDate ? `${task.dueDate}T00:00:00` : undefined,
@@ -70,27 +51,6 @@ const toTaskPayload= (task: CreateTaskDto) => ({
   notes: task.notes?.trim() || undefined,
   parentTaskId: task.parentTaskId?.trim() || undefined,
 });
-
-const buildCustomFieldValuePayload = (
-  taskId: string,
-  customFieldId: string,
-  fieldType: GetCustomFieldDefinitionDto['type'],
-  value: CustomFieldValue
-): CreateCustomFieldValueDto => {
-  const payload: CreateCustomFieldValueDto = {
-    taskId,
-    customFieldId,
-  };
-
-  if (fieldType === 'number') {
-    payload.valueNumber =
-      value === undefined || value === null || value === '' ? undefined : Number(value);
-    return payload;
-  }
-
-  payload.valueText = value === undefined || value === null ? '' : String(value);
-  return payload;
-};
 
 const ProjectsPage = () => {
   const { projectId } = useParams();
@@ -162,7 +122,7 @@ const ProjectsPage = () => {
       }
 
       setTasks(projectTasks);
-      setCustomFields((projectFieldsResponse.data ?? []).map(normalizeCustomField));
+      setCustomFields((projectFieldsResponse.data ?? []).map(normalizeCustomFieldDefinition));
     } catch (error: any) {
       toast.error(error?.message ?? 'Erro ao carregar o projeto');
     } finally {
@@ -219,19 +179,7 @@ const ProjectsPage = () => {
     const task = tasks.find((item) => item.id === taskId);
     const field = customFields.find((item) => item.id === fieldId);
 
-    if (!task) return '';
-    if (task.customFields?.[fieldId] !== undefined) return task.customFields[fieldId];
-    if (field && task.customFields?.[field.name] !== undefined) return task.customFields[field.name];
-
-    if (field && task.customFields) {
-      const normalizedTargetKey = normalizeFieldKey(field.name);
-      const matchingEntry = Object.entries(task.customFields).find(([key]) => normalizeFieldKey(key) === normalizedTargetKey);
-      if (matchingEntry) {
-        return matchingEntry[1];
-      }
-    }
-
-    return '';
+    return getCustomFieldValueByDefinition(task, field);
   };
 
   const getTaskProjects = (taskId: string) => {

@@ -7,6 +7,7 @@ import {
   customFieldDefinitionsApi,
   projectsCustomFieldDefinitionsApi,
 } from "../services/api";
+import { useCustomFieldDefinitionsContext } from "../contexts/CustomFieldDefinitionsContext";
 import type {
   CreateCustomFieldDefinitionDto,
   GetCustomFieldDefinitionDto,
@@ -50,6 +51,7 @@ type CustomFieldsManagerProps = {
 };
 
 const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
+  const { fetchCustomFieldDefinitions } = useCustomFieldDefinitionsContext();
   const [tab, setTab] = useState<"universal" | "project">("universal");
 
   // Universal fields state
@@ -100,10 +102,12 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
     try {
       await customFieldDefinitionsApi.create({
         ...data,
+        isUniversal: true,
         options: opts.length > 0 ? opts.join(",") : undefined,
       });
       toast.success(`Campo "${data.name}" criado`);
       await loadAllFields();
+      await fetchCustomFieldDefinitions({ force: true });
     } catch (err: any) {
       toast.error(err?.message ?? "Erro ao criar campo");
       throw err;
@@ -116,10 +120,12 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
     try {
       await customFieldDefinitionsApi.update(fieldToEdit.id, {
         ...data,
+        isUniversal: fieldToEdit.isUniversal ?? true,
         options: opts.length > 0 ? opts.join(",") : undefined,
       });
       toast.success(`Campo "${data.name}" atualizado`);
       await loadAllFields();
+      await fetchCustomFieldDefinitions({ force: true });
     } catch (err: any) {
       toast.error(err?.message ?? "Erro ao atualizar campo");
       throw err;
@@ -131,6 +137,7 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
     try {
       await customFieldDefinitionsApi.remove(field.id);
       setAllFields((prev) => prev.filter((f) => f.id !== field.id));
+      await fetchCustomFieldDefinitions({ force: true });
       toast.success(`Campo "${field.name}" excluído`);
     } catch (err: any) {
       toast.error(err?.message ?? "Erro ao excluir campo");
@@ -173,7 +180,7 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
   const handleCreateAndLink = async (data: CreateCustomFieldDefinitionDto) => {
     if (!selectedProjectId) return;
     const opts = normalizeFieldOptions(data.options);
-    const payload = { ...data, options: opts.length > 0 ? opts.join(",") : undefined };
+    const payload = { ...data, isUniversal: false, options: opts.length > 0 ? opts.join(",") : undefined };
     try {
       await customFieldDefinitionsApi.create(payload);
       const allRes = await customFieldDefinitionsApi.getAll();
@@ -189,6 +196,7 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
       await projectsCustomFieldDefinitionsApi.assign(selectedProjectId, matched.id);
       setAllFields(normalized);
       setProjectFields((prev) => [...prev.filter((f) => f.id !== matched.id), matched]);
+      await fetchCustomFieldDefinitions({ force: true });
       toast.success(`Campo "${data.name}" criado e vinculado`);
     } catch (err: any) {
       toast.error(err?.message ?? "Erro ao criar e vincular campo");
