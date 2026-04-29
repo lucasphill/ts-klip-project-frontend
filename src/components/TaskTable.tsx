@@ -134,15 +134,17 @@ const parseStoredTaskTableState = (rawValue: string | null) => {
   }
 };
 
-const getColorDotProps = (color?: string): { className: string; style?: CSSProperties } | null => {
-  if (!color) return null;
+const getProjectTagColorProps = (color?: string): { className: string; style?: CSSProperties } => {
+  if (!color) {
+    return { className: "border-slate-200 bg-slate-50 text-slate-700" };
+  }
 
   if (color.startsWith("bg-")) {
-    return { className: color };
+    return { className: `border-transparent ${color} text-white` };
   }
 
   return {
-    className: "",
+    className: "border-transparent text-white",
     style: { backgroundColor: color },
   };
 };
@@ -906,18 +908,18 @@ const TaskTable = ({
                     <Cell className={`border-b border-slate-100 px-3 ${depth > 0 ? "py-1.5" : "py-2"}`}>
                       <div className="flex flex-wrap items-center gap-1.5">
                         {taskProjects.map((project) => {
-                          const colorDot = getColorDotProps(project.color);
+                          const tagColor = getProjectTagColorProps(project.color);
 
                           return (
                             <span
                               key={project.id}
-                              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-700"
+                              className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium ${tagColor.className}`}
+                              style={tagColor.style}
                             >
-                              <span className={`h-2 w-2 rounded-full ${colorDot?.className ?? ""}`} style={colorDot?.style} />
                               {project.name}
                               <button
                                 onClick={() => removeProjectFromTask(task.id, project.id)}
-                                className="text-slate-400 transition-colors hover:text-rose-600"
+                                className="text-white/75 transition-colors hover:text-white"
                               >
                                 <X className="h-3 w-3" />
                               </button>

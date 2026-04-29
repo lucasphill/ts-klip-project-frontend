@@ -7,6 +7,7 @@ import {
   customFieldDefinitionsApi,
   projectsCustomFieldDefinitionsApi,
 } from "../services/api";
+import { useCustomFieldDefinitionsContext } from "../contexts/CustomFieldDefinitionsContext";
 import type {
   CreateCustomFieldDefinitionDto,
   GetCustomFieldDefinitionDto,
@@ -45,11 +46,24 @@ const typeLabel: Record<string, string> = {
   boolean: "Booleano",
 };
 
+const ScopeBadge: FC<{ isUniversal?: boolean }> = ({ isUniversal }) => (
+  <span
+    className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+      isUniversal
+        ? "bg-sky-50 text-sky-700 ring-1 ring-sky-100"
+        : "bg-slate-100 text-slate-600 ring-1 ring-slate-200"
+    }`}
+  >
+    {isUniversal ? "Universal" : "Projeto"}
+  </span>
+);
+
 type CustomFieldsManagerProps = {
   projects: GetProjectsDto[];
 };
 
 const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
+  const { fetchCustomFieldDefinitions } = useCustomFieldDefinitionsContext();
   const [tab, setTab] = useState<"universal" | "project">("universal");
 
   // Universal fields state
@@ -63,6 +77,11 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
   const [projectFields, setProjectFields] = useState<GetCustomFieldDefinitionDto[]>([]);
   const [isLoadingProjectFields, setIsLoadingProjectFields] = useState(false);
   const [showCreateAndLinkModal, setShowCreateAndLinkModal] = useState(false);
+
+  const universalFields = allFields.filter((field) => field.isUniversal === true);
+  const projectOnlyFields = allFields.filter((field) => field.isUniversal !== true);
+  const linkedProjectFields = projectFields.filter((field) => field.isUniversal !== true);
+  const linkedFieldsForSelectedProject = [...universalFields, ...linkedProjectFields];
 
   const loadAllFields = async () => {
     setIsLoadingFields(true);
@@ -100,10 +119,12 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
     try {
       await customFieldDefinitionsApi.create({
         ...data,
+        isUniversal: true,
         options: opts.length > 0 ? opts.join(",") : undefined,
       });
       toast.success(`Campo "${data.name}" criado`);
       await loadAllFields();
+      await fetchCustomFieldDefinitions({ force: true });
     } catch (err: any) {
       toast.error(err?.message ?? "Erro ao criar campo");
       throw err;
@@ -116,10 +137,12 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
     try {
       await customFieldDefinitionsApi.update(fieldToEdit.id, {
         ...data,
+        isUniversal: fieldToEdit.isUniversal ?? true,
         options: opts.length > 0 ? opts.join(",") : undefined,
       });
       toast.success(`Campo "${data.name}" atualizado`);
       await loadAllFields();
+      await fetchCustomFieldDefinitions({ force: true });
     } catch (err: any) {
       toast.error(err?.message ?? "Erro ao atualizar campo");
       throw err;
@@ -131,6 +154,7 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
     try {
       await customFieldDefinitionsApi.remove(field.id);
       setAllFields((prev) => prev.filter((f) => f.id !== field.id));
+      await fetchCustomFieldDefinitions({ force: true });
       toast.success(`Campo "${field.name}" excluído`);
     } catch (err: any) {
       toast.error(err?.message ?? "Erro ao excluir campo");
@@ -144,14 +168,19 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
 
   // -- Project assignment --
 
-  const unassignedFields = allFields.filter((f) => !projectFields.some((pf) => pf.id === f.id));
+  const unassignedFields = projectOnlyFields.filter((f) => !linkedProjectFields.some((pf) => pf.id === f.id));
 
   const handleAssign = async (fieldId: string) => {
     if (!selectedProjectId) return;
+    const field = projectOnlyFields.find((f) => f.id === fieldId);
+    if (!field) {
+      toast.error("Campos universais nao podem ser vinculados a projetos");
+      return;
+    }
+
     try {
       await projectsCustomFieldDefinitionsApi.assign(selectedProjectId, fieldId);
-      const field = allFields.find((f) => f.id === fieldId);
-      if (field) setProjectFields((prev) => [...prev, field]);
+      setProjectFields((prev) => [...prev, field]);
       toast.success("Campo vinculado ao projeto");
     } catch (err: any) {
       toast.error(err?.message ?? "Erro ao vincular campo");
@@ -173,7 +202,7 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
   const handleCreateAndLink = async (data: CreateCustomFieldDefinitionDto) => {
     if (!selectedProjectId) return;
     const opts = normalizeFieldOptions(data.options);
-    const payload = { ...data, options: opts.length > 0 ? opts.join(",") : undefined };
+    const payload = { ...data, isUniversal: false, options: opts.length > 0 ? opts.join(",") : undefined };
     try {
       await customFieldDefinitionsApi.create(payload);
       const allRes = await customFieldDefinitionsApi.getAll();
@@ -189,6 +218,7 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
       await projectsCustomFieldDefinitionsApi.assign(selectedProjectId, matched.id);
       setAllFields(normalized);
       setProjectFields((prev) => [...prev.filter((f) => f.id !== matched.id), matched]);
+      await fetchCustomFieldDefinitions({ force: true });
       toast.success(`Campo "${data.name}" criado e vinculado`);
     } catch (err: any) {
       toast.error(err?.message ?? "Erro ao criar e vincular campo");
@@ -222,7 +252,7 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
             <div>
               <h3 className="text-sm font-semibold text-[var(--text-primary)]">Campos universais</h3>
               <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                Campos disponíveis para vincular a qualquer projeto.
+                Campos exibidos automaticamente nas tarefas e projetos.
               </p>
             </div>
             <button
@@ -235,12 +265,12 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
 
           {isLoadingFields ? (
             <div className="py-10 text-center text-sm text-[var(--text-muted)]">Carregando campos...</div>
-          ) : allFields.length === 0 ? (
+          ) : universalFields.length === 0 ? (
             <div className="rounded-lg border border-dashed border-[var(--border-subtle)] py-12 text-center">
               <div className="mb-2 flex justify-center text-[var(--text-faint)]">
                 <Hash className="h-8 w-8" />
               </div>
-              <p className="text-sm text-[var(--text-muted)]">Nenhum campo criado ainda.</p>
+              <p className="text-sm text-[var(--text-muted)]">Nenhum campo universal criado ainda.</p>
               <button
                 onClick={() => { setFieldToEdit(null); setShowFormModal(true); }}
                 className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-[var(--brand)] hover:underline"
@@ -260,7 +290,7 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border-subtle)]">
-                  {allFields.map((field) => {
+                  {universalFields.map((field) => {
                     const opts = normalizeFieldOptions(field.options);
                     return (
                       <tr key={field.id} className="group bg-[var(--bg-panel)] transition-colors hover:bg-[var(--bg-soft)]">
@@ -268,6 +298,7 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
                           <span className="flex items-center gap-2 font-medium text-[var(--text-primary)]">
                             <span className="text-[var(--text-muted)]"><FieldTypeIcon type={field.type} /></span>
                             {field.name}
+                            <ScopeBadge isUniversal={field.isUniversal} />
                           </span>
                         </td>
                         <td className="px-4 py-3 text-[var(--text-muted)]">{typeLabel[field.type] ?? field.type}</td>
@@ -347,7 +378,7 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Vinculados</span>
                       <span className="rounded-full bg-[var(--bg-soft-strong)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text-secondary)]">
-                        {projectFields.length}
+                        {linkedFieldsForSelectedProject.length}
                       </span>
                     </div>
                     <button
@@ -358,13 +389,13 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
                     </button>
                   </div>
 
-                  {projectFields.length === 0 ? (
+                  {linkedFieldsForSelectedProject.length === 0 ? (
                     <div className="flex flex-1 items-center justify-center py-10 text-center">
                       <p className="text-xs text-[var(--text-faint)]">Nenhum campo vinculado.</p>
                     </div>
                   ) : (
                     <ul className="divide-y divide-[var(--border-subtle)]">
-                      {projectFields.map((field) => (
+                      {linkedFieldsForSelectedProject.map((field) => (
                         <li
                           key={field.id}
                           className="group flex items-center gap-3 bg-[var(--bg-panel)] px-4 py-2.5 transition-colors hover:bg-[var(--bg-soft)]"
@@ -372,15 +403,24 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
                           <span className="text-[var(--text-muted)]"><FieldTypeIcon type={field.type} /></span>
                           <span className="flex-1 min-w-0">
                             <span className="block truncate text-sm font-medium text-[var(--text-primary)]">{field.name}</span>
-                            <span className="text-xs text-[var(--text-faint)]">{typeLabel[field.type] ?? field.type}</span>
+                            <span className="flex items-center gap-1.5 text-xs text-[var(--text-faint)]">
+                              {typeLabel[field.type] ?? field.type}
+                              <ScopeBadge isUniversal={field.isUniversal} />
+                            </span>
                           </span>
-                          <button
-                            onClick={() => void handleUnassign(field)}
-                            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--text-muted)] opacity-0 transition-all group-hover:opacity-100 hover:bg-red-50 hover:text-red-600"
-                            title="Desvincular"
-                          >
-                            <Unlink className="h-3.5 w-3.5" />
-                          </button>
+                          {field.isUniversal ? (
+                            <span className="shrink-0 rounded-md px-2 py-1 text-[11px] font-medium text-[var(--text-faint)]">
+                              Fixo
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => void handleUnassign(field)}
+                              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--text-muted)] opacity-0 transition-all group-hover:opacity-100 hover:bg-red-50 hover:text-red-600"
+                              title="Desvincular"
+                            >
+                              <Unlink className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                         </li>
                       ))}
                     </ul>
@@ -399,8 +439,8 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
                   {unassignedFields.length === 0 ? (
                     <div className="flex flex-1 items-center justify-center py-10 text-center">
                       <p className="text-xs text-[var(--text-faint)]">
-                        {allFields.length === 0
-                          ? "Nenhum campo criado ainda."
+                        {projectOnlyFields.length === 0
+                          ? "Nenhum campo de projeto criado ainda."
                           : "Todos os campos já estão vinculados."}
                       </p>
                     </div>
@@ -414,7 +454,10 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
                           <span className="text-[var(--text-muted)]"><FieldTypeIcon type={field.type} /></span>
                           <span className="flex-1 min-w-0">
                             <span className="block truncate text-sm font-medium text-[var(--text-primary)]">{field.name}</span>
-                            <span className="text-xs text-[var(--text-faint)]">{typeLabel[field.type] ?? field.type}</span>
+                            <span className="flex items-center gap-1.5 text-xs text-[var(--text-faint)]">
+                              {typeLabel[field.type] ?? field.type}
+                              <ScopeBadge isUniversal={field.isUniversal} />
+                            </span>
                           </span>
                           <button
                             onClick={() => void handleAssign(field.id)}

@@ -10,6 +10,7 @@ import SettingsPage from './pages/SettingsPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { TasksProvider, useTasksContext } from './contexts/TasksContext';
 import { ProjectsProvider, useProjectsContext } from './contexts/ProjectsContext';
+import { CustomFieldDefinitionsProvider, useCustomFieldDefinitionsContext } from './contexts/CustomFieldDefinitionsContext';
 import { useLoading } from './contexts/LoadingContext';
 import { Analytics } from '@vercel/analytics/react';
 
@@ -17,6 +18,7 @@ const BootstrapGate = ({ children }: { children: ReactNode }) => {
   const { isAuthenticated } = useAuth();
   const { fetchProjects } = useProjectsContext();
   const { fetchTasks } = useTasksContext();
+  const { fetchCustomFieldDefinitions } = useCustomFieldDefinitionsContext();
   const { setLoading } = useLoading();
   const [isReady, setIsReady] = useState(false);
 
@@ -30,7 +32,11 @@ const BootstrapGate = ({ children }: { children: ReactNode }) => {
     setLoading(true, 'bootstrap');
 
     void (async () => {
-      const results = await Promise.allSettled([fetchProjects(), fetchTasks()]);
+      const results = await Promise.allSettled([
+        fetchProjects(),
+        fetchTasks(),
+        fetchCustomFieldDefinitions(),
+      ]);
       const failedResult = results.find((result) => result.status === 'rejected');
 
       if (failedResult?.status === 'rejected') {
@@ -48,7 +54,7 @@ const BootstrapGate = ({ children }: { children: ReactNode }) => {
       isMounted = false;
       setLoading(false, 'bootstrap');
     };
-  }, [fetchProjects, fetchTasks, isAuthenticated, setLoading]);
+  }, [fetchCustomFieldDefinitions, fetchProjects, fetchTasks, isAuthenticated, setLoading]);
 
   if (!isReady) {
     return null;
@@ -152,7 +158,9 @@ const App = () => {
         <Router>
           <ProjectsProvider>
             <TasksProvider>
-              <AppRoutes />
+              <CustomFieldDefinitionsProvider>
+                <AppRoutes />
+              </CustomFieldDefinitionsProvider>
             </TasksProvider>
           </ProjectsProvider>
         </Router>

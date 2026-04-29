@@ -5,6 +5,8 @@ import TaskTable from '../components/TaskTable';
 import AddTaskModal from '../components/AddTaskModal';
 import TaskViewLayout from '../components/TaskViewLayout';
 import { useProjectsContext } from '../contexts/ProjectsContext';
+import { useTasksContext } from '../contexts/TasksContext';
+import { useCustomFieldDefinitionsContext } from '../contexts/CustomFieldDefinitionsContext';
 import { buildParentTaskOptions, getDescendantTaskIds } from '../lib/taskHierarchy';
 import {
   customFieldValuesApi,
@@ -13,7 +15,6 @@ import {
   tasksApi,
 } from '../services/api';
 import type {
-  CreateCustomFieldValueDto,
   CreateTaskDto,
   CustomFieldValue,
   GetCustomFieldDefinitionDto,
@@ -21,6 +22,11 @@ import type {
   GetTasksDto,
   GetTasksWithCustomFieldsDto,
 } from '../types/apiTypes';
+import {
+  buildCustomFieldValuePayload,
+  getCustomFieldValueByDefinition,
+  normalizeCustomFieldDefinition,
+} from '../lib/customFields';
 
 type ProjectTask = GetTasksDto & {
   customFields?: Record<string, CustomFieldValue>;
@@ -40,29 +46,6 @@ const normalizeTask = (task: GetTasksDto | GetTasksWithCustomFieldsDto): Project
   customFields: 'customFields' in task ? task.customFields ?? {} : {},
 });
 
-const normalizeFieldOptions = (options?: string | string[] | null) => {
-  if (Array.isArray(options)) {
-    return options.map((option) => option.trim()).filter(Boolean);
-  }
-
-  return String(options ?? '')
-    .split(',')
-    .map((option) => option.trim())
-    .filter(Boolean);
-};
-
-const normalizeFieldKey = (value: string) =>
-  value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9]/g, '')
-    .toLowerCase();
-
-const normalizeCustomField = (field: GetCustomFieldDefinitionDto): GetCustomFieldDefinitionDto => ({
-  ...field,
-  options: normalizeFieldOptions(field.options),
-});
-
 const toTaskPayload= (task: CreateTaskDto) => ({
   title: task.title.trim(),
   dueDate: task.dueDate ? `${task.dueDate}T00:00:00` : undefined,
@@ -71,30 +54,11 @@ const toTaskPayload= (task: CreateTaskDto) => ({
   parentTaskId: task.parentTaskId?.trim() || undefined,
 });
 
-const buildCustomFieldValuePayload = (
-  taskId: string,
-  customFieldId: string,
-  fieldType: GetCustomFieldDefinitionDto['type'],
-  value: CustomFieldValue
-): CreateCustomFieldValueDto => {
-  const payload: CreateCustomFieldValueDto = {
-    taskId,
-    customFieldId,
-  };
-
-  if (fieldType === 'number') {
-    payload.valueNumber =
-      value === undefined || value === null || value === '' ? undefined : Number(value);
-    return payload;
-  }
-
-  payload.valueText = value === undefined || value === null ? '' : String(value);
-  return payload;
-};
-
 const ProjectsPage = () => {
   const { projectId } = useParams();
   const { projects, fetchProjects } = useProjectsContext();
+  const { tasks: tasksWithUniversalCustomFields, updateTaskLocal } = useTasksContext();
+  const { universalCustomFields } = useCustomFieldDefinitionsContext();
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
   const [customFields, setCustomFields] = useState<GetCustomFieldDefinitionDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -111,6 +75,33 @@ const ProjectsPage = () => {
     () => buildParentTaskOptions(tasks, taskToEdit?.id),
     [taskToEdit?.id, tasks]
   );
+  const activeCustomFields = useMemo(() => {
+    const fieldsById = new Map<string, GetCustomFieldDefinitionDto>();
+
+    universalCustomFields.forEach((field) => fieldsById.set(field.id, field));
+    customFields.forEach((field) => {
+      if (!fieldsById.has(field.id)) {
+        fieldsById.set(field.id, field);
+      }
+    });
+
+    return Array.from(fieldsById.values());
+  }, [customFields, universalCustomFields]);
+  const visibleTasks = useMemo(() => {
+    const universalTaskMap = new Map(tasksWithUniversalCustomFields.map((task) => [task.id, task]));
+
+    return tasks.map((task) => {
+      const taskWithUniversalFields = universalTaskMap.get(task.id);
+
+      return {
+        ...task,
+        customFields: {
+          ...(taskWithUniversalFields?.customFields ?? {}),
+          ...(task.customFields ?? {}),
+        },
+      };
+    });
+  }, [tasks, tasksWithUniversalCustomFields]);
 
   const loadProjectTaskAssignments = async (projectsList: GetProjectsDto[]) => {
     try {
@@ -162,7 +153,7 @@ const ProjectsPage = () => {
       }
 
       setTasks(projectTasks);
-      setCustomFields((projectFieldsResponse.data ?? []).map(normalizeCustomField));
+      setCustomFields((projectFieldsResponse.data ?? []).map(normalizeCustomFieldDefinition));
     } catch (error: any) {
       toast.error(error?.message ?? 'Erro ao carregar o projeto');
     } finally {
@@ -216,22 +207,10 @@ const ProjectsPage = () => {
   };
 
   const getFieldValue = (taskId: string, fieldId: string) => {
-    const task = tasks.find((item) => item.id === taskId);
-    const field = customFields.find((item) => item.id === fieldId);
+    const task = visibleTasks.find((item) => item.id === taskId);
+    const field = activeCustomFields.find((item) => item.id === fieldId);
 
-    if (!task) return '';
-    if (task.customFields?.[fieldId] !== undefined) return task.customFields[fieldId];
-    if (field && task.customFields?.[field.name] !== undefined) return task.customFields[field.name];
-
-    if (field && task.customFields) {
-      const normalizedTargetKey = normalizeFieldKey(field.name);
-      const matchingEntry = Object.entries(task.customFields).find(([key]) => normalizeFieldKey(key) === normalizedTargetKey);
-      if (matchingEntry) {
-        return matchingEntry[1];
-      }
-    }
-
-    return '';
+    return getCustomFieldValueByDefinition(task, field);
   };
 
   const getTaskProjects = (taskId: string) => {
@@ -273,14 +252,21 @@ const ProjectsPage = () => {
   };
 
   const updateCustomValue = (taskId: string, fieldId: string, value: CustomFieldValue) => {
-    const field = customFields.find((item) => item.id === fieldId);
-    const task = tasks.find((item) => item.id === taskId);
-    if (!field || !task || !projectId) return;
+    const field = activeCustomFields.find((item) => item.id === fieldId);
+    const task = visibleTasks.find((item) => item.id === taskId);
+    if (!field || !task) return;
+    if (!field.isUniversal && !projectId) return;
 
     const previousCustomFields = { ...(task.customFields ?? {}) };
+    const previousGlobalCustomFields = {
+      ...(tasksWithUniversalCustomFields.find((item) => item.id === taskId)?.customFields ?? {}),
+    };
     const nextCustomFields = { ...(task.customFields ?? {}) };
+    const nextGlobalCustomFields = { ...previousGlobalCustomFields };
     delete nextCustomFields[fieldId];
     nextCustomFields[field.name] = value;
+    delete nextGlobalCustomFields[fieldId];
+    nextGlobalCustomFields[field.name] = value;
 
     const currentValue = getFieldValue(taskId, fieldId);
     const hasCurrentValue = currentValue !== '' && currentValue !== undefined && currentValue !== null;
@@ -296,8 +282,19 @@ const ProjectsPage = () => {
       )
     );
 
+    if (field.isUniversal) {
+      updateTaskLocal(taskId, { customFields: nextGlobalCustomFields });
+    }
+
+    if (!hasCurrentValue && (value === '' || value === undefined || value === null)) {
+      return;
+    }
+
     const payload = buildCustomFieldValuePayload(taskId, fieldId, field.type, value);
-    const request = hasCurrentValue ? customFieldValuesApi.update(payload, projectId) : customFieldValuesApi.create(payload, projectId);
+    const requestProjectId = field.isUniversal ? undefined : projectId;
+    const request = hasCurrentValue
+      ? customFieldValuesApi.update(payload, requestProjectId)
+      : customFieldValuesApi.create(payload, requestProjectId);
 
     void (async () => {
       try {
@@ -314,6 +311,9 @@ const ProjectsPage = () => {
               : currentTask
           )
         );
+        if (field.isUniversal) {
+          updateTaskLocal(taskId, { customFields: previousGlobalCustomFields });
+        }
       }
     })();
   };
@@ -414,9 +414,9 @@ const ProjectsPage = () => {
           <div className="flex flex-1 items-center justify-center px-6 py-8 text-sm text-slate-500">Projeto nao encontrado.</div>
         ) : (
           <TaskTable
-            visibleTasks={tasks}
+            visibleTasks={visibleTasks}
             activeView={projectId ?? ''}
-            activeCustomFields={customFields}
+            activeCustomFields={activeCustomFields}
             getFieldValue={getFieldValue}
             updateCustomValue={updateCustomValue}
             toggleTaskCompletion={toggleTaskCompletion}

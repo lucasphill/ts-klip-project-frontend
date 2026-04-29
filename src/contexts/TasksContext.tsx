@@ -1,19 +1,19 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
 import { tasksApi } from '../services/api';
-import type { GetTasksDto } from '../types/apiTypes';
+import type { GetTasksWithCustomFieldsDto } from '../types/apiTypes';
 
 interface TasksContextValue {
-  tasks: GetTasksDto[];
+  tasks: GetTasksWithCustomFieldsDto[];
   fetchTasks: (options?: { force?: boolean }) => Promise<void>;
-  appendTask: (task: GetTasksDto) => void;
-  updateTaskLocal: (taskId: string, updates: Partial<GetTasksDto>) => void;
+  appendTask: (task: GetTasksWithCustomFieldsDto) => void;
+  updateTaskLocal: (taskId: string, updates: Partial<GetTasksWithCustomFieldsDto>) => void;
   removeTaskLocal: (taskId: string) => void;
   removeTasksLocal: (taskIds: string[]) => void;
 }
 
 const TasksContext = createContext<TasksContextValue | null>(null);
 
-const normalizeDueDate = (task: GetTasksDto): GetTasksDto => {
+const normalizeTask = (task: GetTasksWithCustomFieldsDto): GetTasksWithCustomFieldsDto => {
   const rawDueDate = (task as any).dueDate ?? (task as any).due_date;
   return {
     ...task,
@@ -21,12 +21,13 @@ const normalizeDueDate = (task: GetTasksDto): GetTasksDto => {
       typeof rawDueDate === 'string' && rawDueDate.trim()
         ? rawDueDate.split('T')[0]
         : undefined,
+    customFields: task.customFields ?? {},
   };
 };
 
 export const TasksProvider = ({ children }: { children: ReactNode }) => {
-  const [tasks, setTasks] = useState<GetTasksDto[]>([]);
-  const tasksRef = useRef<GetTasksDto[]>([]);
+  const [tasks, setTasks] = useState<GetTasksWithCustomFieldsDto[]>([]);
+  const tasksRef = useRef<GetTasksWithCustomFieldsDto[]>([]);
   const hasFetchedOnceRef = useRef(false);
   const fetchPromiseRef = useRef<Promise<void> | null>(null);
 
@@ -42,9 +43,9 @@ export const TasksProvider = ({ children }: { children: ReactNode }) => {
     }
 
     fetchPromiseRef.current = tasksApi
-      .getAll()
+      .getAllWithUniversalCustomFields()
       .then((response) => {
-        const normalizedTasks = (response.data ?? []).map(normalizeDueDate);
+        const normalizedTasks = (response.data ?? []).map(normalizeTask);
         tasksRef.current = normalizedTasks;
         hasFetchedOnceRef.current = true;
         setTasks(normalizedTasks);
@@ -56,16 +57,16 @@ export const TasksProvider = ({ children }: { children: ReactNode }) => {
     return fetchPromiseRef.current;
   }, []);
 
-  const appendTask = useCallback((task: GetTasksDto) => {
+  const appendTask = useCallback((task: GetTasksWithCustomFieldsDto) => {
     setTasks((prev) => {
-      const nextTasks = [...prev, normalizeDueDate(task)];
+      const nextTasks = [...prev, normalizeTask(task)];
       tasksRef.current = nextTasks;
       hasFetchedOnceRef.current = true;
       return nextTasks;
     });
   }, []);
 
-  const updateTaskLocal = useCallback((taskId: string, updates: Partial<GetTasksDto>) => {
+  const updateTaskLocal = useCallback((taskId: string, updates: Partial<GetTasksWithCustomFieldsDto>) => {
     setTasks((prev) => {
       const nextTasks = prev.map((task) => (task.id === taskId ? { ...task, ...updates } : task));
       tasksRef.current = nextTasks;

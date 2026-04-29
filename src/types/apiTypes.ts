@@ -33,6 +33,7 @@ export interface CreateProjectDto{
 export interface CreateCustomFieldDefinitionDto {
   name: string;
   type: CustomFieldType;
+  isUniversal?: boolean;
   options?: string | string[]; // API aceita string; frontend pode manipular como array
 }
 
@@ -53,7 +54,7 @@ export interface GetTasksDto {
   notes?: string;
   parentTaskId?: string;
   title: string;
-  createdAt: string;
+  createdAt?: string;
 }
 
 export interface GetTasksWithCustomFieldsDto extends GetTasksDto  {
@@ -71,6 +72,7 @@ export interface GetProjectsDto {
 export interface GetCustomFieldDefinitionDto {
   createdAt: string;
   id: string;
+  isUniversal?: boolean;
   name: string;
   options?: string | string[] | null;
   type: CustomFieldType;
