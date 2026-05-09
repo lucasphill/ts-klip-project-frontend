@@ -96,75 +96,35 @@ import {
 import { restrictToVerticalAxis, restrictToHorizontalAxis } from '@dnd-kit/modifiers'
 import { CSS } from '@dnd-kit/utilities'
 
+import { useLocalStorage } from './hooks/useLocalStorage'
+
+import {
+  STATUS_CONFIG,
+  PRIORITY_CONFIG,
+  PROJECT_COLORS,
+  getContrastColor,
+} from './constants'
+import type {
+  TaskStatus,
+  TaskPriority,
+  FieldType,
+  CustomField,
+  Project,
+  Task,
+} from './types'
+import {
+  useTheme,
+  LoaderContext,
+  useLoader,
+  AppDataContext,
+  useAppData,
+  TaskEditContext,
+  useTaskEdit,
+  ThemeProvider,
+} from './contexts.tsx'
+
 const { Header, Content, Footer } = Layout
 const { Text } = Typography
-
-// ─── TYPES ────────────────────────────────────────────────────────────────────
-
-export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'done' | 'cancelled'
-export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
-export type FieldType = 'text' | 'number' | 'date' | 'select' | 'checkbox'
-
-export interface CustomField {
-  id: string
-  name: string
-  type: FieldType
-  options?: string[]
-  scope: 'universal' | 'project'
-  projectIds: string[]
-}
-
-export interface Project {
-  id: string
-  name: string
-  color: string
-  description: string
-  createdAt: string
-}
-
-export interface Task {
-  id: string
-  title: string
-  description: string
-  status: TaskStatus
-  priority: TaskPriority
-  projectId: string
-  dueDate?: string
-  assignee?: string
-  customFieldValues: Record<string, unknown>
-  createdAt: string
-  updatedAt: string
-}
-
-// ─── CONSTANTS ────────────────────────────────────────────────────────────────
-
-export const STATUS_CONFIG: Record<TaskStatus, { label: string; color: string }> = {
-  todo: { label: 'A fazer', color: 'default' },
-  in_progress: { label: 'Em progresso', color: 'processing' },
-  review: { label: 'Em revisão', color: 'warning' },
-  done: { label: 'Concluído', color: 'success' },
-  cancelled: { label: 'Cancelado', color: 'error' },
-}
-
-export const PRIORITY_CONFIG: Record<TaskPriority, { label: string; color: string }> = {
-  low: { label: 'Baixa', color: 'cyan' },
-  medium: { label: 'Média', color: 'blue' },
-  high: { label: 'Alta', color: 'orange' },
-  urgent: { label: 'Urgente', color: 'red' },
-}
-
-export const PROJECT_COLORS = [
-  '#6366f1', '#10b981', '#f59e0b', '#ef4444',
-  '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6',
-]
-
-export const getContrastColor = (hex: string): string => {
-  const h = hex.replace('#', '')
-  const r = parseInt(h.slice(0, 2), 16)
-  const g = parseInt(h.slice(2, 4), 16)
-  const b = parseInt(h.slice(4, 6), 16)
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55 ? '#1a1a1a' : '#ffffff'
-}
 
 // ─── MOCK DATA ────────────────────────────────────────────────────────────────
 
@@ -195,15 +155,8 @@ const MOCK_TASKS: Task[] = [
 
 // ─── THEME CONTEXT ────────────────────────────────────────────────────────────
 
-interface ThemeCtx { isDark: boolean; toggle: () => void }
-const ThemeContext = createContext<ThemeCtx>({ isDark: false, toggle: () => { } })
-export const useTheme = () => useContext(ThemeContext)
-
 // ─── LOADER CONTEXT ───────────────────────────────────────────────────────────
 
-interface LoaderCtx { loading: boolean; showLoader: () => void; hideLoader: () => void }
-const LoaderContext = createContext<LoaderCtx>({ loading: false, showLoader: () => { }, hideLoader: () => { } })
-export const useLoader = () => useContext(LoaderContext)
 
 const LoaderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [loading, setLoading] = useState(false)
@@ -262,31 +215,6 @@ const LoaderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =
 }
 
 // ─── APP DATA CONTEXT ─────────────────────────────────────────────────────────
-
-interface AppDataCtx {
-  tasks: Task[]
-  projects: Project[]
-  customFields: CustomField[]
-  addTask: (t: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => void
-  updateTask: (id: string, u: Partial<Task>) => void
-  deleteTask: (id: string) => void
-  addProject: (p: Omit<Project, 'id' | 'createdAt'>) => Project
-  updateProject: (id: string, u: Partial<Project>) => void
-  deleteProject: (id: string) => void
-  addCustomField: (f: Omit<CustomField, 'id'>) => void
-  updateCustomField: (id: string, u: Partial<Omit<CustomField, 'id'>>) => void
-  deleteCustomField: (id: string) => void
-  setProjectFields: (projectId: string, fieldIds: string[]) => void
-}
-
-const AppDataContext = createContext<AppDataCtx>({
-  tasks: [], projects: [], customFields: [],
-  addTask: () => { }, updateTask: () => { }, deleteTask: () => { },
-  addProject: () => ({} as Project), updateProject: () => { }, deleteProject: () => { },
-  addCustomField: () => { }, updateCustomField: () => { }, deleteCustomField: () => { },
-  setProjectFields: () => { },
-})
-export const useAppData = () => useContext(AppDataContext)
 
 const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { notification } = AntApp.useApp()
@@ -389,16 +317,21 @@ const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) 
 export const AppLogo: React.FC<{ collapsed: boolean }> = ({ collapsed }) => {
   const { isDark } = useTheme()
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 10,
-      padding: collapsed ? '18px 0' : '18px 20px',
-      justifyContent: collapsed ? 'center' : 'flex-start',
-      borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
-      overflow: 'hidden',
-      flexShrink: 0,
-    }}>
+    <a
+      href="/"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: collapsed ? '18px 0' : '18px 20px',
+        justifyContent: collapsed ? 'center' : 'flex-start',
+        borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+        overflow: 'hidden',
+        flexShrink: 0,
+        textDecoration: 'none',
+        color: 'inherit',
+      }}
+    >
       <svg width="32" height="32" viewBox="0 0 191 191" style={{ flexShrink: 0, borderRadius: 7, display: 'block' }}>
         <path d="M 75.00 29.77 L 75.00 160.00 L 71.75 159.90 C60.29,159.54 49.27,152.47 43.84,142.00 C41.51,137.53 41.50,137.27 41.22,96.10 L 41.21 95.49 C40.97,59.07 40.91,50.73 44.72,44.93 C45.88,43.17 47.38,41.65 49.35,39.65 C55.74,33.15 60.71,30.73 68.75,30.19 Z" fill="rgb(102,172,203)" />
         <path d="M 127.25 77.27 C116.94,87.28 103.44,100.40 97.25,106.43 L 86.00 117.39 L 86.00 71.41 L 97.00 61.50 C107.43,52.10 108.00,51.38 108.00,47.68 C108.00,42.45 111.39,36.71 116.00,34.12 C119.31,32.26 121.38,32.00 132.89,32.00 L 146.00 32.00 L 146.00 59.08 ZM 125.81 156.60 C122.88,158.08 118.30,159.33 114.45,159.69 L 108.00 160.29 L 108.00 131.56 L 102.75 126.25 L 97.50 120.93 L 106.02 112.72 C110.71,108.20 116.40,102.77 118.65,100.66 L 122.76 96.83 L 129.88 103.95 C133.80,107.87 138.19,113.41 139.63,116.27 C143.10,123.11 143.85,131.92 141.56,138.83 C139.41,145.28 132.30,153.31 125.81,156.60 Z" fill="rgb(238,128,91)" />
@@ -406,14 +339,14 @@ export const AppLogo: React.FC<{ collapsed: boolean }> = ({ collapsed }) => {
       {!collapsed && (
         <div style={{ lineHeight: 1.15, overflow: 'hidden', whiteSpace: 'nowrap' }}>
           <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.5px', color: isDark ? '#fff' : '#1a1a1a' }}>
-            Klip
+            Klip.App
           </div>
           <div style={{ fontSize: 10, letterSpacing: '1.5px', opacity: 0.4, textTransform: 'uppercase' }}>
             Task Manager App
           </div>
         </div>
       )}
-    </div>
+    </a>
   )
 }
 
@@ -438,7 +371,7 @@ export const TaskDrawer: React.FC<{
 }> = ({ open, onClose, editingTask, defaultProjectId }) => {
   const { projects, customFields, addTask, updateTask } = useAppData()
   const [form] = Form.useForm<TaskFormValues>()
-  const [selPid, setSelPid] = useState(defaultProjectId ?? projects[0]?.id ?? '')
+  const selPid = Form.useWatch('projectId', form) ?? (defaultProjectId ?? projects[0]?.id ?? '')
   const projFields = customFields.filter(f => f.scope === 'universal' || f.projectIds.includes(selPid))
 
   useEffect(() => {
@@ -448,12 +381,10 @@ export const TaskDrawer: React.FC<{
         ...editingTask,
         dueDate: editingTask.dueDate ? dayjs(editingTask.dueDate) : undefined,
       })
-      setSelPid(editingTask.projectId)
     } else {
       form.resetFields()
       const pid = defaultProjectId ?? projects[0]?.id ?? ''
       form.setFieldsValue({ status: 'todo', priority: 'medium', projectId: pid })
-      setSelPid(pid)
     }
   }, [open, editingTask, defaultProjectId, projects, form])
 
@@ -522,7 +453,7 @@ export const TaskDrawer: React.FC<{
         <Row gutter={16}>
           <Col xs={24} sm={12}>
             <Form.Item name="projectId" label="Projeto" rules={[{ required: true }]}>
-              <Select onChange={(v: string) => setSelPid(v)}>
+              <Select>
                 {projects.map(p => (
                   <Select.Option key={p.id} value={p.id}>
                     <Space>
@@ -545,7 +476,7 @@ export const TaskDrawer: React.FC<{
         </Form.Item>
         {projFields.length > 0 && (
           <>
-            <Divider orientation="left" style={{ fontSize: 12, marginTop: 8 }}>
+            <Divider titlePlacement="start" style={{ fontSize: 12, marginTop: 8 }}>
               Campos Personalizados
             </Divider>
             {projFields.map(f => (
@@ -773,6 +704,10 @@ const SortableColTh: React.FC<{
   )
 }
 
+const FIXED_LEFT_COLS = ['drag', 'done']
+const FIXED_RIGHT_COLS = ['actions']
+const MIDDLE_COLS_DEFAULT = ['title', 'status', 'priority', 'project', 'assignee', 'dueDate']
+
 const TasksTable: React.FC<{
   onEdit: (t: Task) => void
   filterPid?: string
@@ -782,19 +717,16 @@ const TasksTable: React.FC<{
   const { token } = antTheme.useToken()
 
   // ── State ──────────────────────────────────────────────────────────────────
-  const [sorting, setSorting] = useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [sorting, setSorting] = useLocalStorage<SortingState>('klip-table-sorting', [])
+  const [columnFilters, setColumnFilters] = useLocalStorage<ColumnFiltersState>('klip-table-filters', [])
   const [globalFilter, setGlobalFilter] = useState('')
   const [columnResizeMode] = useState<ColumnResizeMode>('onChange')
-  const [rowOrder, setRowOrder] = useState<string[]>([])
+  const [rowOrder, setRowOrder] = useLocalStorage<string[]>('klip-table-row-order', [])
   const [hoveredRowId, setHoveredRowId] = useState<string | null>(null)
   const [activeFilterCol, setActiveFilterCol] = useState<string | null>(null)
-  const [tableSize, setTableSize] = useState<'compact' | 'default' | 'comfortable'>('default')
+  const [tableSize, setTableSize] = useLocalStorage<'compact' | 'default' | 'comfortable'>('klip-table-size', 'default')
 
-  const FIXED_LEFT_COLS = ['drag', 'done']
-  const FIXED_RIGHT_COLS = ['actions']
-  const MIDDLE_COLS_DEFAULT = ['title', 'status', 'priority', 'project', 'assignee', 'dueDate']
-  const [middleColOrder, setMiddleColOrder] = useState<string[]>(MIDDLE_COLS_DEFAULT)
+  const [middleColOrder, setMiddleColOrder] = useLocalStorage<string[]>('klip-table-col-order', MIDDLE_COLS_DEFAULT)
   const columnOrder = useMemo(
     () => [...FIXED_LEFT_COLS, ...middleColOrder, ...FIXED_RIGHT_COLS],
     [middleColOrder]
@@ -821,6 +753,7 @@ const TasksTable: React.FC<{
   const rowHover = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.025)'
 
   // ── Column definitions ─────────────────────────────────────────────────────
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const columns = useMemo<ColumnDef<Task, any>[]>(() => [
     columnHelper.display({
       id: 'drag',
@@ -958,7 +891,7 @@ const TasksTable: React.FC<{
       size: 110,
       minSize: 80,
       cell: ({ getValue }) => {
-        const p = getValue()
+        const p = getValue() as TaskPriority
         return (
           <Tag color={PRIORITY_CONFIG[p].color} style={{ margin: 0 }}>
             {PRIORITY_CONFIG[p].label}
@@ -1540,12 +1473,6 @@ const ProjectHero: React.FC<{
 
 // ─── TASK EDIT CONTEXT ────────────────────────────────────────────────────────
 
-interface TaskEditCtx {
-  openEditTask: (task: Task | null, defaultProjectId?: string) => void
-}
-const TaskEditContext = createContext<TaskEditCtx>({ openEditTask: () => { } })
-export const useTaskEdit = () => useContext(TaskEditContext)
-
 const TaskEditProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [taskOpen, setTaskOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
@@ -2041,8 +1968,8 @@ const MainApp: React.FC = () => {
   const { openEditTask } = useTaskEdit()
 
   const [siderWidth, setSiderWidth] = useState(240)
-  const [collapsed, setCollapsed] = useState(false)
-  const [openKeys, setOpenKeys] = useState<string[]>(['projects'])
+  const [collapsed, setCollapsed] = useLocalStorage('klip-sider-collapsed', false)
+  const [openKeys, setOpenKeys] = useLocalStorage<string[]>('klip-menu-open-keys', ['projects'])
   const [activeKey, setActiveKey] = useState('tasks')
   const [filterPid, setFilterPid] = useState<string | undefined>()
   const [projOpen, setProjOpen] = useState(false)
@@ -2373,36 +2300,33 @@ const MainApp: React.FC = () => {
 // ─── THEME WRAPPER ────────────────────────────────────────────────────────────
 
 const ThemeWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isDark, setIsDark] = useState(false)
-  const toggle = useCallback(() => setIsDark(v => !v), [])
+  const { isDark } = useTheme()
 
   return (
-    <ThemeContext.Provider value={{ isDark, toggle }}>
-      <ConfigProvider
-        theme={{
-          cssVar: true,
-          algorithm: isDark ? antTheme.darkAlgorithm : antTheme.defaultAlgorithm,
-          token: {
-            colorPrimary: '#6366f1',
-            fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    <ConfigProvider
+      theme={{
+        cssVar: {},
+        algorithm: isDark ? antTheme.darkAlgorithm : antTheme.defaultAlgorithm,
+        token: {
+          colorPrimary: '#6366f1',
+          fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        },
+        components: {
+          Layout: {
+            headerBg: 'transparent',
+            bodyBg: 'transparent',
           },
-          components: {
-            Layout: {
-              headerBg: 'transparent',
-              bodyBg: 'transparent',
-            },
-            Menu: {
-              itemBg: 'transparent',
-              subMenuItemBg: 'transparent',
-              darkItemBg: 'transparent',
-              darkSubMenuItemBg: 'transparent',
-            },
+          Menu: {
+            itemBg: 'transparent',
+            subMenuItemBg: 'transparent',
+            darkItemBg: 'transparent',
+            darkSubMenuItemBg: 'transparent',
           },
-        }}
-      >
-        {children}
-      </ConfigProvider>
-    </ThemeContext.Provider>
+        },
+      }}
+    >
+      {children}
+    </ConfigProvider>
   )
 }
 
@@ -2413,7 +2337,6 @@ const useMobileDetect = () => {
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)')
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
-    setIsMobile(mq.matches)
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
   }, [])
@@ -2427,16 +2350,18 @@ import MobileApp from './MobileApp'
 export default function App() {
   const isMobile = useMobileDetect()
   return (
-    <ThemeWrapper>
-      <AntApp>
-        <LoaderProvider>
-          <AppDataProvider>
-            <TaskEditProvider>
-              {isMobile ? <MobileApp /> : <MainApp />}
-            </TaskEditProvider>
-          </AppDataProvider>
-        </LoaderProvider>
-      </AntApp>
-    </ThemeWrapper>
+    <ThemeProvider>
+      <ThemeWrapper>
+        <AntApp>
+          <LoaderProvider>
+            <AppDataProvider>
+              <TaskEditProvider>
+                {isMobile ? <MobileApp /> : <MainApp />}
+              </TaskEditProvider>
+            </AppDataProvider>
+          </LoaderProvider>
+        </AntApp>
+      </ThemeWrapper>
+    </ThemeProvider>
   )
 }

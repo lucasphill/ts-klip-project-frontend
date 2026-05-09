@@ -8,7 +8,6 @@ import {
   Space,
   Tag,
   Typography,
-  Tooltip,
 } from 'antd'
 import {
   CheckSquareOutlined,
@@ -25,15 +24,19 @@ import {
   useTheme,
   useAppData,
   useTaskEdit,
+} from './contexts.tsx'
+import {
   STATUS_CONFIG,
   PRIORITY_CONFIG,
+} from './constants'
+import {
   CalendarView,
   UserSettingsView,
   CustomFieldsSettingsView,
   TaskDrawer,
   ProjectDrawer,
 } from './App'
-import type { Task, Project } from './App'
+import type { Task, Project } from './types'
 
 const { Text } = Typography
 
@@ -283,9 +286,9 @@ const TABS: { key: TabKey; icon: React.ReactNode; label: string }[] = [
 // ─── MOBILE APP ───────────────────────────────────────────────────────────────
 
 const MobileApp: React.FC = () => {
-  const { isDark, toggle } = useTheme()
+  const { isDark } = useTheme()
   const { projects } = useAppData()
-  const { openEditTask } = useTaskEdit()
+  useTaskEdit() // Just call the hook if needed for context side effects, or remove if not needed. Actually, useTaskEdit doesn't seem to have side effects.
 
   const [activeTab, setActiveTab] = useState<TabKey>('tasks')
   const [filterPid, setFilterPid] = useState<string | undefined>()
@@ -343,17 +346,19 @@ const MobileApp: React.FC = () => {
         flexShrink: 0,
         gap: 8,
       }}>
-        <KlipLogoSvg />
-        <div style={{ flex: 1, lineHeight: 1.2, overflow: 'hidden' }}>
-          <div style={{ fontWeight: 700, fontSize: 14, letterSpacing: '-0.3px', color: isDark ? '#fff' : '#1a1a1a', whiteSpace: 'nowrap' }}>
-            Klip
-          </div>
-          {activeTab === 'tasks' && filterPid && (
-            <div style={{ fontSize: 11, color: currentProject?.color ?? '#6366f1', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {currentProject?.name}
+        <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'inherit', flex: 1, overflow: 'hidden' }}>
+          <KlipLogoSvg />
+          <div style={{ flex: 1, lineHeight: 1.2, overflow: 'hidden' }}>
+            <div style={{ fontWeight: 700, fontSize: 14, letterSpacing: '-0.3px', color: isDark ? '#fff' : '#1a1a1a', whiteSpace: 'nowrap' }}>
+              Klip.App
             </div>
-          )}
-        </div>
+            {activeTab === 'tasks' && filterPid && (
+              <div style={{ fontSize: 11, color: currentProject?.color ?? '#6366f1', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {currentProject?.name}
+              </div>
+            )}
+          </div>
+        </a>
 
         <Space size={4}>
           <Button
