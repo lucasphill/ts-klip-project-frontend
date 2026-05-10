@@ -1,0 +1,48 @@
+name: ✨ Solicitação de Feature
+description: Solicitação simples de feature — descrição completa obrigatória.
+title: "[FEATURE] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado pela sugestão! Por favor, descreva completamente a funcionalidade desejada.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Descrição completa da feature (obrigatório)
+      description: Explique o que deseja, por que é útil e o comportamento esperado.
+      placeholder: Descreva a feature com todos os detalhes relevantes...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Prioridade (opcional)
+      description: Indique a prioridade desta solicitação.
+      options:
+        - Baixa
+        - Média
+        - Alta
+        - Crítica
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Plataforma alvo (opcional)
+      description: Onde a feature será usada.
+      options:
+        - Web
+        - Mobile
+        - Desktop
+        - API
+        - Outro
+
+  - type: input
+    id: references
+    attributes:
+      label: Links / Referências (opcional)
+      description: Links, mockups ou referências que ajudem a entender a solicitação.
+      placeholder: URLs ou notas rápidas
