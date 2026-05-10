@@ -1,0 +1,62 @@
+name: 🐛 Reporte de Bug
+description: Reporte curto e direto de bugs — apenas o essencial.
+title: "[BUG] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por reportar um bug! Forneça uma descrição completa no campo abaixo.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Descrição completa do bug (obrigatório)
+      description: Detalhe o que aconteceu, passos de reprodução e resultados esperados/atuais.
+      placeholder: Descreva o bug com todos os detalhes relevantes...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Prioridade (opcional)
+      description: Selecione a prioridade percebida deste bug.
+      options:
+        - Baixa
+        - Média
+        - Alta
+        - Crítica
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Plataforma (opcional)
+      description: Onde o problema ocorre.
+      options:
+        - Web
+        - Mobile
+        - Desktop
+        - API
+        - Outro
+
+  - type: dropdown
+    id: browsers
+    attributes:
+      label: Navegadores (opcional)
+      description: Marque os navegadores afetados, se aplicável.
+      multiple: true
+      options:
+        - Chrome
+        - Firefox
+        - Safari
+        - Edge
+        - Opera
+        - Outro
+
+  - type: input
+    id: os
+    attributes:
+      label: Sistema Operacional (opcional)
+      description: Informe o sistema operacional, se relevante.
+      placeholder: Ex. Windows 11, macOS Ventura, Ubuntu 22.04
