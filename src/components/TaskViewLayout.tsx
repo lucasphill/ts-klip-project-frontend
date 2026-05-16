@@ -42,7 +42,7 @@ const TaskViewLayout: FC<TaskViewLayoutProps & { children: ReactNode }> = ({
           </div>
 
           <Link
-            to="/settings"
+            to="/settings/custom-fields"
             className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
           >
             <Settings className="h-4 w-4" />

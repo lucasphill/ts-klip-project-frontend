@@ -76,6 +76,7 @@ type StoredTaskTableState = {
   statusFilter?: TaskStatusFilter;
   sorting?: SortingState;
   expanded?: ExpandedState;
+  paginationStep?: number;
 };
 
 const TASK_TABLE_STORAGE_PREFIX = "klip:task-table-state";
@@ -92,6 +93,7 @@ const parseStoredTaskTableState = (rawValue: string | null) => {
       statusFilter: DEFAULT_STATUS_FILTER,
       sorting: [{ id: "dueDate", desc: false }] as SortingState,
       expanded: {} as ExpandedState,
+      paginationStep: 25,
     };
   }
 
@@ -100,13 +102,15 @@ const parseStoredTaskTableState = (rawValue: string | null) => {
     const statusFilter = isStatusFilter(parsed.statusFilter) ? parsed.statusFilter : DEFAULT_STATUS_FILTER;
     const sorting = Array.isArray(parsed.sorting) ? parsed.sorting : [{ id: "dueDate", desc: false }];
     const expanded = typeof parsed.expanded === "object" && parsed.expanded !== null ? parsed.expanded : {};
+    const paginationStep = typeof parsed.paginationStep === "number" ? parsed.paginationStep : 25;
 
-    return { statusFilter, sorting, expanded };
+    return { statusFilter, sorting, expanded, paginationStep };
   } catch {
     return {
       statusFilter: DEFAULT_STATUS_FILTER,
       sorting: [{ id: "dueDate", desc: false }] as SortingState,
       expanded: {} as ExpandedState,
+      paginationStep: 25,
     };
   }
 };
@@ -210,6 +214,8 @@ const TaskTable = ({
     setStatusFilter(parsedState.statusFilter);
     setSorting(parsedState.sorting);
     setExpanded(parsedState.expanded);
+    setPaginationStep(parsedState.paginationStep);
+    setPageSize(parsedState.paginationStep);
   }, [tableStateStorageKey]);
 
   useEffect(() => {
@@ -225,10 +231,11 @@ const TaskTable = ({
       statusFilter,
       sorting,
       expanded,
+      paginationStep,
     };
 
     window.localStorage.setItem(tableStateStorageKey, JSON.stringify(payload));
-  }, [statusFilter, sorting, expanded, tableStateStorageKey]);
+  }, [statusFilter, sorting, expanded, paginationStep, tableStateStorageKey]);
 
   const safeCustomFields = Array.isArray(activeCustomFields) ? activeCustomFields : [];
 
@@ -357,7 +364,7 @@ const TaskTable = ({
     if (field.type === "enum") {
       return (
         <select
-          className="field h-7 w-full bg-transparent px-1 text-sm text-slate-700 outline-none hover:bg-slate-100 focus:bg-white focus:ring-1 focus:ring-slate-200 rounded transition-colors"
+          className="field h-7 w-full bg-transparent px-1 text-sm text-[var(--text-primary)] outline-none hover:bg-[var(--bg-soft)] focus:bg-[var(--bg-soft-strong)] focus:ring-1 focus:ring-slate-200 rounded transition-colors"
           value={String(fieldValue ?? "")}
           onChange={(event) => updateCustomValue(task.id, field.id, event.target.value)}
         >
@@ -373,7 +380,7 @@ const TaskTable = ({
 
     if (field.type === "boolean") {
       return (
-        <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+        <label className="inline-flex items-center gap-2 text-sm text-[var(--text-primary)]">
           <input
             type="checkbox"
             checked={Boolean(fieldValue)}
@@ -391,7 +398,7 @@ const TaskTable = ({
           value={String(fieldValue ?? "")}
           onChange={(nextDate) => updateCustomValue(task.id, field.id, nextDate)}
           className="w-full"
-          buttonClassName="field h-7 flex-1 bg-transparent hover:bg-slate-100 text-sm text-slate-700 border-transparent focus:bg-white focus:border-slate-300 px-2 rounded transition-colors text-left"
+          buttonClassName="field h-7 flex-1 bg-transparent hover:bg-[var(--bg-soft)] text-sm text-[var(--text-primary)] border-transparent focus:bg-[var(--bg-soft-strong)] focus:border-[var(--border-subtle)] px-2 rounded transition-colors text-left"
           placeholder="Sem data"
         />
       );
@@ -423,7 +430,7 @@ const TaskTable = ({
             }
           });
         }}
-        className="field h-7 w-full bg-transparent px-1 text-sm text-slate-700 outline-none hover:bg-slate-100 focus:bg-white focus:ring-1 focus:ring-slate-200 rounded transition-colors"
+        className="field h-7 w-full bg-transparent px-1 text-sm text-[var(--text-primary)] outline-none hover:bg-[var(--bg-soft)] focus:bg-[var(--bg-soft-strong)] focus:ring-1 focus:ring-slate-200 rounded transition-colors"
         placeholder="-"
       />
     );
@@ -516,13 +523,13 @@ const TaskTable = ({
                           event.currentTarget.blur();
                         }
                       }}
-                      className={`w-full rounded-md border border-transparent bg-transparent px-1 py-1 text-sm outline-none transition-colors hover:bg-slate-100 focus:border-slate-300 focus:bg-white truncate ${
-                        task.isCompleted ? "text-slate-400 line-through" : "text-slate-800"
+                      className={`w-full rounded-md border border-transparent bg-transparent px-1 py-1 text-sm outline-none transition-colors hover:bg-[var(--bg-soft)] focus:border-[var(--border-subtle)] focus:bg-[var(--bg-soft-strong)] truncate ${
+                        task.isCompleted ? "text-[var(--text-muted)] line-through" : "text-[var(--text-primary)]"
                       }`}
                     />
                   </div>
                   {depth > 0 && (
-                    <span className="shrink-0 inline-flex rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-700 whitespace-nowrap">
+                    <span className="shrink-0 inline-flex rounded-full bg-[var(--bg-soft-strong)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-muted)] whitespace-nowrap">
                       Subtarefa
                     </span>
                   )}
@@ -577,10 +584,10 @@ const TaskTable = ({
                   >
                     <SelectTrigger
                       size="sm"
-                      className="h-7 w-7 justify-center border-dashed border-slate-300 bg-transparent hover:bg-white p-0 text-slate-700 [&_svg.pointer-events-none]:hidden"
+                      className="h-7 w-7 justify-center border-dashed border-[var(--border-subtle)] bg-transparent hover:bg-[var(--bg-soft)] p-0 text-[var(--text-primary)] [&_svg.pointer-events-none]:hidden"
                       disabled={availableProjects.length === 0}
                     >
-                      <Plus className="h-3.5 w-3.5 ml-1.5 text-slate-500" />
+                      <Plus className="h-3.5 w-3.5 ml-1.5 text-[var(--text-muted)]" />
                       <SelectValue className="hidden" />
                     </SelectTrigger>
                     <SelectContent>
@@ -613,7 +620,7 @@ const TaskTable = ({
                 value={normalizeDate(task.dueDate)}
                 onChange={(nextDate) => saveTaskField(task.id, { dueDate: nextDate })}
                 className="w-full"
-                buttonClassName="field h-7 flex-1 bg-transparent hover:bg-slate-100 text-sm text-slate-700 border-transparent focus:bg-white focus:border-slate-300 px-2 rounded transition-colors text-left"
+                buttonClassName="field h-7 flex-1 bg-transparent hover:bg-[var(--bg-soft)] text-sm text-[var(--text-primary)] border-transparent focus:bg-[var(--bg-soft-strong)] focus:border-[var(--border-subtle)] px-2 rounded transition-colors text-left"
                 placeholder="Sem prazo"
               />
             </div>

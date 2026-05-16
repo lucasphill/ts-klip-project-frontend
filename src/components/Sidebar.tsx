@@ -279,8 +279,8 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
           <NavItem
             icon={<Settings size={16} />}
             label="Configurações"
-            active={activeTab === "settings"}
-            onClick={() => handleNavigate("/settings")}
+            active={location.pathname.startsWith("/settings")}
+            onClick={() => handleNavigate("/settings/profile")}
             isOpen={isExpanded}
           />
           <button
