@@ -53,7 +53,7 @@ const Navbar = ({ onOpenSidebar }: { onOpenSidebar: () => void }) => {
         </div>
 
         <button
-          onClick={() => navigate("/settings")}
+          onClick={() => navigate("/settings/profile")}
           className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-soft)] hover:text-[var(--text-primary)]"
           aria-label="Configurações"
           title="Configurações"
