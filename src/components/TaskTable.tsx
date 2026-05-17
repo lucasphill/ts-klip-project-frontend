@@ -5,12 +5,10 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
-  ChevronUp,
   Circle,
   Filter,
   Pencil,
   Plus,
-  Search,
   Trash2,
   X,
   XCircle,
@@ -286,7 +284,6 @@ const TaskTable = ({
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 
   const [statusFilter, setStatusFilter] = useState<TaskStatusFilter>(DEFAULT_STATUS_FILTER);
-  const [areFiltersExpanded, setAreFiltersExpanded] = useState(false);
   const [projectSelectVersion, setProjectSelectVersion] = useState<Record<string, number>>({});
 
   // TanStack Table State
@@ -736,9 +733,6 @@ const TaskTable = ({
     setPageSize(step); // reseta para mostrar apenas o step inicial
   };
 
-  const setColumnFilterValue = (id: string, value: string) => {
-    table.getColumn(id)?.setFilterValue(value);
-  };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -748,7 +742,7 @@ const TaskTable = ({
             {!hideAddTaskButton && (
               <button
                 onClick={addTask}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 shadow-sm"
+                className="h-9 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700 shadow-sm"
               >
                 <Plus className="h-4 w-4" />
                 Adicionar tarefa
@@ -760,10 +754,10 @@ const TaskTable = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
+            <div className="h-9 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 shadow-sm hover:border-slate-300 transition-colors">
               <Filter className="h-4 w-4 text-slate-400" />
               <select
-                className="bg-transparent text-sm text-slate-700 outline-none"
+                className="bg-transparent text-sm text-slate-600 outline-none cursor-pointer pr-1 font-medium hover:text-slate-900 transition-colors"
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value as TaskStatusFilter)}
               >
@@ -773,13 +767,7 @@ const TaskTable = ({
               </select>
             </div>
 
-            <button
-              onClick={() => setAreFiltersExpanded((previous) => !previous)}
-              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-50"
-            >
-              {areFiltersExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              {areFiltersExpanded ? "Esconder filtros" : "Mostrar filtros"}
-            </button>
+
 
             <button
               onClick={() => {
@@ -787,7 +775,7 @@ const TaskTable = ({
                 setColumnFilters([]);
                 setSorting([]);
               }}
-              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-50"
+              className="h-9 inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 shadow-sm"
             >
               <XCircle className="h-4 w-4" />
               Limpar filtros
@@ -795,53 +783,6 @@ const TaskTable = ({
           </div>
         </div>
 
-        {areFiltersExpanded && (
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <div className="relative w-full min-w-[180px] flex-1 md:w-auto md:max-w-[240px]">
-              <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-              <input
-                className="field h-9 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="Buscar na coluna Tarefa"
-                value={(table.getColumn("task")?.getFilterValue() as string) ?? ""}
-                onChange={(event) => setColumnFilterValue("task", event.target.value)}
-              />
-            </div>
-
-            {activeView === "all" && (
-              <div className="relative w-full min-w-[180px] flex-1 md:w-auto md:max-w-[240px]">
-                <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-                <input
-                  className="field h-9 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder="Buscar na coluna Projetos"
-                  value={(table.getColumn("projects")?.getFilterValue() as string) ?? ""}
-                  onChange={(event) => setColumnFilterValue("projects", event.target.value)}
-                />
-              </div>
-            )}
-
-            <div className="relative w-full min-w-[180px] flex-1 md:w-auto md:max-w-[220px]">
-              <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-              <input
-                className="field h-9 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="Buscar na coluna Prazo"
-                value={(table.getColumn("dueDate")?.getFilterValue() as string) ?? ""}
-                onChange={(event) => setColumnFilterValue("dueDate", event.target.value)}
-              />
-            </div>
-
-            {safeCustomFields.map((field) => (
-              <div key={field.id} className="relative w-full min-w-[180px] flex-1 md:w-auto md:max-w-[240px]">
-                <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-                <input
-                  className="field h-9 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder={`Buscar em ${field.name}`}
-                  value={(table.getColumn(`cf-${field.id}`)?.getFilterValue() as string) ?? ""}
-                  onChange={(event) => setColumnFilterValue(`cf-${field.id}`, event.target.value)}
-                />
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto bg-white">
