@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type Keyboard
 import { useLocation } from "react-router-dom";
 import {
   ArrowUpDown,
-  CircleHelp,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
@@ -17,7 +16,6 @@ import {
   XCircle,
 } from "lucide-react";
 import DatePickerField from "./DatePickerField";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   useReactTable,
@@ -31,6 +29,7 @@ import {
   type SortingState,
   type ColumnFiltersState,
   type ExpandedState,
+  type ColumnDef,
 } from "@tanstack/react-table";
 import type {
   CustomFieldValue,
@@ -83,10 +82,11 @@ const TaskTitleInput = ({ task, saveTaskField, editingTaskId, setEditingTaskId }
   };
 
   return (
-    <div className="min-w-0 flex-1 flex items-center relative group">
+    <div className="w-full min-w-0 flex-1 flex items-center relative group">
       <input
         type="text"
         value={value}
+        title={value}
         placeholder="Escreva uma tarefa..."
         onFocus={() => setEditingTaskId(task.id)}
         onBlur={handleSave}
@@ -471,7 +471,7 @@ const TaskTable = ({
   const columnHelper = createColumnHelper<TaskTableTreeNode>();
 
   const columns = useMemo(() => {
-    const cols = [
+    const cols: ColumnDef<TaskTableTreeNode, any>[] = [
       columnHelper.accessor("isCompleted", {
         id: "status",
         header: "Status",
@@ -507,7 +507,7 @@ const TaskTable = ({
           const isExpanded = info.row.getIsExpanded();
 
           return (
-            <div className="flex h-full items-center gap-2 px-3" style={{ paddingLeft: `${Math.max(12, depth * 24 + 12)}px` }}>
+            <div className="flex h-full w-full items-center gap-2 px-3" style={{ paddingLeft: `${Math.max(12, depth * 24 + 12)}px` }}>
               <div className="flex shrink-0 items-center justify-center h-8 w-6">
                 {hasChildren ? (
                   <button
@@ -520,8 +520,8 @@ const TaskTable = ({
                 ) : null}
               </div>
 
-              <div className="min-w-0 flex-1 flex flex-col justify-center overflow-hidden">
-                <div className="flex items-center gap-2 min-w-0">
+              <div className="min-w-0 flex-1 flex flex-col justify-center overflow-hidden w-full">
+                <div className="flex items-center gap-2 min-w-0 w-full">
                   <TaskTitleInput
                     task={task}
                     saveTaskField={saveTaskField}
