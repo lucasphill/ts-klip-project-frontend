@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import { useLocation } from "react-router-dom";
 import {
   ArrowUpDown,
@@ -46,6 +46,112 @@ export type TaskTableTask = GetTasksDto & {
 
 export type TaskTableTreeNode = TaskTableTask & {
   subRows: TaskTableTreeNode[];
+};
+
+interface TaskTitleInputProps {
+  task: TaskTableTask;
+  saveTaskField: (taskId: string, updates: { title?: string }) => void;
+  editingTaskId: string | null;
+  setEditingTaskId: (id: string | null) => void;
+}
+
+const TaskTitleInput = ({ task, saveTaskField, editingTaskId, setEditingTaskId }: TaskTitleInputProps) => {
+  const [value, setValue] = useState(task.title);
+  const isEditing = editingTaskId === task.id;
+
+  useEffect(() => {
+    setValue(task.title);
+  }, [task.title]);
+
+  const handleSave = () => {
+    if (value !== task.title) {
+      saveTaskField(task.id, { title: value });
+    }
+    setEditingTaskId(null);
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      setValue(task.title);
+      setEditingTaskId(null);
+      e.currentTarget.blur();
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      e.currentTarget.blur();
+    }
+  };
+
+  return (
+    <div className="min-w-0 flex-1 flex items-center relative group">
+      <input
+        type="text"
+        value={value}
+        placeholder="Escreva uma tarefa..."
+        onFocus={() => setEditingTaskId(task.id)}
+        onBlur={handleSave}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        className={`w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm outline-none transition-colors hover:bg-[var(--bg-soft)] focus:border-[var(--brand)] focus:ring-1 focus:ring-[var(--brand)] focus:bg-[var(--bg-panel)] truncate ${
+          task.isCompleted ? "text-[var(--text-muted)] line-through" : "text-[var(--text-primary)]"
+        }`}
+      />
+      {isEditing && (
+        <button
+          type="button"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            handleSave();
+          }}
+          className="absolute right-1 inline-flex items-center justify-center shrink-0 rounded-md bg-[var(--brand)] px-2.5 py-1 text-xs font-medium text-white hover:bg-[var(--brand-strong)] transition-colors shadow-sm"
+        >
+          Salvar
+        </button>
+      )}
+    </div>
+  );
+};
+
+interface CustomFieldInputProps {
+  task: TaskTableTask;
+  field: GetCustomFieldDefinitionDto;
+  initialValue: string;
+  onSave: (taskId: string, fieldId: string, value: CustomFieldValue) => void;
+}
+
+const CustomFieldInput = ({ task, field, initialValue, onSave }: CustomFieldInputProps) => {
+  const [value, setValue] = useState(initialValue);
+
+  useEffect(() => {
+    setValue(initialValue);
+  }, [initialValue]);
+
+  const handleSave = () => {
+    if (value !== initialValue) {
+      if (field.type === "number") {
+        onSave(task.id, field.id, value === "" ? "" : Number(value));
+      } else {
+        onSave(task.id, field.id, value);
+      }
+    }
+  };
+
+  return (
+    <input
+      type={field.type === "number" ? "number" : "text"}
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={handleSave}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          e.currentTarget.blur();
+        }
+      }}
+      className="field h-7 w-full bg-transparent px-1 text-sm text-[var(--text-primary)] outline-none hover:bg-[var(--bg-soft)] focus:bg-[var(--bg-soft-strong)] focus:ring-1 focus:ring-slate-200 rounded transition-colors"
+      placeholder="-"
+    />
+  );
 };
 
 interface TaskTableProps {
@@ -178,13 +284,11 @@ const TaskTable = ({
 }: TaskTableProps) => {
   const location = useLocation();
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [cfDrafts, setCfDrafts] = useState<Record<string, string>>({});
-  const cfTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-  
+
   const [statusFilter, setStatusFilter] = useState<TaskStatusFilter>(DEFAULT_STATUS_FILTER);
   const [areFiltersExpanded, setAreFiltersExpanded] = useState(false);
   const [projectSelectVersion, setProjectSelectVersion] = useState<Record<string, number>>({});
-  
+
   // TanStack Table State
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -198,12 +302,6 @@ const TaskTable = ({
     () => `${TASK_TABLE_STORAGE_PREFIX}:v${TASK_TABLE_STORAGE_VERSION}:${location.pathname}:${activeView}`,
     [location.pathname, activeView]
   );
-
-  useEffect(() => {
-    return () => {
-      Object.values(cfTimers.current).forEach((timer) => clearTimeout(timer));
-    };
-  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -286,46 +384,6 @@ const TaskTable = ({
     }
   };
 
-  const commitDraft = (key: string, commit: (value: string) => void) => {
-    const value = cfDrafts[key];
-    if (value === undefined) return;
-
-    commit(value);
-    setCfDrafts((previous) => {
-      const next = { ...previous };
-      delete next[key];
-      return next;
-    });
-  };
-
-  const cancelDraft = (key: string) => {
-    setCfDrafts((previous) => {
-      const next = { ...previous };
-      delete next[key];
-      return next;
-    });
-    if (cfTimers.current[key]) {
-      clearTimeout(cfTimers.current[key]);
-      delete cfTimers.current[key];
-    }
-  };
-
-  const queueDraftCommit = (key: string, value: string, commit: (next: string) => void) => {
-    setCfDrafts((previous) => ({ ...previous, [key]: value }));
-    if (cfTimers.current[key]) {
-      clearTimeout(cfTimers.current[key]);
-    }
-    cfTimers.current[key] = setTimeout(() => {
-      commit(value);
-      setCfDrafts((previous) => {
-        const next = { ...previous };
-        delete next[key];
-        return next;
-      });
-      delete cfTimers.current[key];
-    }, 1200);
-  };
-
   const getFieldOptions = (field: GetCustomFieldDefinitionDto) => {
     if (Array.isArray(field.options)) {
       return field.options;
@@ -340,9 +398,8 @@ const TaskTable = ({
     if (field.type === "boolean") {
       return (
         <span
-          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-            value ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
-          }`}
+          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${value ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
+            }`}
         >
           {value ? "Sim" : "Nao"}
         </span>
@@ -354,9 +411,6 @@ const TaskTable = ({
   const renderCustomFieldEditor = (task: TaskTableTask, field: GetCustomFieldDefinitionDto) => {
     const fieldValue = getResolvedFieldValue(task, field);
     const fieldOptions = getFieldOptions(field);
-    const key = `${task.id}::${field.id}`;
-    const draft = cfDrafts[key];
-
     if (!updateCustomValue) {
       return renderReadOnlyFieldValue(field, fieldValue);
     }
@@ -405,33 +459,11 @@ const TaskTable = ({
     }
 
     return (
-      <input
-        type={field.type === "number" ? "number" : "text"}
-        value={draft !== undefined ? draft : String(fieldValue ?? "")}
-        onChange={(event) => {
-          queueDraftCommit(key, event.target.value, (nextValue) => {
-            if (field.type === "number") {
-              updateCustomValue(task.id, field.id, nextValue === "" ? undefined : Number(nextValue));
-            } else {
-              updateCustomValue(task.id, field.id, nextValue);
-            }
-          });
-        }}
-        onBlur={() => {
-          if (cfTimers.current[key]) {
-            clearTimeout(cfTimers.current[key]);
-            delete cfTimers.current[key];
-          }
-          commitDraft(key, (nextValue) => {
-            if (field.type === "number") {
-              updateCustomValue(task.id, field.id, nextValue === "" ? undefined : Number(nextValue));
-            } else {
-              updateCustomValue(task.id, field.id, nextValue);
-            }
-          });
-        }}
-        className="field h-7 w-full bg-transparent px-1 text-sm text-[var(--text-primary)] outline-none hover:bg-[var(--bg-soft)] focus:bg-[var(--bg-soft-strong)] focus:ring-1 focus:ring-slate-200 rounded transition-colors"
-        placeholder="-"
+      <CustomFieldInput
+        task={task}
+        field={field}
+        initialValue={String(fieldValue ?? "")}
+        onSave={updateCustomValue}
       />
     );
   };
@@ -473,10 +505,6 @@ const TaskTable = ({
           const depth = info.row.depth;
           const hasChildren = info.row.getCanExpand();
           const isExpanded = info.row.getIsExpanded();
-          
-          const titleKey = `${task.id}::__title`;
-          const titleDraft = cfDrafts[titleKey];
-          const titleValue = titleDraft !== undefined ? titleDraft : task.title;
 
           return (
             <div className="flex h-full items-center gap-2 px-3" style={{ paddingLeft: `${Math.max(12, depth * 24 + 12)}px` }}>
@@ -491,43 +519,15 @@ const TaskTable = ({
                   </button>
                 ) : null}
               </div>
- 
+
               <div className="min-w-0 flex-1 flex flex-col justify-center overflow-hidden">
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className="min-w-0 flex-1">
-                    <input
-                      type="text"
-                      value={titleValue}
-                      placeholder="Escreva uma tarefa..."
-                      onFocus={() => setEditingTaskId(task.id)}
-                      onBlur={() => {
-                        setEditingTaskId(null);
-                        if (cfTimers.current[titleKey]) {
-                          clearTimeout(cfTimers.current[titleKey]);
-                          delete cfTimers.current[titleKey];
-                        }
-                        commitDraft(titleKey, (nextValue) => saveTaskField(task.id, { title: nextValue }));
-                      }}
-                      onChange={(event) => {
-                        queueDraftCommit(titleKey, event.target.value, (nextValue) => saveTaskField(task.id, { title: nextValue }));
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === "Escape") {
-                          event.preventDefault();
-                          cancelDraft(titleKey);
-                          setEditingTaskId(null);
-                          event.currentTarget.blur();
-                        }
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          event.currentTarget.blur();
-                        }
-                      }}
-                      className={`w-full rounded-md border border-transparent bg-transparent px-1 py-1 text-sm outline-none transition-colors hover:bg-[var(--bg-soft)] focus:border-[var(--border-subtle)] focus:bg-[var(--bg-soft-strong)] truncate ${
-                        task.isCompleted ? "text-[var(--text-muted)] line-through" : "text-[var(--text-primary)]"
-                      }`}
-                    />
-                  </div>
+                  <TaskTitleInput
+                    task={task}
+                    saveTaskField={saveTaskField}
+                    editingTaskId={editingTaskId}
+                    setEditingTaskId={setEditingTaskId}
+                  />
                   {depth > 0 && (
                     <span className="shrink-0 inline-flex rounded-full bg-[var(--bg-soft-strong)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-muted)] whitespace-nowrap">
                       Subtarefa
@@ -543,66 +543,73 @@ const TaskTable = ({
 
     if (activeView === "all") {
       cols.push(
-        columnHelper.display({
-          id: "projects",
-          header: "Projetos",
-          size: 280,
-          cell: (info) => {
-            const task = info.row.original;
-            const taskProjects = getTaskProjects(task.id);
-            const availableProjects = projects.filter(
-              (project) => !taskProjects.find((taskProject) => taskProject.id === project.id)
-            );
-
-            return (
-              <div className="flex h-full items-center gap-1.5 px-3 flex-wrap py-1">
-                {taskProjects.map((project) => {
-                  const tagColor = getProjectTagColorProps(project.color);
-                  return (
-                    <span
-                      key={project.id}
-                      className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium ${tagColor.className}`}
-                      style={tagColor.style}
-                    >
-                      {project.name}
-                      <button
-                        onClick={() => removeProjectFromTask(task.id, project.id)}
-                        className="text-white/75 transition-colors hover:text-white"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  );
-                })}
-                <div className="inline-flex items-center gap-1">
-                  <Select
-                    key={`${task.id}-${projectSelectVersion[task.id] ?? 0}`}
-                    onValueChange={(projectId) => {
-                      addProjectToTask(task.id, projectId);
-                      resetProjectSelect(task.id);
-                    }}
-                  >
-                    <SelectTrigger
-                      size="sm"
-                      className="h-7 w-7 justify-center border-dashed border-[var(--border-subtle)] bg-transparent hover:bg-[var(--bg-soft)] p-0 text-[var(--text-primary)] [&_svg.pointer-events-none]:hidden"
-                      disabled={availableProjects.length === 0}
-                    >
-                      <Plus className="h-3.5 w-3.5 ml-1.5 text-[var(--text-muted)]" />
-                      <SelectValue className="hidden" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableProjects.map((project) => (
-                        <SelectItem key={project.id} value={project.id}>
-                          {project.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            );
+        columnHelper.accessor(
+          (row) => {
+            const taskProjects = getTaskProjects(row.id);
+            return taskProjects.map((p) => p.name).sort().join(", ");
           },
-        })
+          {
+            id: "projects",
+            header: "Projetos",
+            size: 280,
+            sortingFn: "alphanumeric",
+            cell: (info) => {
+              const task = info.row.original;
+              const taskProjects = getTaskProjects(task.id);
+              const availableProjects = projects.filter(
+                (project) => !taskProjects.find((taskProject) => taskProject.id === project.id)
+              );
+
+              return (
+                <div className="flex h-full items-center gap-1.5 px-3 flex-wrap py-1">
+                  {taskProjects.map((project) => {
+                    const tagColor = getProjectTagColorProps(project.color);
+                    return (
+                      <span
+                        key={project.id}
+                        className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium ${tagColor.className}`}
+                        style={tagColor.style}
+                      >
+                        {project.name}
+                        <button
+                          onClick={() => removeProjectFromTask(task.id, project.id)}
+                          className="text-white/75 transition-colors hover:text-white"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    );
+                  })}
+                  <div className="inline-flex items-center gap-1">
+                    <Select
+                      key={`${task.id}-${projectSelectVersion[task.id] ?? 0}`}
+                      onValueChange={(projectId) => {
+                        addProjectToTask(task.id, projectId);
+                        resetProjectSelect(task.id);
+                      }}
+                    >
+                      <SelectTrigger
+                        size="sm"
+                        className="h-7 w-7 justify-center border-dashed border-[var(--border-subtle)] bg-transparent hover:bg-[var(--bg-soft)] p-0 text-[var(--text-primary)] [&_svg.pointer-events-none]:hidden"
+                        disabled={availableProjects.length === 0}
+                      >
+                        <Plus className="h-3.5 w-3.5 ml-1.5 text-[var(--text-muted)]" />
+                        <SelectValue className="hidden" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableProjects.map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              );
+            },
+          }
+        )
       );
     }
 
@@ -656,29 +663,9 @@ const TaskTable = ({
         enableColumnFilter: false,
         cell: (info) => {
           const task = info.row.original;
-          const titleKey = `${task.id}::__title`;
-          const titleDraft = cfDrafts[titleKey];
 
           return (
             <div className="flex h-full items-center justify-center gap-1 px-3">
-              {titleDraft !== undefined && (
-                <>
-                  <button
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => commitDraft(titleKey, (nextValue) => saveTaskField(task.id, { title: nextValue }))}
-                    className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                  >
-                    <CheckCircle2 className="h-4 w-4" />
-                  </button>
-                  <button
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => cancelDraft(titleKey)}
-                    className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </>
-              )}
               {onAddSubtask && (
                 <button
                   onClick={() => onAddSubtask(task)}
@@ -713,7 +700,7 @@ const TaskTable = ({
     );
 
     return cols;
-  }, [activeView, projects, safeCustomFields, cfDrafts, getTaskProjects, toggleTaskCompletion, projectSelectVersion]);
+  }, [activeView, projects, safeCustomFields, getTaskProjects, toggleTaskCompletion, projectSelectVersion]);
 
   const table = useReactTable({
     data,
@@ -885,9 +872,8 @@ const TaskTable = ({
                         <div
                           onMouseDown={header.getResizeHandler()}
                           onTouchStart={header.getResizeHandler()}
-                          className={`absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none bg-slate-300 opacity-0 hover:opacity-100 ${
-                            header.column.getIsResizing() ? "bg-blue-500 opacity-100" : ""
-                          }`}
+                          className={`absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none bg-slate-300 opacity-0 hover:opacity-100 ${header.column.getIsResizing() ? "bg-blue-500 opacity-100" : ""
+                            }`}
                         />
                       )}
                     </div>
@@ -924,34 +910,53 @@ const TaskTable = ({
         </div>
       </div>
 
-      <div className="border-t border-slate-200 bg-slate-50 px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-600">Itens por página:</span>
-          <select
-            value={paginationStep}
-            onChange={(e) => handlePaginationStepChange(e.target.value)}
-            className="rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 outline-none focus:border-blue-500"
-          >
-            <option value="10">10</option>
-            <option value="25">25</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
-          </select>
+      <div className="border-t border-[var(--border-subtle)] bg-[var(--bg-soft)] px-4 py-3 flex items-center justify-between gap-4">
+        {/* Lado esquerdo: Controle de itens por página */}
+        <div className="flex-1 flex justify-start items-center">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-[var(--text-secondary)]">Itens por página:</span>
+            <select
+              value={paginationStep}
+              onChange={(e) => handlePaginationStepChange(e.target.value)}
+              className="h-7 px-2 text-xs font-semibold rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-panel)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-soft-strong)] hover:border-[var(--border-muted)] outline-none cursor-pointer transition-all focus:ring-1 focus:ring-[var(--brand)]"
+            >
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
         </div>
-        
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-slate-500">
-            Exibindo {table.getRowModel().rows.length} de {table.getPrePaginationRowModel().rows.length}
-          </span>
-          {table.getCanNextPage() && (
+
+        {/* Centro: Botão "Mostrar mais" */}
+        <div className="flex-1 flex justify-center">
+          {table.getCanNextPage() ? (
             <button
               onClick={handleLoadMore}
-              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+              className="inline-flex items-center justify-center gap-1.5 h-7 px-4 text-xs font-semibold rounded-lg bg-[var(--brand)] text-white hover:bg-[var(--brand-strong)] shadow-sm transition-all active:scale-95 duration-150 focus:outline-none focus:ring-1 focus:ring-[var(--brand)] focus:ring-offset-1"
             >
-              Mostrar mais
-              <ChevronDown className="h-4 w-4" />
+              <span>Mostrar mais tarefas</span>
+              <ChevronDown className="h-3.5 w-3.5 text-white/90" />
+            </button>
+          ) : (
+            <button
+              disabled
+              className="inline-flex items-center justify-center gap-1 h-7 px-3 text-xs font-semibold rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-panel)] text-[var(--text-muted)] opacity-50 cursor-not-allowed shadow-none transition-none focus:outline-none"
+            >
+              <span>
+                {table.getPrePaginationRowModel().rows.length === 0
+                  ? "Nenhuma tarefa corresponde aos filtros"
+                  : "Todas as tarefas exibidas"}
+              </span>
             </button>
           )}
+        </div>
+
+        {/* Lado direito: Label fixa de contagem */}
+        <div className="flex-1 flex justify-end items-center">
+          <span className="text-sm text-[var(--text-muted)] whitespace-nowrap">
+            Exibindo {table.getRowModel().rows.length} de {table.getPrePaginationRowModel().rows.length}
+          </span>
         </div>
       </div>
     </div>
