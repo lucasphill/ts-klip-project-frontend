@@ -736,28 +736,28 @@ const TaskTable = ({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="border-b border-slate-200 bg-white/90 p-4 backdrop-blur">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+      <div className="border-b border-slate-200 bg-white/90 p-2.5 md:p-4 backdrop-blur [@media(max-height:600px)]:p-1.5">
+        <div className="flex items-center justify-between gap-3 w-full flex-wrap sm:flex-nowrap">
           <div className="flex items-center gap-4">
             {!hideAddTaskButton && (
               <button
                 onClick={addTask}
-                className="h-9 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700 shadow-sm"
+                className="h-9 hidden md:inline-flex [@media(max-height:600px)]:hidden items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700 shadow-sm"
               >
                 <Plus className="h-4 w-4" />
                 Adicionar tarefa
               </button>
             )}
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-500 hidden sm:block [@media(max-height:600px)]:hidden">
               Mostrando <span className="font-semibold text-slate-700">{table.getPrePaginationRowModel().rows.length}</span> tarefas
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="h-9 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 shadow-sm hover:border-slate-300 transition-colors">
-              <Filter className="h-4 w-4 text-slate-400" />
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+            <div className="h-9 [@media(max-height:600px)]:h-8 flex-1 sm:flex-none inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 shadow-sm hover:border-slate-300 transition-colors">
+              <Filter className="h-4 w-4 text-slate-400 shrink-0" />
               <select
-                className="bg-transparent text-sm text-slate-600 outline-none cursor-pointer pr-1 font-medium hover:text-slate-900 transition-colors"
+                className="bg-transparent text-sm text-slate-600 outline-none cursor-pointer pr-1 font-medium hover:text-slate-900 transition-colors w-full"
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value as TaskStatusFilter)}
               >
@@ -767,22 +767,21 @@ const TaskTable = ({
               </select>
             </div>
 
-
-
             <button
               onClick={() => {
                 setStatusFilter(DEFAULT_STATUS_FILTER);
                 setColumnFilters([]);
                 setSorting([]);
               }}
-              className="h-9 inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 shadow-sm"
+              className="h-9 [@media(max-height:600px)]:h-8 inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 sm:px-4 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 shadow-sm whitespace-nowrap"
+              title="Limpar filtros"
             >
-              <XCircle className="h-4 w-4" />
-              Limpar filtros
+              <XCircle className="h-4 w-4 shrink-0" />
+              <span className="hidden xs:inline">Limpar</span>
+              <span className="hidden sm:inline"> filtros</span>
             </button>
           </div>
         </div>
-
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto bg-white">
@@ -851,9 +850,9 @@ const TaskTable = ({
         </div>
       </div>
 
-      <div className="border-t border-[var(--border-subtle)] bg-[var(--bg-soft)] px-4 py-3 flex items-center justify-between gap-4">
+      <div className="border-t border-[var(--border-subtle)] bg-[var(--bg-soft)] px-4 py-2 md:py-3 flex items-center justify-between gap-4">
         {/* Lado esquerdo: Controle de itens por página */}
-        <div className="flex-1 flex justify-start items-center">
+        <div className="hidden md:flex [@media(max-height:600px)]:hidden flex-1 justify-start items-center">
           <div className="flex items-center gap-2">
             <span className="text-sm text-[var(--text-secondary)]">Itens por página:</span>
             <select
@@ -882,11 +881,11 @@ const TaskTable = ({
           ) : (
             <button
               disabled
-              className="inline-flex items-center justify-center gap-1 h-7 px-3 text-xs font-semibold rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-panel)] text-[var(--text-muted)] opacity-50 cursor-not-allowed shadow-none transition-none focus:outline-none"
+              className="inline-flex items-center justify-center gap-1 h-7 px-3 text-xs font-semibold rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-panel)] text-[var(--text-muted)] opacity-50 cursor-not-allowed shadow-none transition-none focus:outline-none whitespace-nowrap truncate"
             >
               <span>
                 {table.getPrePaginationRowModel().rows.length === 0
-                  ? "Nenhuma tarefa corresponde aos filtros"
+                  ? "Sem tarefas"
                   : "Todas as tarefas exibidas"}
               </span>
             </button>
@@ -894,12 +893,22 @@ const TaskTable = ({
         </div>
 
         {/* Lado direito: Label fixa de contagem */}
-        <div className="flex-1 flex justify-end items-center">
+        <div className="hidden md:flex [@media(max-height:600px)]:hidden flex-1 justify-end items-center">
           <span className="text-sm text-[var(--text-muted)] whitespace-nowrap">
             Exibindo {table.getRowModel().rows.length} de {table.getPrePaginationRowModel().rows.length}
           </span>
         </div>
       </div>
+      {!hideAddTaskButton && (
+        <button
+          onClick={addTask}
+          className="fixed bottom-20 right-6 z-45 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-500/30 hover:bg-blue-700 active:scale-95 transition-all duration-150 focus:outline-none md:hidden [@media(max-height:600px)]:flex"
+          title="Adicionar tarefa"
+          aria-label="Adicionar tarefa"
+        >
+          <Plus className="h-6 w-6" />
+        </button>
+      )}
     </div>
   );
 };
