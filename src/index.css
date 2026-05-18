@@ -316,6 +316,23 @@ textarea {
   padding: 10px 4px;
 }
 
+/* Cabeçalho de dias da semana fixo (sticky) ao rolar */
+.fc .fc-view-harness,
+.fc .fc-scroller,
+.fc .fc-scrollgrid {
+  overflow: visible !important;
+}
+
+.fc .fc-scrollgrid-section-header,
+.fc .fc-scrollgrid-section-header > th,
+.fc .fc-scrollgrid-section-header > td,
+.fc .fc-col-header-cell {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--bg-panel) !important;
+}
+
 .fc .fc-daygrid-day-events {
   margin-top: 6px;
   margin-left: 6px;

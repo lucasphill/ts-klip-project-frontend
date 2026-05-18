@@ -376,9 +376,9 @@ const MonthViewPage = () => {
         title="Calendario"
         description="Visualize suas tarefas no mes e clique nos eventos para editar rapidamente."
       >
-        <section className="flex min-h-0 flex-1 flex-col overflow-auto bg-white pt-4 sm:pt-6">
-          <div className="px-4 sm:px-6">
-            <div className="surface-panel rounded-2xl bg-white p-3 sm:p-4">
+        <section className="flex min-h-0 flex-1 flex-col overflow-auto bg-[var(--bg-canvas)] pt-0 sm:pt-0">
+          <div className="px-0 sm:px-6 mt-4 sm:mt-6 [@media(max-height:600px)]:mt-2 [@media(max-height:600px)]:px-0">
+            <div className="w-full bg-[var(--bg-panel)] border-x-0 border-y border-[var(--border-subtle)] rounded-none shadow-none p-1.5 sm:border sm:rounded-2xl sm:shadow-[var(--panel-shadow)] sm:p-4 [@media(max-height:600px)]:border-x-0 [@media(max-height:600px)]:border-y [@media(max-height:600px)]:border-[var(--border-subtle)] [@media(max-height:600px)]:rounded-none [@media(max-height:600px)]:shadow-none [@media(max-height:600px)]:p-1.5">
               <FullCalendar
                 plugins={[dayGridPlugin]}
                 locale={ptBrLocale}
