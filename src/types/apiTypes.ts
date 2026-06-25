@@ -44,6 +44,10 @@ export interface CreateCustomFieldValueDto {
   valueNumber?: number;
   selectedOptionId?: string;
 }
+
+export interface CreateApiKeyDto {
+  name: string;
+}
 //#endregion
 
 //#region Get Models
@@ -77,4 +81,12 @@ export interface GetCustomFieldDefinitionDto {
   options?: string | string[] | null;
   type: CustomFieldType;
 }
+
+export interface GetApiKeyDto {
+  id: string;
+  name: string;
+  keyValue: string;
+  createdAt: string;
+}
 //#endregion
+

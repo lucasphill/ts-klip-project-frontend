@@ -1,9 +1,11 @@
 import axios, { AxiosError } from "axios";
 import type {
+  CreateApiKeyDto,
   CreateCustomFieldDefinitionDto,
   CreateCustomFieldValueDto,
   CreateProjectDto,
   CreateTaskDto,
+  GetApiKeyDto,
   GetCustomFieldDefinitionDto,
   GetProjectsDto,
   GetTasksDto,
@@ -219,6 +221,25 @@ export const tasksApi = {
   },
   remove: async (taskId: string) => {
     const response = await api.delete<ResponseModelDto<unknown>>(`/Tasks/${taskId}`);
+    return response.data;
+  },
+};
+
+export const apiKeysApi = {
+  create: async (data: CreateApiKeyDto) => {
+    const response = await api.post<ResponseModelDto<GetApiKeyDto>>('/ApiKeys', data);
+    return response.data;
+  },
+  getAll: async () => {
+    const response = await api.get<ResponseModelDto<GetApiKeyDto[]>>('/ApiKeys');
+    return response.data;
+  },
+  update: async (keyId: string, data: CreateApiKeyDto) => {
+    const response = await api.put<ResponseModelDto<GetApiKeyDto>>(`/ApiKeys/${keyId}`, data);
+    return response.data;
+  },
+  remove: async (keyId: string) => {
+    const response = await api.delete<ResponseModelDto<boolean>>(`/ApiKeys/${keyId}`);
     return response.data;
   },
 };

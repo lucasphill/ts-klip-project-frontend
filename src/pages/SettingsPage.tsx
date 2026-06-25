@@ -1,14 +1,16 @@
 import { useState } from "react";
-import { User, SlidersHorizontal } from "lucide-react";
+import { User, SlidersHorizontal, Cpu } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useProjectsContext } from "../contexts/ProjectsContext";
 import CustomFieldsManager from "../components/CustomFieldsManager";
+import IntegrationsManager from "../components/IntegrationsManager";
 
-type Tab = "profile" | "custom-fields";
+type Tab = "profile" | "custom-fields" | "integrations";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "profile", label: "Perfil", icon: <User size={15} /> },
   { id: "custom-fields", label: "Campos Personalizados", icon: <SlidersHorizontal size={15} /> },
+  { id: "integrations", label: "Integrações", icon: <Cpu size={15} /> },
 ];
 
 const SettingsPage = () => {
@@ -20,7 +22,7 @@ const SettingsPage = () => {
     <div className="flex h-full flex-col overflow-hidden">
       {/* Sticky header + tabs */}
       <div className="sticky top-0 z-10 shrink-0 border-b border-[var(--border-subtle)] bg-[var(--bg-panel)]">
-        <div className="mx-auto w-full max-w-5xl px-6">
+        <div className="mx-auto w-full max-w-4xl px-6">
           <div className="pt-6 pb-0">
             <h1 className="text-xl font-semibold text-[var(--text-primary)]">Configurações</h1>
             <p className="mt-0.5 text-xs text-[var(--text-muted)]">Gerencie seu perfil e preferências</p>
@@ -30,11 +32,10 @@ const SettingsPage = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
-                  activeTab === tab.id
+                className={`flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === tab.id
                     ? "border-[var(--brand)] text-[var(--brand)]"
                     : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-                }`}
+                  }`}
               >
                 {tab.icon}
                 {tab.label}
@@ -46,12 +47,13 @@ const SettingsPage = () => {
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-5xl px-6 py-6">
+        <div className="mx-auto w-full max-w-4xl px-6 py-6">
 
           {/* Profile tab */}
           {activeTab === "profile" && (
-            <div className="max-w-2xl">
-              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-6">
+            <div className="space-y-6">
+
+              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-6 shadow-sm">
                 <div className="flex items-center gap-5">
                   {user?.picture ? (
                     <img
@@ -104,6 +106,11 @@ const SettingsPage = () => {
           {activeTab === "custom-fields" && (
             <CustomFieldsManager projects={projects} />
           )}
+
+          {/* Integrations tab */}
+          {activeTab === "integrations" && (
+            <IntegrationsManager />
+          )}
         </div>
       </div>
     </div>
@@ -111,3 +118,4 @@ const SettingsPage = () => {
 };
 
 export default SettingsPage;
+
