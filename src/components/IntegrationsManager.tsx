@@ -113,12 +113,29 @@ const IntegrationsManager: FC = () => {
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--brand)] text-white">
             <Cpu className="h-5 w-5" />
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1 w-full">
             <h3 className="text-base font-semibold text-[var(--text-primary)]">Integração com MCP Servers</h3>
             <p className="text-sm text-[var(--text-muted)] leading-relaxed">
               Os Model Context Protocol (MCP) Servers permitem que assistentes e agentes de IA se conectem de forma segura a bases de dados locais e ferramentas externas.
               Gere chaves de API para permitir que seus servidores MCP se autentiquem de forma segura com o Klip Project.
             </p>
+            <div className="mt-4 space-y-2">
+              <span className="text-xs font-semibold text-[var(--text-secondary)]">Exemplo de Configuração do MCP Server</span>
+              <div className="relative rounded-lg bg-[var(--bg-soft)] border border-[var(--border-subtle)] p-3">
+                <pre className="overflow-x-auto font-mono text-xs text-[var(--text-secondary)] leading-relaxed">
+{`{
+  "mcpServers": {
+    "klip": {
+      "serverUrl": "https://api.klip.app.br/mcp/sse",
+      "headers": {
+        "Authorization": "Bearer klip_live_<sua_chave_de_api>"
+      }
+    }
+  }
+}`}
+                </pre>
+              </div>
+            </div>
           </div>
         </div>
       </div>
