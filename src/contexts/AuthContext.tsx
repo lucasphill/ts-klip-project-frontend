@@ -84,7 +84,11 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
   }
 
   const logout = () => {
-    logoutWithRedirect();
+    logoutWithRedirect({
+      logoutParams: {
+        returnTo: window.location.origin,
+      },
+    });
   }
 
   const refreshUser = async () => {
