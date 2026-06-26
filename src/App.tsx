@@ -8,6 +8,7 @@ import ProjectsPage from './pages/ProjectsPage';
 import MonthViewPage from './pages/MonthViewPage';
 import SettingsProfilePage from './pages/SettingsProfilePage';
 import SettingsCustomFieldsPage from './pages/SettingsCustomFieldsPage';
+import SettingsIntegrationsPage from './pages/SettingsIntegrationsPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { TasksProvider, useTasksContext } from './contexts/TasksContext';
 import { ProjectsProvider, useProjectsContext } from './contexts/ProjectsContext';
@@ -138,6 +139,14 @@ const AuthenticatedApp = () => {
           element={
             <Layout>
               <SettingsCustomFieldsPage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/settings/integrations"
+          element={
+            <Layout>
+              <SettingsIntegrationsPage />
             </Layout>
           }
         />
