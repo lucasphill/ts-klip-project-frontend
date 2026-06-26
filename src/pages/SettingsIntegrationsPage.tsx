@@ -6,7 +6,7 @@ const SettingsIntegrationsPage = () => {
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="sticky top-0 z-10 shrink-0 border-b border-[var(--border-subtle)] bg-[var(--bg-panel)]">
-        <div className="mx-auto w-full max-w-5xl px-6">
+        <div className="mx-auto w-full max-w-3xl px-6">
           <div className="pt-6 pb-0">
             <h1 className="text-xl font-semibold text-[var(--text-primary)]">Configurações</h1>
             <p className="mt-0.5 text-xs text-[var(--text-muted)]">Gerencie suas chaves de API e integrações</p>
@@ -38,8 +38,10 @@ const SettingsIntegrationsPage = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-5xl px-6 py-6">
-          <IntegrationsManager />
+        <div className="mx-auto w-full max-w-3xl px-6 py-6">
+          <div className="max-w-3xl">
+            <IntegrationsManager />
+          </div>
         </div>
       </div>
     </div>

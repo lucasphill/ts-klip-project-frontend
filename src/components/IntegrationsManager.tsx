@@ -123,27 +123,10 @@ const IntegrationsManager: FC = () => {
               Os Model Context Protocol (MCP) Servers permitem que assistentes e agentes de IA se conectem de forma segura a bases de dados locais e ferramentas externas.
               Gere chaves de API para permitir que seus servidores MCP se autentiquem de forma segura com o Klip Project.
             </p>
-            <div className="mt-4 space-y-2">
-              <span className="text-xs font-semibold text-[var(--text-secondary)]">Exemplo de Configuração do MCP Server</span>
-              <div className="relative rounded-lg bg-[var(--bg-soft)] border border-[var(--border-subtle)] p-3">
-                <pre className="overflow-x-auto font-mono text-xs text-[var(--text-secondary)] leading-relaxed">
-{`{
-  "mcpServers": {
-    "klip": {
-      "serverUrl": "https://api.klip.app.br/mcp/sse",
-      "headers": {
-        "Authorization": "Bearer klip_live_<sua_chave_de_api>"
-      }
-    }
-  }
-}`}
-                </pre>
-              </div>
-            </div>
           </div>
         </div>
       </div>
-
+ 
       {/* Main Keys List Section */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -160,7 +143,7 @@ const IntegrationsManager: FC = () => {
             <Plus className="h-3.5 w-3.5" /> Nova chave de API
           </button>
         </div>
-
+ 
         {/* Loading state */}
         {isLoading ? (
           <div className="py-12 text-center text-sm text-[var(--text-muted)]">Carregando chaves de API...</div>
@@ -251,7 +234,7 @@ const IntegrationsManager: FC = () => {
           </div>
         )}
       </div>
-
+ 
       {/* Security note banner */}
       <div className="rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/10 p-4">
         <div className="flex gap-3">
@@ -262,6 +245,30 @@ const IntegrationsManager: FC = () => {
               Nunca compartilhe suas chaves de API nem as insira em repositórios públicos. 
               Qualquer pessoa com acesso a elas pode ler, modificar e excluir dados do seu Klip Project.
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* MCP Configuration Example Card */}
+      <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-6 shadow-sm">
+        <div className="space-y-3">
+          <h4 className="text-sm font-semibold text-[var(--text-primary)]">Exemplo de Configuração do MCP Server</h4>
+          <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+            Configure seu servidor MCP adicionando as seguintes linhas no seu arquivo de configurações (por exemplo, `mcpSettings.json` ou `config.json` do seu cliente de IA):
+          </p>
+          <div className="relative rounded-lg bg-[var(--bg-soft)] border border-[var(--border-subtle)] p-3">
+            <pre className="overflow-x-auto font-mono text-xs text-[var(--text-secondary)] leading-relaxed">
+{`{
+  "mcpServers": {
+    "klip": {
+      "serverUrl": "https://api.klip.app.br/mcp/sse",
+      "headers": {
+        "Authorization": "Bearer klip_live_<sua_chave_de_api>"
+      }
+    }
+  }
+}`}
+            </pre>
           </div>
         </div>
       </div>
