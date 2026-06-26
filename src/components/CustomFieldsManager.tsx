@@ -1,7 +1,7 @@
 import { useEffect, useState, type FC } from "react";
 import { toast } from "sonner";
 import {
-  Calendar, CheckCircle2, Hash, Link2, List, Pencil, Plus, Trash2, Type, Unlink,
+  Calendar, CheckCircle2, Hash, Link2, List, Pencil, Plus, SlidersHorizontal, Trash2, Type, Unlink,
 } from "lucide-react";
 import {
   customFieldDefinitionsApi,
@@ -227,9 +227,24 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
   };
 
   return (
-    <div>
+    <div className="space-y-6">
+      {/* Introduction Card */}
+      <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-6 shadow-sm">
+        <div className="flex items-start gap-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--brand)] text-white">
+            <SlidersHorizontal className="h-5 w-5" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-base font-semibold text-[var(--text-primary)]">Campos Personalizados</h3>
+            <p className="text-sm text-[var(--text-muted)] leading-relaxed">
+              Adicione metadados personalizados para organizar e detalhar suas tarefas e projetos. Crie campos globais (universais) aplicados a todas as tarefas ou específicos para vincular apenas aos projetos desejados.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Inner tab switcher */}
-      <div className="mb-6 flex gap-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-soft)] p-1 w-fit">
+      <div className="flex gap-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-soft)] p-1 w-fit">
         {(["universal", "project"] as const).map((t) => (
           <button
             key={t}
