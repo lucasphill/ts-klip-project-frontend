@@ -27,8 +27,9 @@ const IntegrationsManager: FC = () => {
     try {
       const res = await apiKeysApi.getAll();
       setKeys(res.data ?? []);
-    } catch (err: any) {
-      toast.error(err?.message ?? "Erro ao carregar chaves de API");
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      toast.error(error?.message ?? "Erro ao carregar chaves de API");
     } finally {
       setIsLoading(false);
     }
@@ -48,8 +49,9 @@ const IntegrationsManager: FC = () => {
       }
       toast.success(`Chave "${data.name}" criada com sucesso!`);
       await loadApiKeys();
-    } catch (err: any) {
-      toast.error(err?.message ?? "Erro ao criar chave de API");
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      toast.error(error?.message ?? "Erro ao criar chave de API");
       throw err;
     }
   };
@@ -60,8 +62,9 @@ const IntegrationsManager: FC = () => {
       await apiKeysApi.update(keyToEdit.id, data);
       toast.success(`Chave "${data.name}" atualizada com sucesso!`);
       await loadApiKeys();
-    } catch (err: any) {
-      toast.error(err?.message ?? "Erro ao atualizar chave de API");
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      toast.error(error?.message ?? "Erro ao atualizar chave de API");
       throw err;
     }
   };
@@ -72,8 +75,9 @@ const IntegrationsManager: FC = () => {
       await apiKeysApi.remove(key.id);
       setKeys((prev) => prev.filter((k) => k.id !== key.id));
       toast.success(`Chave "${key.name}" excluída.`);
-    } catch (err: any) {
-      toast.error(err?.message ?? "Erro ao excluir chave de API");
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      toast.error(error?.message ?? "Erro ao excluir chave de API");
     }
   };
 

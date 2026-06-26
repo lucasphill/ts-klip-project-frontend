@@ -1,4 +1,4 @@
-import { User, SlidersHorizontal, Sun, Moon } from "lucide-react";
+import { User, SlidersHorizontal, Sun, Moon, Cpu } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
@@ -29,6 +29,13 @@ const SettingsProfilePage = () => {
             >
               <SlidersHorizontal size={15} />
               Campos Personalizados
+            </Link>
+            <Link
+              to="/settings/integrations"
+              className="flex items-center gap-1.5 border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
+            >
+              <Cpu size={15} />
+              Integrações
             </Link>
           </div>
         </div>
