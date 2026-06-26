@@ -16,6 +16,7 @@
     "@fullcalendar/daygrid": "^6.1.20",
     "@fullcalendar/react": "^6.1.20",
     "@tailwindcss/vite": "^4.1.18",
+    "@tanstack/react-table": "^8.21.3",
     "@untitledui/icons": "^0.0.21",
     "@vercel/analytics": "^2.0.1",
     "axios": "^1.13.5",

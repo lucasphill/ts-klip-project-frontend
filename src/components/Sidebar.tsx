@@ -126,7 +126,7 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
     <>
       {isMobileOpen && (
         <button
-          className="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm md:hidden [@media(max-height:600px)]:block"
           onClick={onCloseMobile}
           aria-label="Fechar menu lateral"
         />
@@ -135,9 +135,9 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
       <aside
         className={`
           flex h-full flex-col border-r border-[var(--border-subtle)] bg-[var(--bg-panel)]
-          fixed inset-y-0 left-0 z-40 md:relative md:z-20
+          fixed inset-y-0 left-0 z-40 md:relative md:z-20 [@media(max-height:600px)]:fixed [@media(max-height:600px)]:z-40
           ${isExpanded ? "w-[16rem]" : "w-[3.5rem]"}
-          ${isMobileOpen ? "translate-x-0 mobile-sheet-enter" : "-translate-x-full md:translate-x-0"}
+          ${isMobileOpen ? "translate-x-0 mobile-sheet-enter" : "-translate-x-full md:translate-x-0 [@media(max-height:600px)]:md:-translate-x-full"}
           transition-all duration-200
         `}
       >
@@ -279,8 +279,8 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
           <NavItem
             icon={<Settings size={16} />}
             label="Configurações"
-            active={activeTab === "settings"}
-            onClick={() => handleNavigate("/settings")}
+            active={location.pathname.startsWith("/settings")}
+            onClick={() => handleNavigate("/settings/profile")}
             isOpen={isExpanded}
           />
           <button

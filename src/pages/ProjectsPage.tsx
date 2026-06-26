@@ -409,7 +409,10 @@ const ProjectsPage = () => {
         color={currentProject?.color}
       >
         {isLoading ? (
-          <div className="flex flex-1 items-center justify-center px-6 py-8 text-sm text-slate-500">Carregando projeto...</div>
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-8">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600" />
+            <p className="text-sm font-medium text-slate-500">Carregando projeto...</p>
+          </div>
         ) : !currentProject ? (
           <div className="flex flex-1 items-center justify-center px-6 py-8 text-sm text-slate-500">Projeto nao encontrado.</div>
         ) : (
