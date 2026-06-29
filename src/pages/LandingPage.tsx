@@ -217,14 +217,14 @@ export default function LandingPage() {
 
         <div className="max-w-4xl space-y-6 z-10">
           <div
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border"
+            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold border"
             style={{
               backgroundColor: "rgba(102,172,203,0.08)",
               color: "#66ACCB",
               borderColor: "rgba(102,172,203,0.25)",
             }}
           >
-            <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+            <Sparkles className="w-3 h-3 animate-pulse" />
             <span>Gerenciamento de Tarefas Nativo para IAs</span>
           </div>
 
@@ -520,7 +520,7 @@ export default function LandingPage() {
           {/* Info */}
           <div className="lg:col-span-5 space-y-6">
             <div
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border"
+              className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold border"
               style={{
                 backgroundColor: "rgba(102,172,203,0.12)",
                 color: "#66ACCB",
@@ -673,14 +673,14 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto bg-[var(--bg-panel)] border border-[var(--border-subtle)] p-8 sm:p-12 rounded-3xl grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
           <div className="md:col-span-8 space-y-4 text-left">
             <div
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border"
+              className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold border"
               style={{
                 backgroundColor: "rgba(238,128,91,0.08)",
                 color: "#EE805B",
                 borderColor: "rgba(238,128,91,0.2)",
               }}
             >
-              <Coffee className="w-3.5 h-3.5" />
+              <Coffee className="w-3 h-3" />
               <span>Desenvolvimento Independente</span>
             </div>
 
