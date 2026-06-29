@@ -78,12 +78,20 @@ api.interceptors.response.use(
   },
 );
 
+// Public API instance — no auth interceptor.
+// Used for endpoints that don't require authentication (e.g. /health).
+const publicApi = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 10000,
+});
+
 export const healthApi = {
   getHealth: async () => {
-    const response = await api.get<HealthResponseDto>('/health');
+    const response = await publicApi.get<HealthResponseDto>('/health');
     return response.data;
   }
 }
+
 
 export const customFieldDefinitionsApi = {
   create: async (data: CreateCustomFieldDefinitionDto) => {

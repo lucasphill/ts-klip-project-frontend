@@ -172,7 +172,27 @@ const AuthenticatedApp = () => {
   );
 };
 
+import LandingPage from './pages/LandingPage';
+
 const AppRoutes = () => {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return null;
+  }
+
+  // Unauthenticated users on "/" see the landing page.
+  // Authenticated users always see the full dashboard app.
+  // Any other route goes to AuthenticatedApp which will auto-login.
+  if (!isAuthenticated) {
+    return (
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="*" element={<AuthenticatedApp />} />
+      </Routes>
+    );
+  }
+
   return <AuthenticatedApp />;
 };
 
@@ -196,3 +216,4 @@ const App = () => {
 }
 
 export default App
+
