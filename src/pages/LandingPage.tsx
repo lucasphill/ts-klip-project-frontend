@@ -171,16 +171,6 @@ export default function LandingPage() {
             )}
           </button>
 
-          <a
-            href="https://github.com/lucasphill"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-          >
-            <Github className="w-4 h-4" />
-            <span className="hidden sm:inline">lucasphill</span>
-          </a>
-
           {isAuthenticated ? (
             <a
               href="/"
@@ -196,7 +186,7 @@ export default function LandingPage() {
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all shadow-sm hover:brightness-110"
               style={{ backgroundColor: "#66ACCB" }}
             >
-              Começar Agora
+              Fazer Login
               <ArrowRight className="w-4 h-4" />
             </button>
           )}
@@ -225,7 +215,7 @@ export default function LandingPage() {
             }}
           >
             <Sparkles className="w-3 h-3 animate-pulse" />
-            <span>Gerenciamento de Tarefas Nativo para IAs</span>
+            <span>Gerenciamento de Tarefas Customizado do seu Jeito</span>
           </div>
 
           <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-[var(--text-primary)] leading-tight">
@@ -482,7 +472,7 @@ export default function LandingPage() {
               icon: <Calendar className="w-5 h-5" />,
               color: "#66ACCB",
               title: "Visualização de Calendário",
-              text: "Planeje sua semana ou seu mês em uma interface visual fluida. O Klip sincroniza as datas limites das suas tarefas e sub-tarefas para garantir que você nunca perca nenhum prazo importante.",
+              text: "Planeje sua semana ou seu mês em uma interface visual fluida. O Klip sincroniza as datas limites das suas tarefas e sub-tarefas para garantir que você nunca perca nenhum prazo importante. Em breve você poderá integrar com seus calendários do Google e do iCloud.",
             },
           ].map((card) => (
             <div
@@ -685,14 +675,14 @@ export default function LandingPage() {
             </div>
 
             <h3 className="text-2xl font-extrabold text-[var(--text-primary)]">
-              Desenvolvido de forma independente por Lucas Phill
+              Desenvolvido de forma independente por mim, Lucas Phill
             </h3>
 
             <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
-              O Klip é um projeto indie em constante desenvolvimento. Desenvolvo
-              este aplicativo sozinho nas minhas horas vagas buscando criar o
-              gerenciador de tarefas ideal. No futuro, você poderá me apoiar com
-              um café para acelerar o desenvolvimento do projeto.
+              Desenvolvo o Klip de forma totalmente independente nas minhas horas vagas.
+              Por ser um projeto indie em constante evolução, dedico meu tempo livre para construir o gerenciador de tarefas que sempre considerei ideal.
+              Se o projeto te ajudar de alguma forma, você pode me apoiar com doações ao lado.
+              <p style={{ marginTop: "0.5rem" }}>Agradeço o apoio!</p>
             </p>
 
             <div className="pt-2 flex items-center gap-3 text-xs font-medium text-[var(--text-muted)]">
@@ -708,6 +698,16 @@ export default function LandingPage() {
           </div>
 
           <div className="md:col-span-4 flex flex-col items-center justify-center p-4 border border-dashed border-[var(--border-subtle)] rounded-2xl bg-[var(--bg-soft)]">
+            <a
+              href="https://github.com/lucasphill"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm bg-[var(--bg-soft-strong)] text-[var(--text-primary)] border border-[var(--border-subtle)] hover:bg-[var(--bg-soft)] hover:-translate-y-0.5 active:translate-y-0 transition-all shadow-md mb-4 w-48 justify-center"
+            >
+              <Github className="w-4 h-4 text-[var(--text-muted)]" />
+              <span>Meu GitHub</span>
+            </a>
+
             <div className="group relative">
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-900 text-white text-center text-[10px] py-1.5 px-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md z-20 font-semibold border border-slate-800">
                 Apoio financeiro estará disponível nas próximas semanas! ☕
@@ -715,7 +715,7 @@ export default function LandingPage() {
 
               <button
                 disabled
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-white font-bold text-sm opacity-65 cursor-not-allowed select-none shadow-md"
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-white font-bold text-sm opacity-65 cursor-not-allowed select-none shadow-md w-48 justify-center"
                 style={{ backgroundColor: "#EE805B" }}
               >
                 <Coffee className="w-4 h-4" />
