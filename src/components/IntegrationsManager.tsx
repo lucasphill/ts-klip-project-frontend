@@ -9,12 +9,12 @@ import ApiKeyRevealModal from "./ApiKeyRevealModal";
 const IntegrationsManager: FC = () => {
   const [keys, setKeys] = useState<GetApiKeyDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Modals state
   const [showFormModal, setShowFormModal] = useState(false);
   const [showRevealModal, setShowRevealModal] = useState(false);
   const [keyToEdit, setKeyToEdit] = useState<GetApiKeyDto | null>(null);
-  
+
   // Reveal state (for newly created key)
   const [revealedKeyValue, setRevealedKeyValue] = useState("");
   const [revealedKeyName, setRevealedKeyName] = useState("");
@@ -126,7 +126,7 @@ const IntegrationsManager: FC = () => {
           </div>
         </div>
       </div>
- 
+
       {/* Main Keys List Section */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -143,7 +143,7 @@ const IntegrationsManager: FC = () => {
             <Plus className="h-3.5 w-3.5" /> Nova chave de API
           </button>
         </div>
- 
+
         {/* Loading state */}
         {isLoading ? (
           <div className="py-12 text-center text-sm text-[var(--text-muted)]">Carregando chaves de API...</div>
@@ -234,7 +234,7 @@ const IntegrationsManager: FC = () => {
           </div>
         )}
       </div>
- 
+
       {/* Security note banner */}
       <div className="rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/10 p-4">
         <div className="flex gap-3">
@@ -242,7 +242,7 @@ const IntegrationsManager: FC = () => {
           <div className="space-y-1">
             <h4 className="text-xs font-semibold text-amber-900 dark:text-amber-300">Aviso de Segurança</h4>
             <p className="text-xs text-amber-800 dark:text-amber-400 leading-relaxed">
-              Nunca compartilhe suas chaves de API nem as insira em repositórios públicos. 
+              Nunca compartilhe suas chaves de API nem as insira em repositórios públicos.
               Qualquer pessoa com acesso a elas pode ler, modificar e excluir dados do seu Klip Project.
             </p>
           </div>
@@ -258,12 +258,12 @@ const IntegrationsManager: FC = () => {
           </p>
           <div className="relative rounded-lg bg-[var(--bg-soft)] border border-[var(--border-subtle)] p-3">
             <pre className="overflow-x-auto font-mono text-xs text-[var(--text-secondary)] leading-relaxed">
-{`{
+              {`{
   "mcpServers": {
-    "klip": {
-      "serverUrl": "https://api.klip.app.br/mcp/sse",
+    "Klip": {
+      "serverUrl": "https://api.klip.app.br/mcp",
       "headers": {
-        "Authorization": "Bearer klip_live_<sua_chave_de_api>"
+        "Authorization": "klip_live_<sua_chave_de_api_aqui>"
       }
     }
   }
