@@ -154,6 +154,7 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
     try {
       await customFieldDefinitionsApi.remove(field.id);
       setAllFields((prev) => prev.filter((f) => f.id !== field.id));
+      setProjectFields((prev) => prev.filter((f) => f.id !== field.id));
       await fetchCustomFieldDefinitions({ force: true });
       toast.success(`Campo "${field.name}" excluído`);
     } catch (err: any) {
@@ -428,13 +429,22 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
                               Fixo
                             </span>
                           ) : (
-                            <button
-                              onClick={() => void handleUnassign(field)}
-                              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--text-muted)] opacity-0 transition-all group-hover:opacity-100 hover:bg-red-50 hover:text-red-600"
-                              title="Desvincular"
-                            >
-                              <Unlink className="h-3.5 w-3.5" />
-                            </button>
+                            <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                              <button
+                                onClick={() => void handleUnassign(field)}
+                                className="flex h-6 w-6 items-center justify-center rounded-md text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-primary)]"
+                                title="Desvincular"
+                              >
+                                <Unlink className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={() => void handleDelete(field)}
+                                className="flex h-6 w-6 items-center justify-center rounded-md text-[var(--text-muted)] transition-colors hover:bg-red-50 hover:text-red-600"
+                                title="Excluir campo"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
                           )}
                         </li>
                       ))}
@@ -474,13 +484,22 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
                               <ScopeBadge isUniversal={field.isUniversal} />
                             </span>
                           </span>
-                          <button
-                            onClick={() => void handleAssign(field.id)}
-                            className="flex h-6 shrink-0 items-center gap-1 rounded-md border border-[var(--border-subtle)] px-2 text-xs font-medium text-[var(--text-muted)] opacity-0 transition-all group-hover:opacity-100 hover:border-[var(--brand)] hover:bg-[var(--brand)] hover:text-white"
-                            title="Vincular ao projeto"
-                          >
-                            <Link2 className="h-3 w-3" /> Vincular
-                          </button>
+                          <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                            <button
+                              onClick={() => void handleAssign(field.id)}
+                              className="flex h-6 items-center gap-1 rounded-md border border-[var(--border-subtle)] px-2 text-xs font-medium text-[var(--text-muted)] transition-colors hover:border-[var(--brand)] hover:bg-[var(--brand)] hover:text-white"
+                              title="Vincular ao projeto"
+                            >
+                              <Link2 className="h-3 w-3" /> Vincular
+                            </button>
+                            <button
+                              onClick={() => void handleDelete(field)}
+                              className="flex h-6 w-6 items-center justify-center rounded-md text-[var(--text-muted)] transition-colors hover:bg-red-50 hover:text-red-600"
+                              title="Excluir campo"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </li>
                       ))}
                     </ul>
