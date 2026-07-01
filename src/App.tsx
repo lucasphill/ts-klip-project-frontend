@@ -15,6 +15,7 @@ import { ProjectsProvider, useProjectsContext } from './contexts/ProjectsContext
 import { CustomFieldDefinitionsProvider, useCustomFieldDefinitionsContext } from './contexts/CustomFieldDefinitionsContext';
 import { useLoading } from './contexts/LoadingContext';
 import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 const BootstrapGate = ({ children }: { children: ReactNode }) => {
   const { isAuthenticated } = useAuth();
@@ -200,6 +201,7 @@ const App = () => {
   return (
     <>
       <Analytics />
+      <SpeedInsights />
       <AuthProvider>
         <Router>
           <ProjectsProvider>
