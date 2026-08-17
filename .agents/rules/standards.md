@@ -8,8 +8,8 @@ Este documento contém instruções e regras essenciais que devem ser seguidas r
 
 ## 🔑 Credenciais para Validação (MCP)
 Caso seja necessário testar a aplicação ou realizar validações integradas (como automações ou ferramentas MCP de DevTools), utilize os seguintes dados de teste:
-*   **E-mail de Teste:** `testuser@example.com`
-*   **Senha de Teste:** `TestPassword123!`
+*   **E-mail de Teste:** `teste@email.com`
+*   **Senha de Teste:** `o#mUN9WMKps7rtCGclNu`
 
 ---
 
