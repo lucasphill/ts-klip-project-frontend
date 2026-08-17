@@ -8,6 +8,7 @@ import { useProjectsContext } from '../contexts/ProjectsContext';
 import { useTasksContext } from '../contexts/TasksContext';
 import { useCustomFieldDefinitionsContext } from '../contexts/CustomFieldDefinitionsContext';
 import { buildParentTaskOptions, getDescendantTaskIds } from '../lib/taskHierarchy';
+import { normalizeTask as normalizeApiTask, toTaskPayload } from '../lib/taskPayload';
 import {
   customFieldValuesApi,
   projectsCustomFieldDefinitionsApi,
@@ -40,19 +41,16 @@ const normalizeDueDate = (value?: string | null) => {
   return value.split('T')[0];
 };
 
-const normalizeTask = (task: GetTasksDto | GetTasksWithCustomFieldsDto): ProjectTask => ({
-  ...task,
-  dueDate: normalizeDueDate(task.dueDate),
-  customFields: 'customFields' in task ? task.customFields ?? {} : {},
-});
+const normalizeTask = (task: GetTasksDto | GetTasksWithCustomFieldsDto): ProjectTask => {
+  const normalizedTask = normalizeApiTask(task);
+  const customFields = 'customFields' in task ? task.customFields ?? {} : {};
 
-const toTaskPayload= (task: CreateTaskDto) => ({
-  title: task.title.trim(),
-  dueDate: task.dueDate ? `${task.dueDate}T00:00:00` : undefined,
-  isCompleted: task.isCompleted ?? false,
-  notes: task.notes?.trim() || undefined,
-  parentTaskId: task.parentTaskId?.trim() || undefined,
-});
+  return {
+    ...normalizedTask,
+    dueDate: normalizeDueDate(normalizedTask.dueDate),
+    customFields,
+  };
+};
 
 const ProjectsPage = () => {
   const { projectId } = useParams();
@@ -177,6 +175,7 @@ const ProjectsPage = () => {
 
     try {
       await tasksApi.update(taskId, toTaskPayload(updatedTask));
+      await refreshProjectData();
     } catch (error: any) {
       toast.error(error?.message ?? 'Erro ao atualizar tarefa');
       await refreshProjectData();
@@ -379,11 +378,7 @@ const ProjectsPage = () => {
       if (task.id) {
         await tasksApi.update(task.id, toTaskPayload(task));
         await syncTaskProjects(task.id, selectedProjectIds);
-        setTasks((previousTasks) =>
-          previousTasks.map((currentTask) =>
-            currentTask.id === task.id ? { ...currentTask, ...task } : currentTask
-          )
-        );
+        await refreshProjectData();
         toast.success('Tarefa atualizada');
       } else {
         const createdTaskResponse = await tasksApi.create(toTaskPayload(task));
@@ -396,6 +391,7 @@ const ProjectsPage = () => {
         await refreshProjectData();
       }
     } catch (error: any) {
+      await refreshProjectData().catch(() => undefined);
       toast.error(error?.message ?? 'Erro ao salvar tarefa');
       throw error;
     }
