@@ -678,12 +678,14 @@ export default function LandingPage() {
               Desenvolvido de forma independente por mim, Lucas Phill
             </h3>
 
-            <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
-              Desenvolvo o Klip de forma totalmente independente nas minhas horas vagas.
-              Por ser um projeto indie em constante evolução, dedico meu tempo livre para construir o gerenciador de tarefas que sempre considerei ideal.
-              Se o projeto te ajudar de alguma forma, você pode me apoiar com doações ao lado.
-              <p style={{ marginTop: "0.5rem" }}>Agradeço o apoio!</p>
-            </p>
+            <div className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed space-y-2">
+              <p>
+                Desenvolvo o Klip de forma totalmente independente nas minhas horas vagas.
+                Por ser um projeto indie em constante evolução, dedico meu tempo livre para construir o gerenciador de tarefas que sempre considerei ideal.
+                Se o projeto te ajudar de alguma forma, você pode me apoiar com doações ao lado.
+              </p>
+              <p>Agradeço o apoio!</p>
+            </div>
 
             <div className="pt-2 flex items-center gap-3 text-xs font-medium text-[var(--text-muted)]">
               <span className="flex items-center gap-1">
