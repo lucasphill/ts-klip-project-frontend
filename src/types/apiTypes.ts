@@ -60,6 +60,8 @@ export interface GetTasksDto {
   parent_task_id?: string | null;
   title: string;
   createdAt?: string;
+  googleCalendarEventId?: string | null;
+  google_calendar_event_id?: string | null;
 }
 
 export interface GetTasksWithCustomFieldsDto extends GetTasksDto  {
@@ -88,6 +90,16 @@ export interface GetApiKeyDto {
   name: string;
   keyValue: string;
   createdAt: string;
+}
+
+export interface GoogleCalendarStatusDto {
+  isConnected: boolean;
+  accountEmail: string | null;
+  connectedAtUtc: string | null;
+}
+
+export interface GoogleAuthUrlResponseDto {
+  authUrl: string;
 }
 //#endregion
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type Keyboard
 import { useLocation } from "react-router-dom";
 import {
   ArrowUpDown,
+  Calendar,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
@@ -525,6 +526,15 @@ const TaskTable = ({
                     editingTaskId={editingTaskId}
                     setEditingTaskId={setEditingTaskId}
                   />
+                  {(task.googleCalendarEventId || task.google_calendar_event_id) && (
+                    <span
+                      title="Sincronizado com o Google Calendar"
+                      aria-label="Sincronizado com o Google Calendar"
+                      className="shrink-0 inline-flex items-center justify-center p-1 rounded-md text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 transition-colors"
+                    >
+                      <Calendar className="w-3.5 h-3.5" />
+                    </span>
+                  )}
                   {depth > 0 && (
                     <span className="shrink-0 inline-flex rounded-full bg-[var(--bg-soft-strong)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-muted)] whitespace-nowrap">
                       Subtarefa
