@@ -10,6 +10,8 @@ import type {
   GetProjectsDto,
   GetTasksDto,
   GetTasksWithCustomFieldsDto,
+  GoogleAuthUrlResponseDto,
+  GoogleCalendarStatusDto,
   HealthResponseDto,
   ResponseModelDto,
 } from "../types/apiTypes";
@@ -250,6 +252,34 @@ export const apiKeysApi = {
   },
   remove: async (keyId: string) => {
     const response = await api.delete<ResponseModelDto<boolean>>(`/ApiKeys/${keyId}`);
+    return response.data;
+  },
+};
+
+export const googleCalendarApi = {
+  getStatus: async () => {
+    const response = await api.get<ResponseModelDto<GoogleCalendarStatusDto>>(
+      '/Integrations/GoogleCalendar/status'
+    );
+    return response.data;
+  },
+  getAuthUrl: async () => {
+    const response = await api.get<ResponseModelDto<GoogleAuthUrlResponseDto>>(
+      '/Integrations/GoogleCalendar/auth-url'
+    );
+    return response.data;
+  },
+  handleCallback: async (params: { code?: string; state?: string; error?: string }) => {
+    const response = await api.get<ResponseModelDto<unknown>>(
+      '/Integrations/GoogleCalendar/callback',
+      { params }
+    );
+    return response.data;
+  },
+  disconnect: async () => {
+    const response = await api.delete<ResponseModelDto<boolean>>(
+      '/Integrations/GoogleCalendar'
+    );
     return response.data;
   },
 };

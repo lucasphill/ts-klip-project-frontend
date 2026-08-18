@@ -89,5 +89,15 @@ export interface GetApiKeyDto {
   keyValue: string;
   createdAt: string;
 }
+
+export interface GoogleCalendarStatusDto {
+  isConnected: boolean;
+  accountEmail: string | null;
+  connectedAtUtc: string | null;
+}
+
+export interface GoogleAuthUrlResponseDto {
+  authUrl: string;
+}
 //#endregion
 
