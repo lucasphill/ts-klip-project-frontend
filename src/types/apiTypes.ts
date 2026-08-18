@@ -60,6 +60,8 @@ export interface GetTasksDto {
   parent_task_id?: string | null;
   title: string;
   createdAt?: string;
+  googleCalendarEventId?: string | null;
+  google_calendar_event_id?: string | null;
 }
 
 export interface GetTasksWithCustomFieldsDto extends GetTasksDto  {
