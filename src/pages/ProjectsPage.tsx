@@ -9,6 +9,8 @@ import { useTasksContext } from '../contexts/TasksContext';
 import { useCustomFieldDefinitionsContext } from '../contexts/CustomFieldDefinitionsContext';
 import { buildParentTaskOptions, getDescendantTaskIds } from '../lib/taskHierarchy';
 import { normalizeTask as normalizeApiTask, toTaskPayload } from '../lib/taskPayload';
+import { DeleteTaskModal } from '../components/DeleteTaskModal';
+import type { DeleteTaskTarget } from '../types/taskDeletion';
 import {
   customFieldValuesApi,
   projectsCustomFieldDefinitionsApi,
@@ -64,6 +66,8 @@ const ProjectsPage = () => {
   const [taskToEdit, setTaskToEdit] = useState<(CreateTaskDto & { id?: string }) | null>(null);
   const [projectTasks, setProjectTasks] = useState<{ project_id: string; task_id: string }[]>([]);
   const [taskProjectIds, setTaskProjectIds] = useState<string[]>([]);
+  const [taskToDelete, setTaskToDelete] = useState<DeleteTaskTarget | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const currentProject = useMemo(
     () => projects.find((project) => project.id === projectId) ?? null,
@@ -346,25 +350,49 @@ const ProjectsPage = () => {
     );
   };
 
-  const handleDeleteTask = async (taskId: string): Promise<boolean> => {
+  const handleDeleteTask = (taskId: string): boolean => {
+    const task = tasks.find((item) => item.id === taskId);
+    if (!task) return false;
     const descendantTaskIds = getDescendantTaskIds(tasks, taskId);
-    const taskIdsToRemove = [taskId, ...descendantTaskIds];
-    const confirmationMessage =
-      descendantTaskIds.length > 0
-        ? `Esta tarefa possui ${descendantTaskIds.length} subtarefa(s). Ao excluir a tarefa pai, todas as tarefas filho tambem serao excluidas. Deseja continuar?`
-        : 'Tem certeza que deseja excluir esta tarefa?';
+    setTaskToDelete({
+      id: task.id,
+      title: task.title,
+      subtaskCount: descendantTaskIds.length,
+      descendantTaskIds,
+    });
+    setShowDeleteModal(true);
+    return true;
+  };
 
-    if (!confirm(confirmationMessage)) return false;
+  const handleConfirmDelete = async (taskId: string, cascade?: boolean): Promise<void> => {
+    const descendantTaskIds = taskToDelete?.descendantTaskIds ?? getDescendantTaskIds(tasks, taskId);
+    const isCascade = cascade === true;
 
     try {
-      await tasksApi.remove(taskId);
-      setTasks((previousTasks) => previousTasks.filter((task) => !taskIdsToRemove.includes(task.id)));
-      setProjectTasks((previous) => previous.filter((projectTask) => !taskIdsToRemove.includes(projectTask.task_id)));
-      toast.success(descendantTaskIds.length > 0 ? 'Tarefa e subtarefas excluidas' : 'Tarefa excluida com sucesso');
-      return true;
+      await tasksApi.remove(taskId, cascade);
+
+      if (isCascade || descendantTaskIds.length === 0) {
+        const taskIdsToRemove = isCascade ? [taskId, ...descendantTaskIds] : [taskId];
+        setTasks((previousTasks) => previousTasks.filter((task) => !taskIdsToRemove.includes(task.id)));
+        setProjectTasks((previous) => previous.filter((projectTask) => !taskIdsToRemove.includes(projectTask.task_id)));
+        toast.success(descendantTaskIds.length > 0 ? 'Tarefa e subtarefas excluídas' : 'Tarefa excluída com sucesso');
+      } else {
+        setTasks((previousTasks) =>
+          previousTasks
+            .filter((task) => task.id !== taskId)
+            .map((task) =>
+              task.parentTaskId === taskId || (task as any).parent_task_id === taskId
+                ? { ...task, parentTaskId: undefined, parent_task_id: undefined }
+                : task
+            )
+        );
+        setProjectTasks((previous) => previous.filter((projectTask) => projectTask.task_id !== taskId));
+        toast.success('Tarefa excluída e subtarefas mantidas');
+      }
+      await refreshProjectData().catch(() => undefined);
     } catch (error: any) {
       toast.error(error?.message ?? 'Erro ao excluir tarefa');
-      return false;
+      throw error;
     }
   };
 
@@ -446,6 +474,16 @@ const ProjectsPage = () => {
           projects={projects}
           initialProjectIds={taskProjectIds}
           parentTaskOptions={availableParentTasks}
+        />
+
+        <DeleteTaskModal
+          isOpen={showDeleteModal}
+          onClose={() => {
+            setShowDeleteModal(false);
+            setTaskToDelete(null);
+          }}
+          task={taskToDelete}
+          onConfirm={handleConfirmDelete}
         />
       </TaskViewLayout>
     </>

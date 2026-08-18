@@ -1,6 +1,6 @@
 import { useAuth0, User } from "@auth0/auth0-react";
 import { jwtDecode } from "jwt-decode";
-import { createContext, useContext, useEffect, useState, type FC, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type FC, type ReactNode } from "react";
 import { setAuth0Client } from "../services/api";
 
 interface AuthContextType {
@@ -33,6 +33,18 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(isLoading);
   const [permissions, setPermissions] = useState<string[]>([]);
+
+  const login = useCallback(() => {
+    loginWithRedirect();
+  }, [loginWithRedirect]);
+
+  const logout = useCallback(() => {
+    logoutWithRedirect({
+      logoutParams: {
+        returnTo: window.location.origin,
+      },
+    });
+  }, [logoutWithRedirect]);
 
   // Set Auth0 client for API service
   useEffect(() => {
@@ -77,19 +89,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     if (!isLoading) {
       initializeUser();
     }
-  }, [isAuthenticated, auth0User, isLoading]);
-
-  const login = () => {
-    loginWithRedirect();
-  }
-
-  const logout = () => {
-    logoutWithRedirect({
-      logoutParams: {
-        returnTo: window.location.origin,
-      },
-    });
-  }
+  }, [isAuthenticated, auth0User, isLoading, getAccessTokenSilently, logout]);
 
   const refreshUser = async () => {
     try {

@@ -227,8 +227,10 @@ export const tasksApi = {
     const response = await api.put<ResponseModelDto<unknown>>(`/Tasks/${taskId}`, data);
     return response.data;
   },
-  remove: async (taskId: string) => {
-    const response = await api.delete<ResponseModelDto<unknown>>(`/Tasks/${taskId}`);
+  remove: async (taskId: string, cascade?: boolean) => {
+    const response = await api.delete<ResponseModelDto<unknown>>(`/Tasks/${taskId}`, {
+      params: cascade !== undefined ? { cascade } : undefined,
+    });
     return response.data;
   },
 };
