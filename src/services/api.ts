@@ -284,4 +284,11 @@ export const googleCalendarApi = {
   },
 };
 
+export const usersApi = {
+  deleteMe: async () => {
+    const response = await api.delete<ResponseModelDto<boolean>>('/Users/me');
+    return response.data;
+  },
+};
+
 export default api;

@@ -1,11 +1,35 @@
-import { User, SlidersHorizontal, Sun, Moon, Cpu } from "lucide-react";
+import { useState } from "react";
+import { User, SlidersHorizontal, Sun, Moon, Cpu, AlertTriangle, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
+import { usersApi } from "../services/api";
+import DeleteAccountModal from "../components/DeleteAccountModal";
 
 const SettingsProfilePage = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { isDark, setTheme } = useTheme();
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    try {
+      await usersApi.deleteMe();
+      toast.success("Sua conta e todos os dados foram excluídos com sucesso.");
+      logout();
+    } catch (error: unknown) {
+      console.error("Failed to delete account:", error);
+      let message = "Não foi possível excluir sua conta no momento. Tente novamente mais tarde.";
+      if (typeof error === "object" && error !== null && "response" in error) {
+        const res = (error as { response?: { data?: { message?: string } } }).response;
+        if (res?.data?.message) {
+          message = res.data.message;
+        }
+      }
+      toast.error(message);
+      throw error;
+    }
+  };
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -125,9 +149,39 @@ const SettingsProfilePage = () => {
                 As informações de perfil são gerenciadas pelo provedor de identidade (Auth0).
               </p>
             </div>
+
+            {/* Danger Zone */}
+            <div className="mt-6 rounded-xl border border-red-500/30 bg-[var(--bg-panel)] p-6 dark:border-red-500/20">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <h2 className="text-base font-semibold text-red-600 dark:text-red-400 flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 shrink-0" />
+                    Zona de Perigo
+                  </h2>
+                  <p className="text-xs text-[var(--text-muted)] max-w-md leading-relaxed">
+                    A exclusão da conta é irreversível e removerá permanentemente todas as suas tarefas, projetos, campos personalizados e conexões ativas.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-red-700 active:bg-red-800 shrink-0"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Excluir Conta
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      <DeleteAccountModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDeleteAccount}
+        userEmail={user?.email}
+      />
     </div>
   );
 };
