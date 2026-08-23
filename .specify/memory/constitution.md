@@ -1,7 +1,7 @@
 <!--
 Sync Impact Report
-- Version change: 1.1.0 → 1.1.1
-- Modified principles: IV. Verified Behavior Before Merge (clarified browser-testing tools).
+- Version change: 1.1.1 → 1.1.2
+- Modified principles: III. Reliable Authentication, Data Boundaries and Privacy (added explicit guidance for public legal routes, encryption in rest/transit, and user data rights).
 - Added sections: none.
 - Removed sections: none.
 - Follow-up TODOs: none.
@@ -22,11 +22,14 @@ visual feedback for loading, errors, and asynchronous actions. Interfaces MUST u
 TailwindCSS and shadcn/ui patterns, including the supported light and dark themes. Consistency and
 accessibility make the application usable for all users and reduce avoidable interface complexity.
 
-### III. Reliable Authentication and Data Boundaries
+### III. Reliable Authentication, Data Boundaries and Privacy
 Authenticated routes and API calls MUST preserve the Auth0 authentication flow and MUST NOT expose
 credentials, tokens, or private user data in source code, logs, or browser storage beyond the
-existing approved integration. API interactions MUST be centralized through the configured service
-layer and handle failures visibly. This protects user data and keeps integration behavior predictable.
+existing approved integration. Public informational and legal routes (such as Privacy Policy and
+Terms of Service) MUST remain accessible without authentication challenges. User data and OAuth
+integration tokens MUST be protected by encryption in rest and in transit, and user data rights
+(including self-service disconnection and account deletion) MUST be respected. API interactions
+MUST be centralized through the configured service layer and handle failures visibly.
 
 ### IV. Verified Behavior Before Merge
 Changes to business behavior MUST include proportionate automated verification: unit tests for
@@ -68,4 +71,4 @@ MINOR for new or materially expanded principles, and PATCH for clarifications. E
 MUST include a proportionate compliance review; unresolved exceptions require explicit approval and
 recorded rationale.
 
-**Version**: 1.1.1 | **Ratified**: 2026-08-17 | **Last Amended**: 2026-08-17
+**Version**: 1.1.2 | **Ratified**: 2026-08-17 | **Last Amended**: 2026-08-23

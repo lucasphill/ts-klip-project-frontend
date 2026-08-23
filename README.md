@@ -1,104 +1,161 @@
 # Klip — Frontend
 
-Frontend da aplicação **Klip**, uma ferramenta de gerenciamento de projetos e tarefas. Construído com React 19, TypeScript e Vite.
+Frontend da aplicação **Klip**, um gerenciador de tarefas e projetos pessoal flexível e expansível. O aplicativo combina uma interface visual limpa inspirada no método GTD com a potência do **Model Context Protocol (MCP)** e integração com o **Google Calendar**.
 
-## Stack
+Construído com React 19, TypeScript e Vite.
+
+---
+
+## 🛠️ Stack Tecnológica
 
 | Categoria | Tecnologia |
 |---|---|
-| Framework | React 19 + TypeScript |
-| Build | Vite 7 |
-| Estilo | TailwindCSS 4 + shadcn/ui |
-| Autenticação | Auth0 (`@auth0/auth0-react`) |
-| Roteamento | React Router v7 |
-| HTTP | Axios |
-| Calendário | FullCalendar (daygrid) |
-| Notificações | Sonner |
-| Analytics | Vercel Analytics |
-| Ícones | Lucide React + Untitled UI Icons |
-| Fontes | Geist Variable |
+| **Framework** | [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) |
+| **Build & Tooling** | [Vite 7](https://vite.dev/) |
+| **Estilização** | [TailwindCSS 4](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/) |
+| **Autenticação** | [Auth0](https://auth0.com/) (`@auth0/auth0-react`) |
+| **Roteamento** | [React Router v7](https://reactrouter.com/) |
+| **Cliente HTTP** | [Axios](https://axios-http.com/) |
+| **Calendário** | [FullCalendar](https://fullcalendar.io/) (visão mensal e semanal) |
+| **Notificações** | [Sonner](https://sonner.emilkowal.ski/) |
+| **Ícones** | [Lucide React](https://lucide.dev/) |
+| **Telemetria & Desempenho** | [Vercel Analytics](https://vercel.com/analytics) + [Speed Insights](https://vercel.com/docs/speed-insights) |
+| **Tipografia** | Geist Variable Font |
 
-## Funcionalidades
+---
 
-- **Autenticação** via Auth0 com redirecionamento automático para login
-- **Gerenciamento de projetos** — criar, editar e visualizar projetos com cores personalizadas
-- **Gerenciamento de tarefas** — criar, editar, excluir tarefas com suporte a subtarefas
-- **Campos customizados** — campos extras por projeto via `AddCustomFieldModal`
-- **Visualização de calendário** — visão mensal das tarefas com FullCalendar
-- **Modo escuro** — alternância via `ThemeContext`
-- **Loading global** — indicador de carregamento multi-fonte via `LoadingContext`
-- **Preferências persistidas** — filtros e ordenação da tabela salvos no `localStorage` por escopo
+## ✨ Funcionalidades Principais
 
-## Rotas
+### 1. Gestão de Tarefas e Projetos (GTD)
+* **Inbox e Visualização Geral**: Criação rápida de tarefas, categorização por projetos, definição de prioridades e prazos.
+* **Sub-tarefas**: Decomposição de tarefas complexas em itens menores com acompanhamento de progresso.
+* **Projetos Customizáveis**: Criação e edição de projetos com paleta de cores personalizada.
+* **Campos Customizados por Projeto**: Adição de campos específicos (texto, número, seleção, checkbox, etc.) por projeto via gerenciador dedicado.
+* **Filtros e Preferências Persistidas**: Ordenação e filtragem salvas automaticamente no `localStorage` por escopo e visualização.
 
-| Rota | Página |
+### 2. Calendário e Planejamento
+* **Visão Mensal e Semanal**: Navegação intuitiva entre meses e semanas com realce de prazos e eventos.
+* **Integração com Google Calendar**: Sincronização bidirecional de prazos de tarefas diretamente com a agenda do Google via OAuth 2.0.
+
+### 3. Integrações & Model Context Protocol (MCP)
+* **Servidor MCP**: Conexão com modelos de linguagem (Claude, Gemini, ChatGPT) para automação de relatórios, standups e gerenciamento de tarefas via linguagem natural.
+* **Gerenciador de Chaves de API**: Criação, revelação segura e revogação de tokens de acesso na área de configurações.
+* **Painel de Integrações em Abas Colapsáveis**: Configuração limpa e isolada para MCP e Google Calendar.
+
+### 4. Privacidade, Termos Legais & Segurança
+* **Páginas Legais Públicas**: Rotas acessíveis publicamente (sem exigir login) para [Política de Privacidade](/privacy) e [Termos de Serviço](/terms).
+* **Conformidade Google OAuth**: Seção mandatória de *Limited Use* (*Google API Services User Data Policy*), garantindo que dados do calendário não são comercializados, usados para anúncios ou treinamento de IA.
+* **Criptografia**: Dados e tokens persistidos protegidos com criptografia em repouso (*at rest*) e em trânsito (*HTTPS/TLS*).
+* **Auto-serviço de Privacidade**: Desconexão instantânea de integrações e botão de exclusão definitiva de conta nas configurações de perfil.
+
+### 5. Experiência de Uso & UI
+* **Landing Page Interativa**: Demonstração animada do terminal MCP, apresentação de funcionalidades e modo claro/escuro para visitantes.
+* **Modo Claro / Escuro**: Suporte completo a temas com alternância instantânea.
+* **Loading Global Centralizado**: Indicador de carregamento multi-fonte que sincroniza requisições assíncronas em segundo plano.
+
+---
+
+## 🧭 Rotas da Aplicação
+
+### Rotas Públicas (Sem Autenticação)
+| Rota | Descrição |
 |---|---|
-| `/` | `HomePage` — listagem de tarefas do usuário |
-| `/calendar` | `MonthViewPage` — visão de calendário mensal |
-| `/week` | `MonthViewPage` — visão semanal |
-| `/project/:projectId` | `ProjectsPage` — tarefas de um projeto específico |
+| `/` | Landing page para visitantes (ou redirecionamento para o Dashboard se logado) |
+| `/privacy` | Política de Privacidade (aliases: `/politica-de-privacidade`, `/privacy-policy`) |
+| `/terms` | Termos de Serviço (aliases: `/termos-de-uso`, `/terms-of-service`) |
 
-## Estrutura de pastas
+### Rotas Autenticadas (Dashboard)
+| Rota | Descrição |
+|---|---|
+| `/` | `HomePage` — Caixa de entrada e listagem geral de tarefas |
+| `/calendar` | `MonthViewPage` — Calendário em visão mensal |
+| `/week` | `MonthViewPage` — Calendário em visão semanal |
+| `/project/:projectId` | `ProjectsPage` — Visão detalhada de tarefas de um projeto |
+| `/settings/profile` | `SettingsProfilePage` — Gerenciamento de perfil e exclusão de conta |
+| `/settings/custom-fields` | `SettingsCustomFieldsPage` — Definições e tipos de campos customizados |
+| `/settings/integrations` | `SettingsIntegrationsPage` — Painéis colapsáveis de MCP e Google Calendar |
 
-```
+---
+
+## 📁 Estrutura do Projeto
+
+```text
 src/
-├── components/       # Componentes reutilizáveis e modais
-│   └── ui/           # Componentes base (shadcn/ui)
-├── contexts/         # Contextos globais (Auth, Tasks, Projects, Loading, Theme)
-├── hooks/            # Hooks customizados
-├── pages/            # Páginas principais
-├── services/         # Configuração do Axios (api.ts)
-├── types/            # Interfaces TypeScript (Task, Project, etc.)
-└── lib/              # Utilitários
+├── assets/             # Ícones e fontes estáticas
+├── components/         # Componentes compartilhados e modais
+│   ├── ui/             # Primitivas shadcn/ui (button, dialog, input, etc.)
+│   ├── Footer.tsx      # Rodapé com status da API e links legais
+│   ├── Layout.tsx      # Layout principal do Dashboard autenticado
+│   ├── LegalLayout.tsx # Layout dedicado para páginas legais (cabeçalho, tema, impressão)
+│   ├── GoogleCalendarIntegration.tsx # Painel colapsável da integração Google Calendar
+│   ├── IntegrationsManager.tsx       # Gerenciador de chaves MCP
+│   └── TaskTable.tsx   # Tabela de tarefas com suporte a ordenação e campos customizados
+├── contexts/           # Contextos React globais
+│   ├── AuthContext.tsx                   # Estado de login e integração Auth0
+│   ├── TasksContext.tsx                  # Estado e operações CRUD de tarefas
+│   ├── ProjectsContext.tsx               # Estado e operações CRUD de projetos
+│   ├── CustomFieldDefinitionsContext.tsx # Definições de campos customizados
+│   ├── LoadingContext.tsx                # Gestão centralizada de loading
+│   └── ThemeContext.tsx                  # Alternador de tema claro/escuro
+├── hooks/              # Hooks customizados (ex: useTaskTablePreferences)
+├── lib/                # Funções utilitárias e helpers
+├── pages/              # Páginas da aplicação
+│   ├── HomePage.tsx               # Dashboard principal
+│   ├── LandingPage.tsx            # Página inicial pública
+│   ├── MonthViewPage.tsx          # Visão de calendário mensal/semanal
+│   ├── PrivacyPolicyPage.tsx      # Política de Privacidade oficial
+│   ├── ProjectsPage.tsx           # Visão por projeto
+│   ├── SettingsCustomFieldsPage.tsx # Configuração de campos
+│   ├── SettingsIntegrationsPage.tsx # Configuração de MCP e Google Calendar
+│   ├── SettingsProfilePage.tsx    # Perfil do usuário e exclusão de conta
+│   └── TermsOfServicePage.tsx     # Termos de Serviço oficiais
+├── services/           # Camada de comunicação com a API backend (api.ts)
+└── types/              # Interfaces TypeScript e definições de domínio
 ```
 
-## Instalação e uso
+---
 
-```bash
-npm install
-npm run dev
-```
+## 🚀 Instalação e Execução
 
-| Script | Descrição |
+### Pré-requisitos
+* Node.js 18+ ou superior
+* Gerenciador de pacotes `npm`
+
+### Passos de Instalação
+
+1. Clone o repositório e instale as dependências:
+   ```bash
+   npm install
+   ```
+
+2. Configure o arquivo `.env` na raiz do projeto com as credenciais do Auth0 e URLs da API:
+   ```env
+   VITE_AUTH0_DOMAIN=seu-dominio.auth0.com
+   VITE_AUTH0_CLIENT_ID=seu-client-id
+   VITE_AUTH0_AUDIENCE=sua-audience
+   VITE_API_BASE_URL=http://localhost:5145
+   ```
+
+3. Execute o servidor de desenvolvimento:
+   ```bash
+   npm run dev
+   ```
+
+---
+
+## 📜 Scripts Disponíveis
+
+| Comando | Descrição |
 |---|---|
-| `npm run dev` | Servidor de desenvolvimento |
-| `npm run build` | Build de produção (`tsc -b && vite build`) |
-| `npm run lint` | Lint com ESLint |
-| `npm run preview` | Preview do build |
+| `npm run dev` | Inicia o servidor de desenvolvimento Vite local |
+| `npm run build` | Valida tipagem (`tsc -b`) e gera o build de produção (`vite build`) |
+| `npm run lint` | Executa a verificação estática de código com ESLint |
+| `npm run preview` | Inicia um servidor local servindo a pasta `dist/` gerada no build |
 
-## Contextos
+---
 
-### `LoadingContext`
-Loading global multi-fonte. Exibe um overlay com spinner enquanto qualquer operação assíncrona estiver ativa.
+## 📄 Governança e Especificação
 
-```tsx
-const { isLoading, setLoading, withLoading } = useLoading();
-
-// Envolve uma Promise e gerencia o loading automaticamente
-await withLoading(fetchData(), 'minha-operacao');
-```
-
-### `TasksContext` / `ProjectsContext`
-Gerenciam o estado global de tarefas e projetos, expondo funções de fetch, criação, edição e exclusão.
-
-### `ThemeContext`
-Controla o tema claro/escuro da aplicação.
-
-## Hook: `useTaskTablePreferences`
-
-Persiste preferências de filtro e ordenação da tabela de tarefas no `localStorage`, com escopo por projeto/view.
-
-```ts
-const { statusFilter, sortBy, sortDir, setStatusFilter, setSortBy, setSortDir } =
-  useTaskTablePreferences({ scope: 'home', activeView: 'list' });
-```
-
-Chave de armazenamento: `klip:task-table-preferences:v1:{scope}:{activeView}`
-
-## Modais
-
-- **`AddTaskModal`** — cria e edita tarefas; aceita prop `task` para modo de edição
-- **`AddProjectModal`** — cria e edita projetos; suporte a 8 cores pré-definidas
-- **`AddCustomFieldModal`** — adiciona campos customizados a um projeto
-
-Consulte [`LOADING_AND_MODALS.md`](./LOADING_AND_MODALS.md) para exemplos de uso detalhados.
+Este repositório utiliza o **Spec Kit** para especificação de requisitos, planejamento arquitetural e governança:
+* Especificações de features disponíveis na pasta [`specs/`](./specs/).
+* Princípios de arquitetura e padrões técnicos documentados na [Constituição do Projeto](.specify/memory/constitution.md).
