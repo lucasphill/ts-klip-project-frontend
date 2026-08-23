@@ -4,15 +4,18 @@ import type {
   CreateCustomFieldDefinitionDto,
   CreateCustomFieldValueDto,
   CreateProjectDto,
+  CreateProjectGroupDto,
   CreateTaskDto,
   GetApiKeyDto,
   GetCustomFieldDefinitionDto,
+  GetProjectGroupDto,
   GetProjectsDto,
   GetTasksDto,
   GetTasksWithCustomFieldsDto,
   GoogleAuthUrlResponseDto,
   GoogleCalendarStatusDto,
   HealthResponseDto,
+  ReorderProjectGroupsDto,
   ResponseModelDto,
 } from "../types/apiTypes";
 
@@ -139,21 +142,56 @@ export const customFieldValuesApi = {
   },
 };
 
+export const projectGroupsApi = {
+  create: async (data: CreateProjectGroupDto) => {
+    const response = await api.post<ResponseModelDto<GetProjectGroupDto>>('/project-groups', data);
+    return response.data;
+  },
+  getAll: async () => {
+    const response = await api.get<ResponseModelDto<GetProjectGroupDto[]>>('/project-groups');
+    return response.data;
+  },
+  update: async (groupId: string, data: CreateProjectGroupDto) => {
+    const response = await api.put<ResponseModelDto<GetProjectGroupDto>>(`/project-groups/${groupId}`, data);
+    return response.data;
+  },
+  remove: async (groupId: string) => {
+    const response = await api.delete<ResponseModelDto<unknown>>(`/project-groups/${groupId}`);
+    return response.data;
+  },
+  reorder: async (data: ReorderProjectGroupsDto) => {
+    const response = await api.put<ResponseModelDto<unknown>>('/project-groups/reorder', data);
+    return response.data;
+  },
+};
+
 export const projectsApi = {
   create: async (data: CreateProjectDto) => {
     const response = await api.post<ResponseModelDto<unknown>>('/Projects', data);
     return response.data;
   },
-  getAll: async () => {
-    const response = await api.get<ResponseModelDto<GetProjectsDto[]>>('/Projects');
+  getAll: async (options?: { archived?: boolean }) => {
+    const response = await api.get<ResponseModelDto<GetProjectsDto[]>>('/Projects', {
+      params: options?.archived !== undefined ? { archived: options.archived } : undefined,
+    });
     return response.data;
   },
   update: async (projectId: string, data: CreateProjectDto) => {
     const response = await api.put<ResponseModelDto<unknown>>(`/Projects/${projectId}`, data);
     return response.data;
   },
-  remove: async (projectId: string) => {
-    const response = await api.delete<ResponseModelDto<unknown>>(`/Projects/${projectId}`);
+  archive: async (projectId: string) => {
+    const response = await api.patch<ResponseModelDto<unknown>>(`/Projects/${projectId}/archive`);
+    return response.data;
+  },
+  unarchive: async (projectId: string) => {
+    const response = await api.patch<ResponseModelDto<unknown>>(`/Projects/${projectId}/unarchive`);
+    return response.data;
+  },
+  remove: async (projectId: string, options?: { deleteTasks?: boolean }) => {
+    const response = await api.delete<ResponseModelDto<unknown>>(`/Projects/${projectId}`, {
+      params: options?.deleteTasks !== undefined ? { deleteTasks: options.deleteTasks } : undefined,
+    });
     return response.data;
   },
 };

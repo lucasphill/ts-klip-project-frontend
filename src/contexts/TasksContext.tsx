@@ -42,7 +42,7 @@ export const TasksProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    fetchPromiseRef.current = tasksApi
+    const promise = tasksApi
       .getAllWithUniversalCustomFields()
       .then((response) => {
         const normalizedTasks = (response.data ?? []).map(normalizeTask);
@@ -51,10 +51,13 @@ export const TasksProvider = ({ children }: { children: ReactNode }) => {
         setTasks(normalizedTasks);
       })
       .finally(() => {
-        fetchPromiseRef.current = null;
+        if (fetchPromiseRef.current === promise) {
+          fetchPromiseRef.current = null;
+        }
       });
 
-    return fetchPromiseRef.current;
+    fetchPromiseRef.current = promise;
+    return promise;
   }, []);
 
   const appendTask = useCallback((task: GetTasksWithCustomFieldsDto) => {

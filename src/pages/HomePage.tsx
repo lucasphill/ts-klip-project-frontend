@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import TaskTable from "../components/TaskTable";
 import AddTaskModal from "../components/AddTaskModal";
@@ -29,7 +29,7 @@ const HomePage = () => {
     [tasks, taskToEdit?.id]
   );
 
-  const loadProjectTaskAssignments = async (projectsList: GetProjectsDto[]) => {
+  const loadProjectTaskAssignments = useCallback(async (projectsList: GetProjectsDto[]) => {
     try {
       const promises = projectsList.map((project) => projectsTasksApi.getByProject(project.id));
       const results = await Promise.all(promises);
@@ -47,16 +47,50 @@ const HomePage = () => {
     } catch (error) {
       console.error("Erro ao carregar vinculos projeto-tarefa", error);
     }
-  };
+  }, []);
+
+  const refreshHomeData = useCallback(
+    async (isSilent = false) => {
+      try {
+        const [projectsList] = await Promise.all([
+          fetchProjects({ force: true }),
+          fetchTasks({ force: true }),
+        ]);
+        await loadProjectTaskAssignments(projectsList);
+      } catch (error: any) {
+        if (!isSilent) {
+          toast.error(error?.message ?? "Erro ao sincronizar tarefas");
+        }
+      }
+    },
+    [fetchProjects, fetchTasks, loadProjectTaskAssignments]
+  );
 
   useEffect(() => {
-    fetchProjects()
-      .then((projectsList) => loadProjectTaskAssignments(projectsList))
-      .catch((error: any) => toast.error(error?.message ?? "Erro ao buscar projetos"));
+    void refreshHomeData(false);
 
-    fetchTasks().catch((error: any) => toast.error(error?.message ?? "Erro ao buscar tarefas"));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    let lastFocusTime = Date.now();
+    const handleRevalidation = () => {
+      const now = Date.now();
+      if (now - lastFocusTime > 2000) {
+        lastFocusTime = now;
+        void refreshHomeData(true);
+      }
+    };
+
+    window.addEventListener("focus", handleRevalidation);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        handleRevalidation();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", handleRevalidation);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [refreshHomeData]);
 
   const persistTaskUpdate = async (taskId: string, updates: Partial<GetTasksDto>) => {
     const existingTask = tasks.find((task) => task.id === taskId);

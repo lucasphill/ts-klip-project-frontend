@@ -24,10 +24,22 @@ export interface CreateTaskDto{
   parentTaskId?: string | null;
 }
 
-export interface CreateProjectDto{
+export interface CreateProjectGroupDto {
+  name: string;
+  color?: string;
+  icon?: string;
+  orderIndex?: number;
+}
+
+export interface ReorderProjectGroupsDto {
+  groupIdsInOrder: string[];
+}
+
+export interface CreateProjectDto {
   name: string;
   description?: string;
   color?: string;
+  groupId?: string | null;
 }
 
 export interface CreateCustomFieldDefinitionDto {
@@ -74,6 +86,24 @@ export interface GetProjectsDto {
   description?: string;
   id: string;
   name: string;
+  groupId?: string | null;
+  group_id?: string | null;
+  isArchived?: boolean;
+  is_archived?: boolean;
+  archivedAt?: string | null;
+  archived_at?: string | null;
+}
+
+export interface GetProjectGroupDto {
+  id: string;
+  name: string;
+  color?: string;
+  icon?: string;
+  orderIndex: number;
+  order_index?: number;
+  createdAt: string;
+  created_at?: string;
+  projects: GetProjectsDto[];
 }
 
 export interface GetCustomFieldDefinitionDto {
