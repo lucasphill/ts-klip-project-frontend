@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import Layout from './components/Layout';
@@ -9,6 +9,9 @@ import MonthViewPage from './pages/MonthViewPage';
 import SettingsProfilePage from './pages/SettingsProfilePage';
 import SettingsCustomFieldsPage from './pages/SettingsCustomFieldsPage';
 import SettingsIntegrationsPage from './pages/SettingsIntegrationsPage';
+import LandingPage from './pages/LandingPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import TermsOfServicePage from './pages/TermsOfServicePage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { TasksProvider, useTasksContext } from './contexts/TasksContext';
 import { ProjectsProvider, useProjectsContext } from './contexts/ProjectsContext';
@@ -173,8 +176,6 @@ const AuthenticatedApp = () => {
   );
 };
 
-import LandingPage from './pages/LandingPage';
-
 const AppRoutes = () => {
   const { isAuthenticated, loading } = useAuth();
 
@@ -182,19 +183,21 @@ const AppRoutes = () => {
     return null;
   }
 
-  // Unauthenticated users on "/" see the landing page.
-  // Authenticated users always see the full dashboard app.
-  // Any other route goes to AuthenticatedApp which will auto-login.
-  if (!isAuthenticated) {
-    return (
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="*" element={<AuthenticatedApp />} />
-      </Routes>
-    );
-  }
+  return (
+    <Routes>
+      {/* Public Legal Routes & Aliases (accessible in both unauthenticated and authenticated states) */}
+      <Route path="/privacy" element={<PrivacyPolicyPage />} />
+      <Route path="/terms" element={<TermsOfServicePage />} />
+      <Route path="/politica-de-privacidade" element={<Navigate to="/privacy" replace />} />
+      <Route path="/privacy-policy" element={<Navigate to="/privacy" replace />} />
+      <Route path="/termos-de-uso" element={<Navigate to="/terms" replace />} />
+      <Route path="/terms-of-service" element={<Navigate to="/terms" replace />} />
 
-  return <AuthenticatedApp />;
+      {/* Unauthenticated Landing vs Authenticated Dashboard App */}
+      {!isAuthenticated && <Route path="/" element={<LandingPage />} />}
+      <Route path="*" element={<AuthenticatedApp />} />
+    </Routes>
+  );
 };
 
 const App = () => {
