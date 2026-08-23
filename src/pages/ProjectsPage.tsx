@@ -56,8 +56,15 @@ const normalizeTask = (task: GetTasksDto | GetTasksWithCustomFieldsDto): Project
 
 const ProjectsPage = () => {
   const { projectId } = useParams();
-  const { projects, fetchProjects } = useProjectsContext();
-  const { tasks: tasksWithUniversalCustomFields, updateTaskLocal } = useTasksContext();
+  const { projects, archivedProjects, fetchProjects, unarchiveProject } = useProjectsContext();
+  const {
+    tasks: tasksWithUniversalCustomFields,
+    appendTask,
+    updateTaskLocal,
+    removeTaskLocal,
+    removeTasksLocal,
+    fetchTasks,
+  } = useTasksContext();
   const { universalCustomFields } = useCustomFieldDefinitionsContext();
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
   const [customFields, setCustomFields] = useState<GetCustomFieldDefinitionDto[]>([]);
@@ -70,8 +77,11 @@ const ProjectsPage = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const currentProject = useMemo(
-    () => projects.find((project) => project.id === projectId) ?? null,
-    [projectId, projects]
+    () =>
+      projects.find((project) => project.id === projectId) ??
+      archivedProjects.find((project) => project.id === projectId) ??
+      null,
+    [projectId, projects, archivedProjects]
   );
   const availableParentTasks = useMemo(
     () => buildParentTaskOptions(tasks, taskToEdit?.id),
@@ -375,6 +385,7 @@ const ProjectsPage = () => {
         const taskIdsToRemove = isCascade ? [taskId, ...descendantTaskIds] : [taskId];
         setTasks((previousTasks) => previousTasks.filter((task) => !taskIdsToRemove.includes(task.id)));
         setProjectTasks((previous) => previous.filter((projectTask) => !taskIdsToRemove.includes(projectTask.task_id)));
+        removeTasksLocal(taskIdsToRemove);
         toast.success(descendantTaskIds.length > 0 ? 'Tarefa e subtarefas excluídas' : 'Tarefa excluída com sucesso');
       } else {
         setTasks((previousTasks) =>
@@ -387,8 +398,10 @@ const ProjectsPage = () => {
             )
         );
         setProjectTasks((previous) => previous.filter((projectTask) => projectTask.task_id !== taskId));
+        removeTaskLocal(taskId);
         toast.success('Tarefa excluída e subtarefas mantidas');
       }
+      void fetchTasks({ force: true }).catch(() => undefined);
       await refreshProjectData().catch(() => undefined);
     } catch (error: any) {
       toast.error(error?.message ?? 'Erro ao excluir tarefa');
@@ -406,6 +419,14 @@ const ProjectsPage = () => {
       if (task.id) {
         await tasksApi.update(task.id, toTaskPayload(task));
         await syncTaskProjects(task.id, selectedProjectIds);
+        updateTaskLocal(task.id, {
+          title: task.title,
+          dueDate: task.dueDate ? task.dueDate.split('T')[0] : undefined,
+          isCompleted: task.isCompleted,
+          notes: task.notes,
+          parentTaskId: task.parentTaskId,
+        });
+        void fetchTasks({ force: true }).catch(() => undefined);
         await refreshProjectData();
         toast.success('Tarefa atualizada');
       } else {
@@ -415,6 +436,8 @@ const ProjectsPage = () => {
         const targetProjectIds =
           normalizedSelectedProjectIds.length > 0 ? normalizedSelectedProjectIds : [projectId];
         await syncTaskProjects(createdTask.id, targetProjectIds);
+        appendTask(createdTask);
+        void fetchTasks({ force: true }).catch(() => undefined);
         toast.success('Tarefa criada com sucesso');
         await refreshProjectData();
       }
@@ -432,6 +455,26 @@ const ProjectsPage = () => {
         description={currentProject?.description ?? 'Visualize e gerencie as tarefas deste projeto.'}
         color={currentProject?.color}
       >
+        {currentProject?.isArchived && (
+          <div className="mb-4 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
+            <span>Este projeto está arquivado. Suas tarefas ficam ocultas da Home ativa.</span>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await unarchiveProject(currentProject.id);
+                  toast.success('Projeto desarquivado com sucesso!');
+                } catch (e: any) {
+                  toast.error(e?.message ?? 'Erro ao desarquivar');
+                }
+              }}
+              className="rounded-lg bg-amber-200/80 px-3 py-1 font-semibold text-amber-900 transition-colors hover:bg-amber-300 dark:bg-amber-900/60 dark:text-amber-100"
+            >
+              Desarquivar Projeto
+            </button>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-8">
             <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600" />

@@ -1,5 +1,5 @@
 import { useEffect, useState, type FC, type FormEvent } from "react";
-import { CircleHelp } from "lucide-react";
+import { CircleHelp, Folder, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,31 +13,42 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-
-interface Project {
-  id?: string;
-  name: string;
-  description?: string;
-  color?: string;
-  owner_id?: string;
-}
+import { useProjectsContext } from "@/contexts/ProjectsContext";
+import type { CreateProjectDto, GetProjectsDto } from "@/types/apiTypes";
 
 interface AddProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (project: Project) => Promise<void> | void;
-  project?: Project | null;
+  onSave: (project: CreateProjectDto & { id?: string }) => Promise<void> | void;
+  project?: GetProjectsDto | null;
+  defaultGroupId?: string | null;
 }
 
-const PRESET_COLORS = ["#2f6fb2", "#1f9d8f", "#d9772b", "#bb4f5c", "#7a6ac8", "#2f839f", "#708142", "#c15f2e"];
+const PRESET_COLORS = [
+  "#2f6fb2",
+  "#1f9d8f",
+  "#d9772b",
+  "#bb4f5c",
+  "#7a6ac8",
+  "#2f839f",
+  "#708142",
+  "#c15f2e",
+];
 
-const AddProjectModal: FC<AddProjectModalProps> = ({ isOpen, onClose, onSave, project }) => {
+export const AddProjectModal: FC<AddProjectModalProps> = ({
+  isOpen,
+  onClose,
+  onSave,
+  project,
+  defaultGroupId,
+}) => {
+  const { projectGroups } = useProjectsContext();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState<Project>({
+  const [formData, setFormData] = useState<CreateProjectDto>({
     name: "",
     description: "",
     color: PRESET_COLORS[0],
-    owner_id: "auth0|1",
+    groupId: defaultGroupId ?? null,
   });
 
   useEffect(() => {
@@ -46,7 +57,7 @@ const AddProjectModal: FC<AddProjectModalProps> = ({ isOpen, onClose, onSave, pr
         name: project.name,
         description: project.description || "",
         color: project.color || PRESET_COLORS[0],
-        owner_id: project.owner_id,
+        groupId: project.groupId ?? (project as any).group_id ?? null,
       });
       return;
     }
@@ -55,9 +66,9 @@ const AddProjectModal: FC<AddProjectModalProps> = ({ isOpen, onClose, onSave, pr
       name: "",
       description: "",
       color: PRESET_COLORS[0],
-      owner_id: "auth0|1",
+      groupId: defaultGroupId ?? null,
     });
-  }, [project, isOpen]);
+  }, [project, defaultGroupId, isOpen]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -69,6 +80,7 @@ const AddProjectModal: FC<AddProjectModalProps> = ({ isOpen, onClose, onSave, pr
         ...formData,
         name: formData.name.trim(),
         description: formData.description?.trim() || undefined,
+        groupId: formData.groupId || null,
         id: project?.id,
       });
       onClose();
@@ -87,68 +99,93 @@ const AddProjectModal: FC<AddProjectModalProps> = ({ isOpen, onClose, onSave, pr
       }}
     >
       <DialogContent
-        className="surface-panel w-[min(100%-1.5rem,56rem)] rounded-2xl border border-slate-200 bg-white p-0"
+        className="surface-panel w-[min(100%-1.5rem,38rem)] rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-0"
         showCloseButton={!isSubmitting}
       >
         <form onSubmit={handleSubmit}>
-          <DialogHeader className="border-b border-slate-200 px-5 py-4 sm:px-6">
-            <DialogTitle className="text-xl font-bold text-slate-900">
+          <DialogHeader className="border-b border-[var(--border-subtle)] px-5 py-4 sm:px-6">
+            <DialogTitle className="text-xl font-bold text-[var(--text-primary)]">
               {project ? "Editar projeto" : "Novo projeto"}
             </DialogTitle>
-            <DialogDescription className="mt-1 flex items-center gap-2 text-sm text-slate-500">
-              <span>Defina nome, descricao e cor para organizar seu espaco.</span>
+            <DialogDescription className="mt-1 flex items-center gap-2 text-xs text-[var(--text-muted)]">
+              <span>Defina nome, grupo, descrição e cor para organizar seu espaço.</span>
               <HoverCard openDelay={150}>
                 <HoverCardTrigger asChild>
                   <button
                     type="button"
                     aria-label="Ajuda sobre projetos"
-                    className="inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                    className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[var(--text-faint)] transition-colors hover:bg-[var(--bg-soft)] hover:text-[var(--text-primary)]"
                   >
-                    <CircleHelp className="h-4 w-4" />
+                    <CircleHelp className="h-3.5 w-3.5" />
                   </button>
                 </HoverCardTrigger>
-                <HoverCardContent className="w-72">
-                  Use nomes objetivos e uma cor fixa por area para facilitar o filtro visual na lista de tarefas.
+                <HoverCardContent className="w-72 text-xs">
+                  Use nomes objetivos, escolha uma pasta/grupo correspondente e uma cor fixa para facilitar a identificação visual.
                 </HoverCardContent>
               </HoverCard>
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 px-5 py-5 sm:px-6">
+            {/* Nome do Projeto */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-semibold text-slate-700">Nome do projeto *</Label>
+              <Label className="text-xs font-semibold text-[var(--text-secondary)]">Nome do projeto *</Label>
               <Input
                 type="text"
                 value={formData.name}
                 onChange={(event) => setFormData({ ...formData, name: event.target.value })}
                 placeholder="Ex: Roadmap Produto 2026"
-                className="field h-11 px-3 text-sm"
+                className="field h-10 px-3 text-sm"
                 autoFocus
                 required
               />
             </div>
 
+            {/* Grupo / Pasta do Projeto */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-semibold text-slate-700">Descricao</Label>
+              <Label className="text-xs font-semibold text-[var(--text-secondary)]">Grupo / Pasta</Label>
+              <div className="relative">
+                <select
+                  value={formData.groupId ?? ""}
+                  onChange={(e) => setFormData({ ...formData, groupId: e.target.value ? e.target.value : null })}
+                  className="field h-10 w-full appearance-none rounded-lg bg-[var(--field-bg)] px-3 pr-8 text-xs text-[var(--text-primary)] transition-colors"
+                >
+                  <option value="">Nenhum (Raiz - Sem pasta)</option>
+                  {projectGroups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      📁 {g.name}
+                    </option>
+                  ))}
+                </select>
+                <Folder className="pointer-events-none absolute right-3 top-3 h-4 w-4 text-[var(--text-muted)]" />
+              </div>
+            </div>
+
+            {/* Descricao */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-[var(--text-secondary)]">Descrição</Label>
               <Textarea
                 value={formData.description}
                 onChange={(event) => setFormData({ ...formData, description: event.target.value })}
                 placeholder="Contexto e objetivo principal do projeto."
-                rows={4}
-                className="field resize-none px-3 py-2 text-sm"
+                rows={3}
+                className="field resize-none px-3 py-2 text-xs"
               />
             </div>
 
+            {/* Cor do Projeto */}
             <div className="space-y-2">
-              <Label className="text-sm font-semibold text-slate-700">Cor</Label>
+              <Label className="text-xs font-semibold text-[var(--text-secondary)]">Cor do projeto</Label>
               <div className="flex flex-wrap gap-2">
                 {PRESET_COLORS.map((color) => (
                   <button
                     key={color}
                     type="button"
                     onClick={() => setFormData({ ...formData, color })}
-                    className={`h-9 w-9 rounded-xl border transition-all ${
-                      formData.color === color ? "scale-110 border-slate-500 ring-2 ring-slate-300" : "border-slate-200 hover:scale-105"
+                    className={`h-8 w-8 rounded-lg border transition-all ${
+                      formData.color === color
+                        ? "scale-110 border-[var(--text-primary)] ring-2 ring-[var(--border-strong)]"
+                        : "border-[var(--border-subtle)] hover:scale-105"
                     }`}
                     style={{ backgroundColor: color }}
                     title={`Cor ${color}`}
@@ -158,22 +195,31 @@ const AddProjectModal: FC<AddProjectModalProps> = ({ isOpen, onClose, onSave, pr
             </div>
           </div>
 
-          <DialogFooter className="border-t border-slate-200 bg-white px-5 py-4 sm:px-6">
+          <DialogFooter className="border-t border-[var(--border-subtle)] bg-[var(--bg-panel)] px-5 py-3.5 sm:px-6">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
               disabled={isSubmitting}
-              className="border-slate-200 text-slate-700 hover:bg-slate-50"
+              className="border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-soft)]"
             >
               Cancelar
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting}
-              className="bg-[#2f6fb2] text-white hover:bg-[#225587]"
+              disabled={isSubmitting || !formData.name.trim()}
+              className="bg-[var(--brand)] text-white hover:bg-[var(--brand-strong)]"
             >
-              {isSubmitting ? "Salvando..." : project?.id ? "Salvar projeto" : "Criar projeto"}
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Salvando...
+                </>
+              ) : project?.id ? (
+                "Salvar projeto"
+              ) : (
+                "Criar projeto"
+              )}
             </Button>
           </DialogFooter>
         </form>
