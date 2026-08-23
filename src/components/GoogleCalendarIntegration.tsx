@@ -1,4 +1,5 @@
 import { useEffect, useState, type FC } from 'react';
+import { Link } from 'react-router-dom';
 import { Calendar, CheckCircle2, ExternalLink, Loader2, RefreshCw, Unlink, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { googleCalendarApi } from '../services/api';
@@ -247,6 +248,17 @@ export const GoogleCalendarIntegration: FC<GoogleCalendarIntegrationProps> = ({
                 </div>
               </div>
             </div>
+
+            <p className="text-[11px] text-[var(--text-muted)] text-center sm:text-left leading-relaxed">
+              Ao conectar sua conta Google, você declara estar ciente e de acordo com os{' '}
+              <Link to="/terms" className="underline font-medium text-[var(--text-primary)] hover:text-[#66ACCB]">
+                Termos de Uso
+              </Link>{' '}
+              e a{' '}
+              <Link to="/privacy" className="underline font-medium text-[var(--text-primary)] hover:text-[#66ACCB]">
+                Política de Privacidade
+              </Link>.
+            </p>
           </div>
         )}
       </CollapsibleSection>
