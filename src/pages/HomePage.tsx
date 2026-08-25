@@ -107,9 +107,13 @@ const HomePage = () => {
         notes: (updatedTask as any).notes?.trim() || undefined,
         parentTaskId: (updatedTask as any).parentTaskId?.trim() || undefined,
       });
+      if (updates.notes !== undefined) {
+        toast.success("Observação da tarefa atualizada");
+      }
     } catch (error: any) {
       toast.error(error?.message ?? "Erro ao atualizar tarefa");
       updateTaskLocal(taskId, existingTask);
+      throw error;
     }
   };
 
@@ -240,7 +244,7 @@ const HomePage = () => {
     void persistTaskUpdate(taskId, { dueDate });
   };
 
-  const updateTaskInline = (taskId: string, updates: { title?: string; dueDate?: string }) => {
+  const updateTaskInline = (taskId: string, updates: { title?: string; dueDate?: string; notes?: string }) => {
     void persistTaskUpdate(taskId, updates);
   };
 

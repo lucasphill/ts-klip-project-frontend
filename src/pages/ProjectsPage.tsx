@@ -192,10 +192,14 @@ const ProjectsPage = () => {
 
     try {
       await tasksApi.update(taskId, toTaskPayload(updatedTask));
+      if (updates.notes !== undefined) {
+        toast.success("Observação da tarefa atualizada");
+      }
       await refreshProjectData();
     } catch (error: any) {
       toast.error(error?.message ?? 'Erro ao atualizar tarefa');
       await refreshProjectData();
+      throw error;
     }
   };
 
@@ -342,7 +346,7 @@ const ProjectsPage = () => {
     void persistTaskUpdate(taskId, { dueDate });
   };
 
-  const updateTaskInline = (taskId: string, updates: { title?: string; dueDate?: string }) => {
+  const updateTaskInline = (taskId: string, updates: { title?: string; dueDate?: string; notes?: string }) => {
     void persistTaskUpdate(taskId, updates);
   };
 
