@@ -22,7 +22,6 @@ import {
   useReactTable,
   getCoreRowModel,
   getFilteredRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   getExpandedRowModel,
   flexRender,
@@ -184,7 +183,6 @@ type StoredTaskTableState = {
   statusFilter?: TaskStatusFilter;
   sorting?: SortingState;
   expanded?: ExpandedState;
-  paginationStep?: number;
 };
 
 const TASK_TABLE_STORAGE_PREFIX = "klip:task-table-state";
@@ -201,7 +199,6 @@ const parseStoredTaskTableState = (rawValue: string | null) => {
       statusFilter: DEFAULT_STATUS_FILTER,
       sorting: [{ id: "dueDate", desc: false }] as SortingState,
       expanded: {} as ExpandedState,
-      paginationStep: 25,
     };
   }
 
@@ -210,15 +207,13 @@ const parseStoredTaskTableState = (rawValue: string | null) => {
     const statusFilter = isStatusFilter(parsed.statusFilter) ? parsed.statusFilter : DEFAULT_STATUS_FILTER;
     const sorting = Array.isArray(parsed.sorting) ? parsed.sorting : [{ id: "dueDate", desc: false }];
     const expanded = typeof parsed.expanded === "object" && parsed.expanded !== null ? parsed.expanded : {};
-    const paginationStep = typeof parsed.paginationStep === "number" ? parsed.paginationStep : 25;
 
-    return { statusFilter, sorting, expanded, paginationStep };
+    return { statusFilter, sorting, expanded };
   } catch {
     return {
       statusFilter: DEFAULT_STATUS_FILTER,
       sorting: [{ id: "dueDate", desc: false }] as SortingState,
       expanded: {} as ExpandedState,
-      paginationStep: 25,
     };
   }
 };
@@ -295,8 +290,6 @@ const TaskTable = ({
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [expanded, setExpanded] = useState<ExpandedState>({});
-  const [pageSize, setPageSize] = useState(25);
-  const [paginationStep, setPaginationStep] = useState(25);
 
   const skipNextTableStatePersist = useRef(false);
 
@@ -314,8 +307,6 @@ const TaskTable = ({
     setStatusFilter(parsedState.statusFilter);
     setSorting(parsedState.sorting);
     setExpanded(parsedState.expanded);
-    setPaginationStep(parsedState.paginationStep);
-    setPageSize(parsedState.paginationStep);
   }, [tableStateStorageKey]);
 
   useEffect(() => {
@@ -331,11 +322,10 @@ const TaskTable = ({
       statusFilter,
       sorting,
       expanded,
-      paginationStep,
     };
 
     window.localStorage.setItem(tableStateStorageKey, JSON.stringify(payload));
-  }, [statusFilter, sorting, expanded, paginationStep, tableStateStorageKey]);
+  }, [statusFilter, sorting, expanded, tableStateStorageKey]);
 
   const safeCustomFields = Array.isArray(activeCustomFields) ? activeCustomFields : [];
 
@@ -736,32 +726,17 @@ const TaskTable = ({
       sorting,
       columnFilters,
       expanded,
-      pagination: {
-        pageIndex: 0,
-        pageSize,
-      },
     },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onExpandedChange: setExpanded,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
     getSubRows: (row) => row.subRows,
     columnResizeMode: "onChange",
   });
-
-  const handleLoadMore = () => {
-    setPageSize((prev) => prev + paginationStep);
-  };
-
-  const handlePaginationStepChange = (value: string) => {
-    const step = Number(value);
-    setPaginationStep(step);
-    setPageSize(step); // reseta para mostrar apenas o step inicial
-  };
 
 
   return (
@@ -779,7 +754,7 @@ const TaskTable = ({
               </button>
             )}
             <p className="text-sm text-slate-500 hidden sm:block [@media(max-height:600px)]:hidden">
-              Mostrando <span className="font-semibold text-slate-700">{table.getPrePaginationRowModel().rows.length}</span> tarefas
+              Mostrando <span className="font-semibold text-slate-700">{table.getRowModel().rows.length}</span> tarefas
             </p>
           </div>
 
@@ -881,51 +856,9 @@ const TaskTable = ({
       </div>
 
       <div className="border-t border-[var(--border-subtle)] bg-[var(--bg-soft)] px-4 py-2 md:py-3 flex items-center justify-between gap-4">
-        {/* Lado esquerdo: Controle de itens por página */}
-        <div className="hidden md:flex [@media(max-height:600px)]:hidden flex-1 justify-start items-center">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-[var(--text-secondary)]">Itens por página:</span>
-            <select
-              value={paginationStep}
-              onChange={(e) => handlePaginationStepChange(e.target.value)}
-              className="h-7 px-2 text-xs font-semibold rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-panel)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-soft-strong)] hover:border-[var(--border-muted)] outline-none cursor-pointer transition-all focus:ring-1 focus:ring-[var(--brand)]"
-            >
-              <option value="10">10</option>
-              <option value="25">25</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Centro: Botão "Mostrar mais" */}
-        <div className="flex-1 flex justify-center">
-          {table.getCanNextPage() ? (
-            <button
-              onClick={handleLoadMore}
-              className="inline-flex items-center justify-center gap-1.5 h-7 px-4 text-xs font-semibold rounded-lg bg-[var(--brand)] text-white hover:bg-[var(--brand-strong)] shadow-sm transition-all active:scale-95 duration-150 focus:outline-none focus:ring-1 focus:ring-[var(--brand)] focus:ring-offset-1"
-            >
-              <span>Mostrar mais tarefas</span>
-              <ChevronDown className="h-3.5 w-3.5 text-white/90" />
-            </button>
-          ) : (
-            <button
-              disabled
-              className="inline-flex items-center justify-center gap-1 h-7 px-3 text-xs font-semibold rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-panel)] text-[var(--text-muted)] opacity-50 cursor-not-allowed shadow-none transition-none focus:outline-none whitespace-nowrap truncate"
-            >
-              <span>
-                {table.getPrePaginationRowModel().rows.length === 0
-                  ? "Sem tarefas"
-                  : "Todas as tarefas exibidas"}
-              </span>
-            </button>
-          )}
-        </div>
-
-        {/* Lado direito: Label fixa de contagem */}
-        <div className="hidden md:flex [@media(max-height:600px)]:hidden flex-1 justify-end items-center">
-          <span className="text-sm text-[var(--text-muted)] whitespace-nowrap">
-            Exibindo {table.getRowModel().rows.length} de {table.getPrePaginationRowModel().rows.length}
+        <div className="flex items-center justify-between w-full">
+          <span className="text-sm text-[var(--text-muted)]">
+            Total: <span className="font-semibold text-[var(--text-primary)]">{table.getRowModel().rows.length}</span> {table.getRowModel().rows.length === 1 ? 'tarefa' : 'tarefas'}
           </span>
         </div>
       </div>
