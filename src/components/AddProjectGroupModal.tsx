@@ -157,7 +157,7 @@ export const AddProjectGroupModal: FC<AddProjectGroupModalProps> = ({
             {/* Seleção de Ícone */}
             <div className="space-y-2">
               <Label className="text-xs font-semibold text-[var(--text-secondary)]">Ícone</Label>
-              <div className="grid grid-cols-6 gap-2 sm:grid-cols-11">
+              <div className="flex flex-wrap gap-2">
                 {PRESET_ICONS.map((item) => {
                   const IconComp = item.icon;
                   const isSelected = icon === item.id;
@@ -167,7 +167,8 @@ export const AddProjectGroupModal: FC<AddProjectGroupModalProps> = ({
                       type="button"
                       onClick={() => setIcon(item.id)}
                       title={item.label}
-                      className={`flex h-9 w-9 items-center justify-center rounded-lg border transition-all ${
+                      aria-label={`Ícone: ${item.label}`}
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition-all ${
                         isSelected
                           ? "border-[var(--brand)] bg-[var(--brand)] text-white shadow-sm ring-2 ring-[var(--brand-soft)]"
                           : "border-[var(--border-subtle)] bg-[var(--bg-soft)] text-[var(--text-muted)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]"
