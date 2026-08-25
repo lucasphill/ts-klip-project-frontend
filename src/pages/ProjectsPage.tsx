@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { Trash2 } from 'lucide-react';
 import TaskTable from '../components/TaskTable';
 import AddTaskModal from '../components/AddTaskModal';
 import TaskViewLayout from '../components/TaskViewLayout';
@@ -10,6 +11,7 @@ import { useCustomFieldDefinitionsContext } from '../contexts/CustomFieldDefinit
 import { buildParentTaskOptions, getDescendantTaskIds } from '../lib/taskHierarchy';
 import { normalizeTask as normalizeApiTask, toTaskPayload } from '../lib/taskPayload';
 import { DeleteTaskModal } from '../components/DeleteTaskModal';
+import { DeleteCompletedTasksModal } from '../components/DeleteCompletedTasksModal';
 import type { DeleteTaskTarget } from '../types/taskDeletion';
 import {
   customFieldValuesApi,
@@ -75,6 +77,7 @@ const ProjectsPage = () => {
   const [taskProjectIds, setTaskProjectIds] = useState<string[]>([]);
   const [taskToDelete, setTaskToDelete] = useState<DeleteTaskTarget | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDeleteCompletedModal, setShowDeleteCompletedModal] = useState(false);
 
   const currentProject = useMemo(
     () =>
@@ -409,6 +412,45 @@ const ProjectsPage = () => {
     }
   };
 
+  const handleDeleteCompletedProjectTasks = async () => {
+    if (!projectId) return;
+
+    try {
+      const response = await tasksApi.deleteCompleted(projectId);
+      const deletedCount = response.data?.deletedCount ?? 0;
+      const deletedTaskIds = response.data?.deletedTaskIds ?? [];
+
+      if (deletedTaskIds.length > 0) {
+        setTasks((prev) => prev.filter((t) => !deletedTaskIds.includes(t.id)));
+        setProjectTasks((prev) => prev.filter((pt) => !deletedTaskIds.includes(pt.task_id)));
+        removeTasksLocal(deletedTaskIds);
+      }
+      void fetchTasks({ force: true }).catch(() => undefined);
+      await refreshProjectData().catch(() => undefined);
+
+      if (deletedCount > 0) {
+        toast.success(
+          deletedCount === 1
+            ? '1 tarefa concluída foi excluída deste projeto.'
+            : `${deletedCount} tarefas concluídas foram excluídas deste projeto.`
+        );
+      } else {
+        toast.info('Nenhuma tarefa concluída encontrada para exclusão neste projeto.');
+      }
+    } catch (error: unknown) {
+      console.error('Failed to delete completed project tasks:', error);
+      let message = 'Não foi possível excluir as tarefas concluídas do projeto.';
+      if (typeof error === 'object' && error !== null && 'response' in error) {
+        const res = (error as { response?: { data?: { message?: string } } }).response;
+        if (res?.data?.message) {
+          message = res.data.message;
+        }
+      }
+      toast.error(message);
+      throw error;
+    }
+  };
+
   const handleSaveTask = async (
     task: CreateTaskDto & { id?: string },
     selectedProjectIds: string[] = []
@@ -454,6 +496,19 @@ const ProjectsPage = () => {
         title={currentProject?.name ?? 'Projeto'}
         description={currentProject?.description ?? 'Visualize e gerencie as tarefas deste projeto.'}
         color={currentProject?.color}
+        actions={
+          currentProject && (
+            <button
+              type="button"
+              onClick={() => setShowDeleteCompletedModal(true)}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white p-2 md:px-3 md:py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-700 dark:border-[var(--border-subtle)] dark:bg-[var(--bg-panel)] dark:text-[var(--text-secondary)] dark:hover:border-red-900/50 dark:hover:bg-red-950/30 dark:hover:text-red-400"
+              title="Excluir tarefas concluídas deste projeto"
+            >
+              <Trash2 className="h-4 w-4 shrink-0 text-slate-400 hover:text-red-600" />
+              <span className="hidden md:inline">Limpar concluídas</span>
+            </button>
+          )
+        }
       >
         {currentProject?.isArchived && (
           <div className="mb-4 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
@@ -527,6 +582,13 @@ const ProjectsPage = () => {
           }}
           task={taskToDelete}
           onConfirm={handleConfirmDelete}
+        />
+
+        <DeleteCompletedTasksModal
+          isOpen={showDeleteCompletedModal}
+          onClose={() => setShowDeleteCompletedModal(false)}
+          onConfirm={handleDeleteCompletedProjectTasks}
+          projectName={currentProject?.name}
         />
       </TaskViewLayout>
     </>

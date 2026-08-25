@@ -6,6 +6,7 @@ import type {
   CreateProjectDto,
   CreateProjectGroupDto,
   CreateTaskDto,
+  DeleteCompletedTasksResponseDto,
   GetApiKeyDto,
   GetCustomFieldDefinitionDto,
   GetProjectGroupDto,
@@ -270,6 +271,12 @@ export const tasksApi = {
   remove: async (taskId: string, cascade?: boolean) => {
     const response = await api.delete<ResponseModelDto<unknown>>(`/Tasks/${taskId}`, {
       params: cascade !== undefined ? { cascade } : undefined,
+    });
+    return response.data;
+  },
+  deleteCompleted: async (projectId?: string) => {
+    const response = await api.delete<ResponseModelDto<DeleteCompletedTasksResponseDto>>('/Tasks/completed', {
+      params: projectId ? { projectId } : undefined,
     });
     return response.data;
   },

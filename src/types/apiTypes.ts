@@ -131,5 +131,10 @@ export interface GoogleCalendarStatusDto {
 export interface GoogleAuthUrlResponseDto {
   authUrl: string;
 }
+
+export interface DeleteCompletedTasksResponseDto {
+  deletedCount: number;
+  deletedTaskIds: string[];
+}
 //#endregion
 
