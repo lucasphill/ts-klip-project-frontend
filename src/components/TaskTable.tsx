@@ -15,6 +15,8 @@ import {
   XCircle,
 } from "lucide-react";
 import DatePickerField from "./DatePickerField";
+import TaskNotePopover from "./TaskNotePopover";
+import { isTaskOverdue } from "../lib/taskUtils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   useReactTable,
@@ -167,7 +169,8 @@ interface TaskTableProps {
   removeProjectFromTask: (taskId: string, projectId: string) => void;
   updateTaskTitle: (taskId: string, title: string) => void;
   updateTaskDueDate: (taskId: string, dueDate: string) => void;
-  updateTaskInline?: (taskId: string, updates: { title?: string; dueDate?: string }) => void;
+  updateTaskNotes?: (taskId: string, notes: string) => void;
+  updateTaskInline?: (taskId: string, updates: { title?: string; dueDate?: string; notes?: string }) => void;
   onEditTask?: (task: TaskTableTask) => void;
   onDeleteTask?: (taskId: string) => void;
   onAddSubtask?: (task: TaskTableTask) => void;
@@ -275,6 +278,7 @@ const TaskTable = ({
   removeProjectFromTask,
   updateTaskTitle,
   updateTaskDueDate,
+  updateTaskNotes,
   updateTaskInline,
   onEditTask,
   onDeleteTask,
@@ -367,7 +371,7 @@ const TaskTable = ({
     }));
   };
 
-  const saveTaskField = (taskId: string, updates: { title?: string; dueDate?: string }) => {
+  const saveTaskField = (taskId: string, updates: { title?: string; dueDate?: string; notes?: string }) => {
     if (updateTaskInline) {
       updateTaskInline(taskId, updates);
       return;
@@ -379,6 +383,10 @@ const TaskTable = ({
 
     if (updates.dueDate !== undefined) {
       updateTaskDueDate(taskId, updates.dueDate);
+    }
+
+    if (updates.notes !== undefined && updateTaskNotes) {
+      updateTaskNotes(taskId, updates.notes);
     }
   };
 
@@ -526,6 +534,12 @@ const TaskTable = ({
                     editingTaskId={editingTaskId}
                     setEditingTaskId={setEditingTaskId}
                   />
+                  <TaskNotePopover
+                    taskId={task.id}
+                    taskTitle={task.title}
+                    notes={task.notes}
+                    onSave={(nextNotes) => saveTaskField(task.id, { notes: nextNotes })}
+                  />
                   {(task.googleCalendarEventId || task.google_calendar_event_id) && (
                     <span
                       title="Sincronizado com o Google Calendar"
@@ -628,13 +642,19 @@ const TaskTable = ({
         filterFn: 'includesString',
         cell: (info) => {
           const task = info.row.original;
+          const isOverdue = isTaskOverdue(task.dueDate, task.isCompleted);
+
           return (
             <div className="flex h-full items-center px-3">
               <DatePickerField
                 value={normalizeDate(task.dueDate)}
                 onChange={(nextDate) => saveTaskField(task.id, { dueDate: nextDate })}
                 className="w-full"
-                buttonClassName="field h-7 flex-1 bg-transparent hover:bg-[var(--bg-soft)] text-sm text-[var(--text-primary)] border-transparent focus:bg-[var(--bg-soft-strong)] focus:border-[var(--border-subtle)] px-2 rounded transition-colors text-left"
+                buttonClassName={`field h-7 flex-1 bg-transparent hover:bg-[var(--bg-soft)] text-sm border-transparent focus:bg-[var(--bg-soft-strong)] focus:border-[var(--border-subtle)] px-2 rounded transition-colors text-left ${
+                  isOverdue
+                    ? "!text-red-600 dark:!text-red-400 font-medium hover:!text-red-700 dark:hover:!text-red-300"
+                    : "text-[var(--text-primary)]"
+                }`}
                 placeholder="Sem prazo"
               />
             </div>
@@ -837,7 +857,7 @@ const TaskTable = ({
             {table.getRowModel().rows.map((row) => (
               <div
                 key={row.id}
-                className={`flex border-b border-slate-100 transition-colors group hover:bg-slate-50`}
+                className={`flex border-b border-slate-100 transition-colors group group/task-row hover:bg-slate-50`}
               >
                 {row.getVisibleCells().map((cell) => (
                   <div
