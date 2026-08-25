@@ -6,6 +6,7 @@ type TaskViewLayoutProps = {
   title?: string;
   color?: string;
   description: string;
+  actions?: ReactNode;
 };
 
 const getColorDotProps = (color?: string): { className: string; style?: CSSProperties } | null => {
@@ -25,6 +26,7 @@ const TaskViewLayout: FC<TaskViewLayoutProps & { children: ReactNode }> = ({
   title,
   color,
   description,
+  actions,
   children,
 }) => {
   const colorDot = getColorDotProps(color);
@@ -41,14 +43,17 @@ const TaskViewLayout: FC<TaskViewLayoutProps & { children: ReactNode }> = ({
             <p className="mt-1 text-sm text-slate-500 hidden sm:block">{description}</p>
           </div>
 
-          <Link
-            to="/settings/custom-fields"
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-2 md:px-3 md:py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-            title="Gerenciar campos"
-          >
-            <Settings className="h-4 w-4 shrink-0" />
-            <span className="hidden md:inline">Gerenciar campos</span>
-          </Link>
+          <div className="flex items-center gap-2 shrink-0">
+            {actions}
+            <Link
+              to="/settings/custom-fields"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-2 md:px-3 md:py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+              title="Gerenciar campos"
+            >
+              <Settings className="h-4 w-4 shrink-0" />
+              <span className="hidden md:inline">Gerenciar campos</span>
+            </Link>
+          </div>
         </div>
       </header>
 
