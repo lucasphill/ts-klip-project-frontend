@@ -382,7 +382,7 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
             {isExpanded && (
               <div className="flex items-center justify-between px-2 pb-1">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-faint)]">
-                  Projetos & Pastas
+                  Projetos
                 </p>
                 <div className="flex items-center gap-0.5">
                   <button
@@ -423,8 +423,77 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
               </div>
             )}
 
-            {/* Listagem de Grupos */}
+            {/* Listagem de Projetos e Grupos */}
             <div className="space-y-1">
+              {/* Projetos na Raiz (Sem Pasta) exibidos primeiro */}
+              {rootProjects.length > 0 && (
+                <div className="space-y-0.5">
+                  {rootProjects.map((project) => {
+                    const colorDot = getColorDotProps(project.color);
+                    const isActive = activeTab === project.id;
+
+                    return (
+                      <div
+                        key={project.id}
+                        title={project.name}
+                        className={`group flex items-center ${
+                          isExpanded ? "justify-between" : "justify-center"
+                        } rounded-lg px-2 py-1.5 text-xs transition-colors ${
+                          isActive
+                            ? "bg-[var(--bg-soft-strong)] text-[var(--text-primary)]"
+                            : "text-[var(--text-secondary)] hover:bg-[var(--bg-soft)] hover:text-[var(--text-primary)]"
+                        }`}
+                      >
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => handleNavigate(`/project/${project.id}`)}
+                          className={`flex ${
+                            isExpanded ? "flex-1 min-w-0" : "justify-center"
+                          } cursor-pointer items-center gap-2`}
+                        >
+                          <span
+                            className={`h-2 w-2 shrink-0 rounded-full ${colorDot?.className ?? "bg-slate-400"}`}
+                            style={colorDot?.style}
+                          />
+                          {isExpanded && <span className="truncate text-sm font-medium">{project.name}</span>}
+                        </div>
+
+                        {isExpanded && (
+                          <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                            <button
+                              type="button"
+                              onClick={() => handleEditProject(project)}
+                              className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-primary)]"
+                              title="Editar projeto"
+                            >
+                              <Pencil size={12} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleArchiveProject(project)}
+                              className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-primary)]"
+                              title="Arquivar projeto"
+                            >
+                              <Archive size={12} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteProjectClick(project)}
+                              className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-muted)] hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/50"
+                              title="Excluir projeto"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Listagem de Grupos/Pastas abaixo dos projetos raiz */}
               {projectGroups.map((group) => {
                 const groupProjects = groupedProjects.get(group.id) || [];
                 const isCollapsed = collapsedGroupIds.has(group.id) && !projectSearch.trim();
@@ -509,17 +578,17 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
                           return (
                             <div
                               key={project.id}
-                              className="group flex items-center justify-between rounded-lg px-2 py-1 text-xs transition-colors hover:bg-[var(--bg-soft)]"
+                              className={`group flex items-center justify-between rounded-lg px-2 py-1 text-xs transition-colors ${
+                                isActive
+                                  ? "bg-[var(--bg-soft-strong)] text-[var(--text-primary)]"
+                                  : "text-[var(--text-secondary)] hover:bg-[var(--bg-soft)] hover:text-[var(--text-primary)]"
+                              }`}
                             >
                               <div
                                 role="button"
                                 tabIndex={0}
                                 onClick={() => handleNavigate(`/project/${project.id}`)}
-                                className={`flex flex-1 min-w-0 cursor-pointer items-center gap-2 ${
-                                  isActive
-                                    ? "font-medium text-[var(--brand)]"
-                                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                                }`}
+                                className="flex flex-1 min-w-0 cursor-pointer items-center gap-2"
                               >
                                 <span
                                   className={`h-1.5 w-1.5 shrink-0 rounded-full ${colorDot?.className ?? "bg-slate-400"}`}
@@ -565,74 +634,6 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
                   </div>
                 );
               })}
-
-              {/* Projetos na Raiz (Sem Pasta) */}
-              {rootProjects.length > 0 && (
-                <div className="pt-1 space-y-0.5">
-                  {isExpanded && projectGroups.length > 0 && (
-                    <p className="px-2 pt-1 pb-0.5 text-[10px] font-semibold text-[var(--text-faint)] uppercase tracking-wider">
-                      Sem pasta
-                    </p>
-                  )}
-                  {rootProjects.map((project) => {
-                    const colorDot = getColorDotProps(project.color);
-                    const isActive = activeTab === project.id;
-
-                    return (
-                      <div
-                        key={project.id}
-                        className="group flex items-center justify-between rounded-lg px-2 py-1.5 text-xs transition-colors hover:bg-[var(--bg-soft)]"
-                      >
-                        <div
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => handleNavigate(`/project/${project.id}`)}
-                          className={`flex flex-1 min-w-0 cursor-pointer items-center gap-2 ${
-                            isActive
-                              ? "font-medium text-[var(--brand)]"
-                              : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                          }`}
-                        >
-                          <span
-                            className={`h-2 w-2 shrink-0 rounded-full ${colorDot?.className ?? "bg-slate-400"}`}
-                            style={colorDot?.style}
-                          />
-                          {isExpanded && <span className="truncate text-sm font-medium">{project.name}</span>}
-                        </div>
-
-                        {isExpanded && (
-                          <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                            <button
-                              type="button"
-                              onClick={() => handleEditProject(project)}
-                              className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-primary)]"
-                              title="Editar projeto"
-                            >
-                              <Pencil size={12} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleArchiveProject(project)}
-                              className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-primary)]"
-                              title="Arquivar projeto"
-                            >
-                              <Archive size={12} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteProjectClick(project)}
-                              className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-muted)] hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/50"
-                              title="Excluir projeto"
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
 
               {filteredProjects.length === 0 && projectGroups.length === 0 && isExpanded && (
                 <p className="px-2 py-3 text-xs text-[var(--text-faint)]">Nenhum projeto ou pasta.</p>
