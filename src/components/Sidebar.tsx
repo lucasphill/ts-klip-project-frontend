@@ -43,6 +43,7 @@ import AddProjectModal from "./AddProjectModal";
 import AddProjectGroupModal from "./AddProjectGroupModal";
 import DeleteProjectModal from "./DeleteProjectModal";
 import ArchivedProjectsModal from "./ArchivedProjectsModal";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "./ui/hover-card";
 
 type SidebarProps = {
   isDesktopExpanded: boolean;
@@ -424,21 +425,98 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
             )}
 
             {/* Listagem de Projetos e Grupos */}
-            <div className="space-y-1">
+            <div className={isExpanded ? "space-y-1" : "flex flex-col items-center space-y-1"}>
               {/* Projetos na Raiz (Sem Pasta) exibidos primeiro */}
               {rootProjects.length > 0 && (
-                <div className="space-y-0.5">
+                <div className={isExpanded ? "space-y-0.5" : "flex flex-col items-center space-y-1 w-full"}>
                   {rootProjects.map((project) => {
                     const colorDot = getColorDotProps(project.color);
                     const isActive = activeTab === project.id;
 
+                    if (!isExpanded) {
+                      return (
+                        <HoverCard openDelay={150} closeDelay={120} key={project.id}>
+                          <HoverCardTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={() => handleNavigate(`/project/${project.id}`)}
+                              aria-label={`Projeto: ${project.name}`}
+                              className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${
+                                isActive
+                                  ? "bg-[var(--bg-soft-strong)] text-[var(--text-primary)]"
+                                  : "text-[var(--text-secondary)] hover:bg-[var(--bg-soft)] hover:text-[var(--text-primary)]"
+                              }`}
+                            >
+                              <span
+                                className={`h-2.5 w-2.5 shrink-0 rounded-full ${colorDot?.className ?? "bg-slate-400"}`}
+                                style={colorDot?.style}
+                              />
+                            </button>
+                          </HoverCardTrigger>
+                          <HoverCardContent
+                            side="right"
+                            align="center"
+                            sideOffset={8}
+                            className="w-56 p-2.5 bg-[var(--bg-panel)] border border-[var(--border-subtle)] shadow-xl rounded-xl"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => handleNavigate(`/project/${project.id}`)}
+                                className="flex items-center gap-2 min-w-0 cursor-pointer flex-1"
+                              >
+                                <span
+                                  className={`h-2.5 w-2.5 shrink-0 rounded-full ${colorDot?.className ?? "bg-slate-400"}`}
+                                  style={colorDot?.style}
+                                />
+                                <span className="font-medium text-xs text-[var(--text-primary)] truncate">{project.name}</span>
+                              </div>
+                              <div className="flex items-center gap-0.5 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditProject(project);
+                                  }}
+                                  className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-primary)]"
+                                  title="Editar projeto"
+                                >
+                                  <Pencil size={12} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleArchiveProject(project);
+                                  }}
+                                  className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-primary)]"
+                                  title="Arquivar projeto"
+                                >
+                                  <Archive size={12} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteProjectClick(project);
+                                  }}
+                                  className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-muted)] hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/50"
+                                  title="Excluir projeto"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            </div>
+                          </HoverCardContent>
+                        </HoverCard>
+                      );
+                    }
+
                     return (
                       <div
                         key={project.id}
-                        title={project.name}
-                        className={`group flex items-center ${
-                          isExpanded ? "justify-between" : "justify-center"
-                        } rounded-lg px-2 py-1.5 text-xs transition-colors ${
+                        className={`group flex items-center justify-between rounded-lg px-2 py-1.5 text-xs transition-colors ${
                           isActive
                             ? "bg-[var(--bg-soft-strong)] text-[var(--text-primary)]"
                             : "text-[var(--text-secondary)] hover:bg-[var(--bg-soft)] hover:text-[var(--text-primary)]"
@@ -448,45 +526,41 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
                           role="button"
                           tabIndex={0}
                           onClick={() => handleNavigate(`/project/${project.id}`)}
-                          className={`flex ${
-                            isExpanded ? "flex-1 min-w-0" : "justify-center"
-                          } cursor-pointer items-center gap-2`}
+                          className="flex flex-1 min-w-0 cursor-pointer items-center gap-2"
                         >
                           <span
                             className={`h-2 w-2 shrink-0 rounded-full ${colorDot?.className ?? "bg-slate-400"}`}
                             style={colorDot?.style}
                           />
-                          {isExpanded && <span className="truncate text-sm font-medium">{project.name}</span>}
+                          <span className="truncate text-sm font-medium">{project.name}</span>
                         </div>
 
-                        {isExpanded && (
-                          <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                            <button
-                              type="button"
-                              onClick={() => handleEditProject(project)}
-                              className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-primary)]"
-                              title="Editar projeto"
-                            >
-                              <Pencil size={12} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleArchiveProject(project)}
-                              className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-primary)]"
-                              title="Arquivar projeto"
-                            >
-                              <Archive size={12} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteProjectClick(project)}
-                              className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-muted)] hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/50"
-                              title="Excluir projeto"
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
-                        )}
+                        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                          <button
+                            type="button"
+                            onClick={() => handleEditProject(project)}
+                            className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-primary)]"
+                            title="Editar projeto"
+                          >
+                            <Pencil size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleArchiveProject(project)}
+                            className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-primary)]"
+                            title="Arquivar projeto"
+                          >
+                            <Archive size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteProjectClick(project)}
+                            className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-muted)] hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/50"
+                            title="Excluir projeto"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
@@ -499,77 +573,198 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
                 const isCollapsed = collapsedGroupIds.has(group.id) && !projectSearch.trim();
                 const IconComponent = getGroupIconComponent(group.icon);
 
+                if (!isExpanded) {
+                  return (
+                    <div key={group.id} className="flex justify-center w-full">
+                      <HoverCard openDelay={150} closeDelay={120}>
+                        <HoverCardTrigger asChild>
+                          <button
+                            type="button"
+                            aria-label={`Pasta: ${group.name}`}
+                            className="flex h-10 w-10 items-center justify-center rounded-lg text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-soft)] hover:text-[var(--text-primary)]"
+                          >
+                            <IconComponent size={18} style={{ color: group.color || "var(--text-muted)" }} />
+                          </button>
+                        </HoverCardTrigger>
+                        <HoverCardContent
+                          side="right"
+                          align="start"
+                          sideOffset={8}
+                          className="w-64 p-2.5 bg-[var(--bg-panel)] border border-[var(--border-subtle)] shadow-xl rounded-xl"
+                        >
+                          {/* Header */}
+                          <div className="flex items-center justify-between pb-2 border-b border-[var(--border-subtle)]">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <IconComponent size={14} style={{ color: group.color || "var(--text-muted)" }} className="shrink-0" />
+                              <span className="font-semibold text-xs text-[var(--text-primary)] truncate">{group.name}</span>
+                              <span className="rounded-full bg-[var(--bg-soft-strong)] px-1.5 py-0.2 text-[10px] text-[var(--text-muted)]">
+                                {groupProjects.length}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-0.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={(e) => handleAddProjectToGroup(group.id, e)}
+                                className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-primary)]"
+                                title="Novo projeto nesta pasta"
+                              >
+                                <Plus size={12} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => handleEditGroup(group, e)}
+                                className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-primary)]"
+                                title="Editar pasta"
+                              >
+                                <Pencil size={11} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => handleDeleteGroup(group, e)}
+                                className="flex h-6 w-6 items-center justify-center rounded text-[var(--text-muted)] hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/50"
+                                title="Excluir pasta"
+                              >
+                                <Trash2 size={11} />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Lista de Projetos dentro da pasta */}
+                          <div className="pt-1.5 max-h-56 overflow-y-auto space-y-0.5">
+                            {groupProjects.map((project) => {
+                              const colorDot = getColorDotProps(project.color);
+                              const isActive = activeTab === project.id;
+
+                              return (
+                                <div
+                                  key={project.id}
+                                  className={`group flex items-center justify-between rounded-lg px-2 py-1.5 text-xs transition-colors ${
+                                    isActive
+                                      ? "bg-[var(--bg-soft-strong)] text-[var(--text-primary)] font-medium"
+                                      : "text-[var(--text-secondary)] hover:bg-[var(--bg-soft)] hover:text-[var(--text-primary)]"
+                                  }`}
+                                >
+                                  <div
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() => handleNavigate(`/project/${project.id}`)}
+                                    className="flex flex-1 min-w-0 cursor-pointer items-center gap-2"
+                                  >
+                                    <span
+                                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${colorDot?.className ?? "bg-slate-400"}`}
+                                      style={colorDot?.style}
+                                    />
+                                    <span className="truncate">{project.name}</span>
+                                  </div>
+                                  <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEditProject(project);
+                                      }}
+                                      className="flex h-5 w-5 items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-primary)]"
+                                      title="Editar projeto"
+                                    >
+                                      <Pencil size={11} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleArchiveProject(project);
+                                      }}
+                                      className="flex h-5 w-5 items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-primary)]"
+                                      title="Arquivar projeto"
+                                    >
+                                      <Archive size={11} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteProjectClick(project);
+                                      }}
+                                      className="flex h-5 w-5 items-center justify-center rounded text-[var(--text-muted)] hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/50"
+                                      title="Excluir projeto"
+                                    >
+                                      <Trash2 size={11} />
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                            {groupProjects.length === 0 && (
+                              <p className="py-2 text-center text-xs italic text-[var(--text-faint)]">Pasta vazia</p>
+                            )}
+                          </div>
+                        </HoverCardContent>
+                      </HoverCard>
+                    </div>
+                  );
+                }
+
                 return (
                   <div key={group.id} className="space-y-0.5">
                     {/* Header do Grupo */}
-                    {isExpanded ? (
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => toggleGroupCollapse(group.id)}
-                        className="group flex w-full cursor-pointer items-center justify-between rounded-lg px-2 py-1.5 text-xs text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-soft)]"
-                      >
-                        <div className="flex min-w-0 items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={(e) => toggleGroupCollapse(group.id, e)}
-                            className="flex h-4 w-4 shrink-0 items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-                          >
-                            <ChevronDown
-                              size={12}
-                              className={`transition-transform duration-200 ${isCollapsed ? "-rotate-90" : ""}`}
-                            />
-                          </button>
-                          <IconComponent
-                            size={14}
-                            className="shrink-0"
-                            style={{ color: group.color || "var(--text-muted)" }}
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => toggleGroupCollapse(group.id)}
+                      className="group flex w-full cursor-pointer items-center justify-between rounded-lg px-2 py-1.5 text-xs text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-soft)]"
+                    >
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={(e) => toggleGroupCollapse(group.id, e)}
+                          className="flex h-4 w-4 shrink-0 items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                        >
+                          <ChevronDown
+                            size={12}
+                            className={`transition-transform duration-200 ${isCollapsed ? "-rotate-90" : ""}`}
                           />
-                          <span className="truncate font-semibold text-[var(--text-primary)]">{group.name}</span>
-                          <span className="ml-0.5 rounded-full bg-[var(--bg-soft-strong)] px-1.5 py-0.2 text-[10px] text-[var(--text-muted)]">
-                            {groupProjects.length}
-                          </span>
-                        </div>
+                        </button>
+                        <IconComponent
+                          size={14}
+                          className="shrink-0"
+                          style={{ color: group.color || "var(--text-muted)" }}
+                        />
+                        <span className="truncate font-semibold text-[var(--text-primary)]">{group.name}</span>
+                        <span className="ml-0.5 rounded-full bg-[var(--bg-soft-strong)] px-1.5 py-0.2 text-[10px] text-[var(--text-muted)]">
+                          {groupProjects.length}
+                        </span>
+                      </div>
 
-                        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                          <button
-                            type="button"
-                            onClick={(e) => handleAddProjectToGroup(group.id, e)}
-                            className="flex h-5 w-5 items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-primary)]"
-                            title="Adicionar projeto nesta pasta"
-                          >
-                            <Plus size={12} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => handleEditGroup(group, e)}
-                            className="flex h-5 w-5 items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-primary)]"
-                            title="Editar pasta"
-                          >
-                            <Pencil size={11} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => handleDeleteGroup(group, e)}
-                            className="flex h-5 w-5 items-center justify-center rounded text-[var(--text-muted)] hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/50"
-                            title="Excluir pasta"
-                          >
-                            <Trash2 size={11} />
-                          </button>
-                        </div>
+                      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                        <button
+                          type="button"
+                          onClick={(e) => handleAddProjectToGroup(group.id, e)}
+                          className="flex h-5 w-5 items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-primary)]"
+                          title="Adicionar projeto nesta pasta"
+                        >
+                          <Plus size={12} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleEditGroup(group, e)}
+                          className="flex h-5 w-5 items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-primary)]"
+                          title="Editar pasta"
+                        >
+                          <Pencil size={11} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteGroup(group, e)}
+                          className="flex h-5 w-5 items-center justify-center rounded text-[var(--text-muted)] hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/50"
+                          title="Excluir pasta"
+                        >
+                          <Trash2 size={11} />
+                        </button>
                       </div>
-                    ) : (
-                      /* Versão colapsada da barra lateral */
-                      <div
-                        className="flex justify-center py-1.5"
-                        title={`${group.name} (${groupProjects.length} projetos)`}
-                      >
-                        <IconComponent size={16} style={{ color: group.color || "var(--text-muted)" }} />
-                      </div>
-                    )}
+                    </div>
 
                     {/* Projetos dentro do Grupo */}
-                    {!isCollapsed && isExpanded && (
+                    {!isCollapsed && (
                       <div className="space-y-0.5 pl-3 border-l border-[var(--border-subtle)] ml-3">
                         {groupProjects.map((project) => {
                           const colorDot = getColorDotProps(project.color);
@@ -641,7 +836,7 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
             </div>
 
             {/* Botão de Projetos Arquivados */}
-            {isExpanded && (
+            {isExpanded ? (
               <div className="pt-2 border-t border-[var(--border-subtle)] mt-2">
                 <button
                   type="button"
@@ -651,6 +846,29 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
                   <Archive size={14} className="shrink-0" />
                   <span>Projetos arquivados</span>
                 </button>
+              </div>
+            ) : (
+              <div className="pt-2 border-t border-[var(--border-subtle)] mt-2 flex justify-center w-full">
+                <HoverCard openDelay={150} closeDelay={120}>
+                  <HoverCardTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => setShowArchivedModal(true)}
+                      aria-label="Projetos arquivados"
+                      className="flex h-10 w-10 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-soft)] hover:text-[var(--text-primary)]"
+                    >
+                      <Archive size={16} />
+                    </button>
+                  </HoverCardTrigger>
+                  <HoverCardContent
+                    side="right"
+                    align="center"
+                    sideOffset={8}
+                    className="w-auto px-3 py-1.5 text-xs font-medium bg-[var(--bg-panel)] border border-[var(--border-subtle)] shadow-xl rounded-lg"
+                  >
+                    Projetos arquivados
+                  </HoverCardContent>
+                </HoverCard>
               </div>
             )}
           </div>
@@ -666,9 +884,12 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
             isOpen={isExpanded}
           />
           <button
+            type="button"
             onClick={onToggleDesktop}
-            className={`mt-1 hidden w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-soft)] hover:text-[var(--text-primary)] md:flex ${
-              isExpanded ? "justify-start" : "justify-center"
+            aria-label={isExpanded ? "Recolher barra lateral" : "Expandir barra lateral"}
+            title={!isExpanded ? "Expandir barra lateral" : undefined}
+            className={`mt-1 hidden w-full items-center gap-2 rounded-lg text-xs font-medium text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-soft)] hover:text-[var(--text-primary)] md:flex ${
+              isExpanded ? "justify-start px-2 py-1.5" : "h-10 justify-center"
             }`}
           >
             {isDesktopExpanded ? <ChevronLeft className="h-3.5 w-3.5 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0" />}
