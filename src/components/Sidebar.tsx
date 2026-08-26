@@ -86,6 +86,32 @@ const getGroupIconComponent = (iconName?: string) => {
   }
 };
 
+const SidebarDotsLoading = ({ isExpanded }: { isExpanded: boolean }) => {
+  if (!isExpanded) {
+    return (
+      <div
+        className="flex flex-col items-center justify-center gap-1.5 py-4 animate-in fade-in duration-200"
+        aria-label="Carregando projetos"
+      >
+        <span className="h-1.5 w-1.5 rounded-full bg-[var(--text-muted)] animate-bounce [animation-delay:-0.3s]" />
+        <span className="h-1.5 w-1.5 rounded-full bg-[var(--text-muted)] animate-bounce [animation-delay:-0.15s]" />
+        <span className="h-1.5 w-1.5 rounded-full bg-[var(--text-muted)] animate-bounce" />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="flex items-center justify-center gap-1.5 py-6 animate-in fade-in duration-200"
+      aria-label="Carregando projetos"
+    >
+      <span className="h-2 w-2 rounded-full bg-[var(--text-muted)] animate-bounce [animation-delay:-0.3s]" />
+      <span className="h-2 w-2 rounded-full bg-[var(--text-muted)] animate-bounce [animation-delay:-0.15s]" />
+      <span className="h-2 w-2 rounded-full bg-[var(--text-muted)] animate-bounce" />
+    </div>
+  );
+};
+
 const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobile }: SidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -113,6 +139,7 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
         : location.pathname.slice(1);
   const isExpanded = isDesktopExpanded || isMobileOpen;
 
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [showNewTaskModal, setShowNewTaskModal] = useState(false);
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
   const [showNewGroupModal, setShowNewGroupModal] = useState(false);
@@ -139,7 +166,9 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
     Promise.all([
       fetchProjects().catch((err: any) => toast.error(err?.message ?? "Erro ao buscar projetos")),
       fetchProjectGroups().catch((err: any) => toast.error(err?.message ?? "Erro ao buscar grupos")),
-    ]);
+    ]).finally(() => {
+      setIsInitialLoading(false);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -179,11 +208,10 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
   const { groupedProjects, rootProjects } = useMemo(() => {
     const groupMap = new Map<string, GetProjectsDto[]>();
     const root: GetProjectsDto[] = [];
-    const knownGroupIds = new Set(projectGroups.map((g) => g.id));
 
     filteredProjects.forEach((proj) => {
       const gId = proj.groupId ?? (proj as any).group_id;
-      if (gId && knownGroupIds.has(gId)) {
+      if (gId) {
         const list = groupMap.get(gId) || [];
         list.push(proj);
         groupMap.set(gId, list);
@@ -193,7 +221,7 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
     });
 
     return { groupedProjects: groupMap, rootProjects: root };
-  }, [filteredProjects, projectGroups]);
+  }, [filteredProjects]);
 
   const handleSaveTask = async (task: CreateTaskDto, selectedProjectIds: string[] = []): Promise<void> => {
     try {
@@ -350,12 +378,20 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
               setShowNewTaskModal(true);
               onCloseMobile();
             }}
-            className={`flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--brand)] py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand-strong)] ${
-              isExpanded ? "px-3" : "px-2"
+            aria-label="Nova tarefa"
+            title={!isExpanded ? "Nova tarefa" : undefined}
+            className={`flex w-full items-center rounded-lg bg-[var(--brand)] text-sm font-medium text-white transition-all duration-200 hover:bg-[var(--brand-strong)] ${
+              isExpanded ? "h-9 justify-center px-3 gap-2" : "h-10 justify-center px-2"
             }`}
           >
             <Plus className="h-4 w-4 shrink-0" />
-            {isExpanded && <span>Nova tarefa</span>}
+            <span
+              className={`overflow-hidden whitespace-nowrap transition-all duration-200 ${
+                isExpanded ? "max-w-[10rem] opacity-100" : "max-w-0 opacity-0 pointer-events-none"
+              }`}
+            >
+              Nova tarefa
+            </span>
           </button>
         </div>
 
@@ -380,52 +416,59 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
 
           {/* Projects & Groups Section */}
           <div className="space-y-1.5">
-            {isExpanded && (
-              <div className="flex items-center justify-between px-2 pb-1">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-faint)]">
-                  Projetos
-                </p>
-                <div className="flex items-center gap-0.5">
-                  <button
-                    onClick={() => {
-                      setGroupToEdit(null);
-                      setShowNewGroupModal(true);
-                    }}
-                    className="flex h-6 w-6 items-center justify-center rounded-md text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-soft)] hover:text-[var(--text-primary)]"
-                    title="Nova pasta / grupo"
-                  >
-                    <FolderPlus size={13} />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setTargetGroupIdForNewProject(null);
-                      setProjectToEdit(null);
-                      setShowNewProjectModal(true);
-                    }}
-                    className="flex h-6 w-6 items-center justify-center rounded-md text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-soft)] hover:text-[var(--text-primary)]"
-                    title="Novo projeto"
-                  >
-                    <Plus size={13} />
-                  </button>
-                </div>
+            <div
+              className={`flex items-center justify-between px-2 overflow-hidden whitespace-nowrap transition-all duration-200 ${
+                isExpanded ? "max-h-8 opacity-100 pb-1" : "max-h-0 opacity-0 pb-0 pointer-events-none"
+              }`}
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-faint)]">
+                Projetos
+              </p>
+              <div className="flex items-center gap-0.5">
+                <button
+                  onClick={() => {
+                    setGroupToEdit(null);
+                    setShowNewGroupModal(true);
+                  }}
+                  className="flex h-6 w-6 items-center justify-center rounded-md text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-soft)] hover:text-[var(--text-primary)]"
+                  title="Nova pasta / grupo"
+                >
+                  <FolderPlus size={13} />
+                </button>
+                <button
+                  onClick={() => {
+                    setTargetGroupIdForNewProject(null);
+                    setProjectToEdit(null);
+                    setShowNewProjectModal(true);
+                  }}
+                  className="flex h-6 w-6 items-center justify-center rounded-md text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-soft)] hover:text-[var(--text-primary)]"
+                  title="Novo projeto"
+                >
+                  <Plus size={13} />
+                </button>
               </div>
-            )}
+            </div>
 
-            {isExpanded && (
-              <div className="relative px-1 pb-1">
-                <Search size={12} className="pointer-events-none absolute left-4 top-2.5 text-[var(--text-faint)]" />
-                <input
-                  type="text"
-                  placeholder="Buscar projeto..."
-                  className="field h-8 w-full bg-[var(--field-bg)] pl-8 pr-3 text-xs"
-                  value={projectSearch}
-                  onChange={(event) => setProjectSearch(event.target.value)}
-                />
-              </div>
-            )}
+            <div
+              className={`relative overflow-hidden transition-all duration-200 ${
+                isExpanded ? "max-h-12 opacity-100 px-1 pb-1" : "max-h-0 opacity-0 p-0 pointer-events-none"
+              }`}
+            >
+              <Search size={12} className="pointer-events-none absolute left-4 top-2.5 text-[var(--text-faint)]" />
+              <input
+                type="text"
+                placeholder="Buscar projeto..."
+                className="field h-8 w-full bg-[var(--field-bg)] pl-8 pr-3 text-xs"
+                value={projectSearch}
+                onChange={(event) => setProjectSearch(event.target.value)}
+              />
+            </div>
 
-            {/* Listagem de Projetos e Grupos */}
-            <div className={isExpanded ? "space-y-1" : "flex flex-col items-center space-y-1"}>
+            {/* Listagem de Projetos e Grupos com Loading Animado */}
+            {isInitialLoading ? (
+              <SidebarDotsLoading isExpanded={isExpanded} />
+            ) : (
+              <div className={`transition-opacity duration-200 ${isExpanded ? "space-y-1" : "flex flex-col items-center space-y-1"}`}>
               {/* Projetos na Raiz (Sem Pasta) exibidos primeiro */}
               {rootProjects.length > 0 && (
                 <div className={isExpanded ? "space-y-0.5" : "flex flex-col items-center space-y-1 w-full"}>
@@ -833,7 +876,8 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
               {filteredProjects.length === 0 && projectGroups.length === 0 && isExpanded && (
                 <p className="px-2 py-3 text-xs text-[var(--text-faint)]">Nenhum projeto ou pasta.</p>
               )}
-            </div>
+              </div>
+            )}
 
             {/* Botão de Projetos Arquivados */}
             {isExpanded ? (
@@ -888,12 +932,18 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
             onClick={onToggleDesktop}
             aria-label={isExpanded ? "Recolher barra lateral" : "Expandir barra lateral"}
             title={!isExpanded ? "Expandir barra lateral" : undefined}
-            className={`mt-1 hidden w-full items-center gap-2 rounded-lg text-xs font-medium text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-soft)] hover:text-[var(--text-primary)] md:flex ${
-              isExpanded ? "justify-start px-2 py-1.5" : "h-10 justify-center"
+            className={`mt-1 hidden w-full items-center rounded-lg text-xs font-medium text-[var(--text-muted)] transition-all duration-200 hover:bg-[var(--bg-soft)] hover:text-[var(--text-primary)] md:flex ${
+              isExpanded ? "h-9 justify-start px-2" : "h-10 justify-center px-0"
             }`}
           >
             {isDesktopExpanded ? <ChevronLeft className="h-3.5 w-3.5 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0" />}
-            {isExpanded && <span>Recolher</span>}
+            <span
+              className={`overflow-hidden whitespace-nowrap transition-all duration-200 ${
+                isExpanded ? "max-w-[10rem] opacity-100 ml-2" : "max-w-0 opacity-0 ml-0 pointer-events-none"
+              }`}
+            >
+              Recolher
+            </span>
           </button>
         </div>
       </aside>

@@ -7,6 +7,11 @@ import type {
 } from '../types/apiTypes';
 
 interface ProjectsContextValue {
+  // Estado de Carregamento
+  isLoading: boolean;
+  isLoadingProjects: boolean;
+  isLoadingGroups: boolean;
+
   // Projetos Ativos
   projects: GetProjectsDto[];
   fetchProjects: (options?: { force?: boolean }) => Promise<GetProjectsDto[]>;
@@ -35,6 +40,8 @@ export const ProjectsProvider = ({ children }: { children: ReactNode }) => {
   const [projects, setProjects] = useState<GetProjectsDto[]>([]);
   const [archivedProjects, setArchivedProjects] = useState<GetProjectsDto[]>([]);
   const [projectGroups, setProjectGroups] = useState<GetProjectGroupDto[]>([]);
+  const [isLoadingProjects, setIsLoadingProjects] = useState<boolean>(true);
+  const [isLoadingGroups, setIsLoadingGroups] = useState<boolean>(true);
 
   const projectsRef = useRef<GetProjectsDto[]>([]);
   const archivedProjectsRef = useRef<GetProjectsDto[]>([]);
@@ -57,9 +64,11 @@ export const ProjectsProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (hasFetchedProjectsRef.current && !shouldForce) {
+      setIsLoadingProjects(false);
       return projectsRef.current;
     }
 
+    setIsLoadingProjects(true);
     fetchProjectsPromiseRef.current = projectsApi
       .getAll({ archived: false })
       .then((response) => {
@@ -71,6 +80,7 @@ export const ProjectsProvider = ({ children }: { children: ReactNode }) => {
       })
       .finally(() => {
         fetchProjectsPromiseRef.current = null;
+        setIsLoadingProjects(false);
       });
 
     return fetchProjectsPromiseRef.current;
@@ -109,9 +119,11 @@ export const ProjectsProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (hasFetchedGroupsRef.current && !shouldForce) {
+      setIsLoadingGroups(false);
       return projectGroupsRef.current;
     }
 
+    setIsLoadingGroups(true);
     fetchGroupsPromiseRef.current = projectGroupsApi
       .getAll()
       .then((response) => {
@@ -123,6 +135,7 @@ export const ProjectsProvider = ({ children }: { children: ReactNode }) => {
       })
       .finally(() => {
         fetchGroupsPromiseRef.current = null;
+        setIsLoadingGroups(false);
       });
 
     return fetchGroupsPromiseRef.current;
@@ -270,9 +283,14 @@ export const ProjectsProvider = ({ children }: { children: ReactNode }) => {
   }, [removeProjectLocal]);
   // #endregion
 
+  const isLoading = isLoadingProjects || isLoadingGroups;
+
   return (
     <ProjectsContext.Provider
       value={{
+        isLoading,
+        isLoadingProjects,
+        isLoadingGroups,
         projects,
         fetchProjects,
         updateProjectLocal,
