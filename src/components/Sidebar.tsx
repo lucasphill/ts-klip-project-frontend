@@ -464,6 +464,58 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
               />
             </div>
 
+            {/* Botão de Criação de Projetos e Pastas na Barra Colapsada */}
+            {!isExpanded && (
+              <div className="flex justify-center w-full pb-0.5">
+                <HoverCard openDelay={150} closeDelay={120}>
+                  <HoverCardTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTargetGroupIdForNewProject(null);
+                        setProjectToEdit(null);
+                        setShowNewProjectModal(true);
+                      }}
+                      aria-label="Adicionar projeto ou pasta"
+                      className="flex h-10 w-10 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-soft)] hover:text-[var(--text-primary)]"
+                    >
+                      <Plus size={16} />
+                    </button>
+                  </HoverCardTrigger>
+                  <HoverCardContent
+                    side="right"
+                    align="center"
+                    sideOffset={8}
+                    className="w-44 p-1.5 bg-[var(--bg-panel)] border border-[var(--border-subtle)] shadow-xl rounded-xl space-y-0.5"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTargetGroupIdForNewProject(null);
+                        setProjectToEdit(null);
+                        setShowNewProjectModal(true);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-primary)] transition-colors text-left"
+                    >
+                      <Plus size={14} className="shrink-0 text-[var(--text-muted)]" />
+                      <span className="font-medium">Novo projeto</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGroupToEdit(null);
+                        setShowNewGroupModal(true);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-primary)] transition-colors text-left"
+                    >
+                      <FolderPlus size={14} className="shrink-0 text-[var(--text-muted)]" />
+                      <span className="font-medium">Nova pasta</span>
+                    </button>
+                  </HoverCardContent>
+                </HoverCard>
+              </div>
+            )}
+
             {/* Listagem de Projetos e Grupos com Loading Animado */}
             {isInitialLoading ? (
               <SidebarDotsLoading isExpanded={isExpanded} />
