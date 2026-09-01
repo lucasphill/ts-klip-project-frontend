@@ -20,7 +20,7 @@ export interface CreateTaskDto{
   title: string;
   dueDate?: string;
   isCompleted?: boolean;
-  notes?: string;
+  notes?: string | null;
   parentTaskId?: string | null;
 }
 
@@ -67,7 +67,7 @@ export interface GetTasksDto {
   dueDate?: string;
   id: string;
   isCompleted?: boolean;
-  notes?: string;
+  notes?: string | null;
   parentTaskId?: string | null;
   parent_task_id?: string | null;
   title: string;

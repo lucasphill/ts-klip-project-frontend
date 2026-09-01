@@ -14,6 +14,8 @@ import { buildParentTaskOptions, getDescendantTaskIds } from "../lib/taskHierarc
 import { DeleteTaskModal } from "../components/DeleteTaskModal";
 import type { DeleteTaskTarget } from "../types/taskDeletion";
 import { projectsTasksApi, tasksApi } from "../services/api";
+import { toTaskPayload } from "../lib/taskPayload";
+import { isMarkdownEmpty } from "../lib/markdown";
 import type { CreateTaskDto, CustomFieldValue, GetProjectsDto, GetTasksDto } from "../types/apiTypes";
 
 const toDateString = (date: Date): string => {
@@ -157,16 +159,13 @@ const MonthViewPage = () => {
     if (!existingTask) return;
 
     const updatedTask = { ...existingTask, ...updates };
-    updateTaskLocal(taskId, updates);
+    updateTaskLocal(taskId, {
+      ...updates,
+      notes: isMarkdownEmpty(updatedTask.notes) ? undefined : updatedTask.notes,
+    });
 
     try {
-      await tasksApi.update(taskId, {
-        title: updatedTask.title?.trim() ?? "",
-        dueDate: updatedTask.dueDate ? `${updatedTask.dueDate}T00:00:00` : undefined,
-        isCompleted: updatedTask.isCompleted ?? false,
-        notes: (updatedTask as any).notes?.trim() || undefined,
-        parentTaskId: (updatedTask as any).parentTaskId?.trim() || undefined,
-      });
+      await tasksApi.update(taskId, toTaskPayload(updatedTask));
       if (updates.notes !== undefined) {
         toast.success("Observação da tarefa atualizada");
       }

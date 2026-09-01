@@ -1,5 +1,6 @@
 import type { CreateTaskDto, GetTasksDto } from "../types/apiTypes";
 import { normalizeParentTaskId } from "./taskHierarchy";
+import { isMarkdownEmpty } from "./markdown";
 
 type TaskWithParentAlias = GetTasksDto & {
   parent_task_id?: string | null;
@@ -32,6 +33,6 @@ export const toTaskPayload = (task: CreateTaskDto): CreateTaskDto => ({
   title: task.title.trim(),
   dueDate: toApiDueDate(task.dueDate),
   isCompleted: task.isCompleted ?? false,
-  notes: task.notes?.trim() || undefined,
+  notes: isMarkdownEmpty(task.notes) ? null : task.notes?.trim(),
   parentTaskId: normalizeParentTaskId(task.parentTaskId) ?? null,
 });

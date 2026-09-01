@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Textarea } from "@/components/ui/textarea";
+import { MarkdownEditor } from "@/components/ui/markdown-editor";
 import type { CreateTaskDto, GetProjectsDto } from "../types/apiTypes";
 import type { ParentTaskOption } from "../lib/taskHierarchy";
 
@@ -330,11 +330,13 @@ const AddTaskModal: FC<AddTaskModalProps> = ({
 
             <div className="space-y-1.5">
               <Label className="text-sm font-semibold text-slate-700">Notas</Label>
-              <Textarea
+              <MarkdownEditor
+                key={task?.id || (isOpen ? "new-task-open" : "new-task-closed")}
                 value={formData.notes ?? ""}
-                onChange={(event) => setFormData({ ...formData, notes: event.target.value })}
-                placeholder="Contexto, links ou checklist da tarefa."
-                className="field min-h-[120px] resize-y px-3 py-2 text-sm"
+                onChange={(markdown) => setFormData((previous) => ({ ...previous, notes: markdown }))}
+                placeholder="Contexto, links ou checklist da tarefa em markdown..."
+                minHeight="120px"
+                maxHeight="220px"
               />
             </div>
           </div>
