@@ -1,8 +1,9 @@
-﻿import { useEffect, useState, type FC, type KeyboardEvent } from "react";
+import { useEffect, useState, useRef, type FC } from "react";
 import { StickyNote, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Textarea } from "@/components/ui/textarea";
+import { MarkdownEditor, type MarkdownEditorRef } from "@/components/ui/markdown-editor";
+import { stripMarkdown, isMarkdownEmpty } from "@/lib/markdown";
 import { cn } from "@/lib/utils";
 
 export interface TaskNotePopoverProps {
@@ -25,8 +26,11 @@ export const TaskNotePopover: FC<TaskNotePopoverProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [noteText, setNoteText] = useState(notes ?? "");
   const [isSaving, setIsSaving] = useState(false);
+  const editorRef = useRef<MarkdownEditorRef>(null);
 
-  const hasNotes = Boolean(notes && notes.trim().length > 0);
+  const isNotesEmpty = isMarkdownEmpty(notes);
+  const cleanPreview = stripMarkdown(notes);
+  const hasNotes = !isNotesEmpty;
 
   useEffect(() => {
     if (isOpen) {
@@ -34,25 +38,18 @@ export const TaskNotePopover: FC<TaskNotePopoverProps> = ({
     }
   }, [isOpen, notes]);
 
-  const handleSave = async () => {
+  const handleSave = async (contentToSave?: string) => {
     if (isSaving || disabled) return;
     setIsSaving(true);
+    const rawContent = contentToSave !== undefined ? contentToSave : (editorRef.current?.getMarkdown() ?? noteText);
+    const finalContent = isMarkdownEmpty(rawContent) ? "" : rawContent.trim();
     try {
-      await onSave(noteText);
+      await onSave(finalContent);
       setIsOpen(false);
     } catch {
       // Error handled by parent or toast
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Escape") {
-      setIsOpen(false);
-    } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault();
-      void handleSave();
     }
   };
 
@@ -64,14 +61,12 @@ export const TaskNotePopover: FC<TaskNotePopoverProps> = ({
           disabled={disabled}
           title={
             hasNotes
-              ? notes?.trim()
-                ? `Observações: ${notes.trim()}`
-                : "Ver ou editar observações"
+              ? `Observações: ${cleanPreview}`
               : "Adicionar observação"
           }
           aria-label={
             hasNotes
-              ? "Ver ou editar observações da tarefa"
+              ? `Ver ou editar observações da tarefa: ${cleanPreview}`
               : "Adicionar observação à tarefa"
           }
           className={cn(
@@ -89,7 +84,7 @@ export const TaskNotePopover: FC<TaskNotePopoverProps> = ({
       <PopoverContent
         align="start"
         side="bottom"
-        className="w-80 p-3 bg-[var(--bg-panel)] border-[var(--border-subtle)] shadow-xl z-50 rounded-xl"
+        className="w-[420px] max-w-[90vw] p-3 bg-[var(--bg-panel)] border-[var(--border-subtle)] shadow-xl z-50 rounded-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col gap-2.5">
@@ -97,17 +92,19 @@ export const TaskNotePopover: FC<TaskNotePopoverProps> = ({
             <h4 className="text-xs font-semibold text-[var(--text-primary)]">
               Observações da Tarefa
             </h4>
-            <p className="text-[11px] text-[var(--text-muted)] truncate max-w-[280px]">
+            <p className="text-[11px] text-[var(--text-muted)] truncate max-w-[380px]">
               {taskTitle || "Sem título"}
             </p>
           </div>
 
-          <Textarea
+          <MarkdownEditor
+            ref={editorRef}
             value={noteText}
-            onChange={(e) => setNoteText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Escreva uma observação ou anotação..."
-            className="min-h-[100px] max-h-[220px] text-xs text-[var(--text-primary)] bg-[var(--bg-soft)] border-[var(--border-subtle)] focus-visible:border-[var(--brand)] focus-visible:ring-1 focus-visible:ring-[var(--brand)] resize-y p-2"
+            onChange={setNoteText}
+            onSaveShortcut={(md) => void handleSave(md)}
+            placeholder="Adicione observações / notas à sua tarefa."
+            minHeight="110px"
+            maxHeight="250px"
             autoFocus
           />
 

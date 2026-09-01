@@ -10,6 +10,8 @@ import { useProjectsContext } from "../contexts/ProjectsContext";
 import { useCustomFieldDefinitionsContext } from "../contexts/CustomFieldDefinitionsContext";
 import { buildParentTaskOptions, getDescendantTaskIds } from "../lib/taskHierarchy";
 import { buildCustomFieldValuePayload, getCustomFieldValueByDefinition } from "../lib/customFields";
+import { toTaskPayload } from "../lib/taskPayload";
+import { isMarkdownEmpty } from "../lib/markdown";
 import { DeleteTaskModal } from "../components/DeleteTaskModal";
 import type { DeleteTaskTarget } from "../types/taskDeletion";
 
@@ -97,16 +99,13 @@ const HomePage = () => {
     if (!existingTask) return;
 
     const updatedTask = { ...existingTask, ...updates };
-    updateTaskLocal(taskId, updates);
+    updateTaskLocal(taskId, {
+      ...updates,
+      notes: isMarkdownEmpty(updatedTask.notes) ? undefined : updatedTask.notes,
+    });
 
     try {
-      await tasksApi.update(taskId, {
-        title: updatedTask.title?.trim() ?? "",
-        dueDate: updatedTask.dueDate ? `${updatedTask.dueDate}T00:00:00` : undefined,
-        isCompleted: updatedTask.isCompleted ?? false,
-        notes: (updatedTask as any).notes?.trim() || undefined,
-        parentTaskId: (updatedTask as any).parentTaskId?.trim() || undefined,
-      });
+      await tasksApi.update(taskId, toTaskPayload(updatedTask));
       if (updates.notes !== undefined) {
         toast.success("Observação da tarefa atualizada");
       }

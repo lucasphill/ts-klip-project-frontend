@@ -352,9 +352,9 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
 
       <aside
         className={`
-          flex h-full flex-col border-r border-[var(--border-subtle)] bg-[var(--bg-panel)]
+          flex h-full flex-col border-r border-[var(--border-subtle)] bg-[var(--bg-panel)] overflow-hidden
           fixed inset-y-0 left-0 z-40 md:relative md:z-20 [@media(max-height:600px)]:fixed [@media(max-height:600px)]:z-40
-          ${isExpanded ? "w-[17rem]" : "w-[3.5rem]"}
+          w-[17rem] max-w-[85vw] ${isDesktopExpanded ? "md:w-[17rem]" : "md:w-[3.5rem]"}
           ${isMobileOpen ? "translate-x-0 mobile-sheet-enter" : "-translate-x-full md:translate-x-0 [@media(max-height:600px)]:md:-translate-x-full"}
           transition-all duration-200
         `}

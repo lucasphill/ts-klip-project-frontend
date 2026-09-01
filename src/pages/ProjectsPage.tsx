@@ -10,6 +10,7 @@ import { useTasksContext } from '../contexts/TasksContext';
 import { useCustomFieldDefinitionsContext } from '../contexts/CustomFieldDefinitionsContext';
 import { buildParentTaskOptions, getDescendantTaskIds } from '../lib/taskHierarchy';
 import { normalizeTask as normalizeApiTask, toTaskPayload } from '../lib/taskPayload';
+import { isMarkdownEmpty } from '../lib/markdown';
 import { DeleteTaskModal } from '../components/DeleteTaskModal';
 import { DeleteCompletedTasksModal } from '../components/DeleteCompletedTasksModal';
 import type { DeleteTaskTarget } from '../types/taskDeletion';
@@ -184,7 +185,13 @@ const ProjectsPage = () => {
     const existingTask = tasks.find((task) => task.id === taskId);
     if (!existingTask) return;
 
-    const updatedTask = { ...existingTask, ...updates };
+    const updatedTask = {
+      ...existingTask,
+      ...updates,
+      notes: isMarkdownEmpty(updates.notes !== undefined ? updates.notes : existingTask.notes)
+        ? undefined
+        : (updates.notes !== undefined ? updates.notes : existingTask.notes),
+    };
 
     setTasks((previousTasks) =>
       previousTasks.map((task) => (task.id === taskId ? updatedTask : task))
@@ -469,7 +476,7 @@ const ProjectsPage = () => {
           title: task.title,
           dueDate: task.dueDate ? task.dueDate.split('T')[0] : undefined,
           isCompleted: task.isCompleted,
-          notes: task.notes,
+          notes: isMarkdownEmpty(task.notes) ? undefined : (task.notes ?? undefined),
           parentTaskId: task.parentTaskId,
         });
         void fetchTasks({ force: true }).catch(() => undefined);
