@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
+import listPlugin from "@fullcalendar/list";
+import interactionPlugin from "@fullcalendar/interaction";
 import ptBrLocale from "@fullcalendar/core/locales/pt-br";
-import type { DatesSetArg, DayCellMountArg, EventClickArg, EventMountArg } from "@fullcalendar/core";
+import type { DatesSetArg, DayCellMountArg, EventClickArg, EventDropArg, EventMountArg } from "@fullcalendar/core";
 import { toast } from "sonner";
 import AddTaskModal from "../components/AddTaskModal";
 import TaskTable from "../components/TaskTable";
@@ -18,6 +20,7 @@ import { isMarkdownEmpty } from "../lib/markdown";
 import type { CreateTaskDto, CustomFieldValue, GetProjectsDto, GetTasksDto } from "../types/apiTypes";
 import { errorMessage } from "../services/gatewayError";
 import { isTaskOverdue } from "../lib/taskUtils";
+import { NARROW_SCREEN_QUERY, useMediaQuery } from "../hooks/useMediaQuery";
 
 const toDateString = (date: Date): string => {
   const year = date.getFullYear();
@@ -26,10 +29,14 @@ const toDateString = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
+const COMPLETED_EVENT_COLOR = "#9ca3af";
+
 const MonthViewPage = () => {
   const { tasks, fetchTasks, appendTask, updateTaskLocal, removeTasksLocal } = useTasksContext();
   const { projects, fetchProjects } = useProjectsContext();
   const [projectTasks, setProjectTasks] = useState<{ project_id: string; task_id: string }[]>([]);
+  // No celular a grade semanal corta os títulos; usamos a agenda (lista por dia).
+  const isNarrowScreen = useMediaQuery(NARROW_SCREEN_QUERY);
   const [showEditTaskModal, setShowEditTaskModal] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<(CreateTaskDto & { id?: string }) | null>(null);
   const [taskProjectIds, setTaskProjectIds] = useState<string[]>([]);
@@ -100,7 +107,12 @@ const MonthViewPage = () => {
           date: task.dueDate,
           allDay: true,
           // A cor do projeto vai nas propriedades do evento para acompanhar atualizações.
-          ...(projectColor ? { backgroundColor: projectColor, borderColor: projectColor } : {}),
+          // Concluídas ficam cinza (também no marcador da agenda).
+          ...(projectColor
+            ? { backgroundColor: projectColor, borderColor: projectColor }
+            : isCompleted
+              ? { backgroundColor: COMPLETED_EVENT_COLOR, borderColor: COMPLETED_EVENT_COLOR }
+              : {}),
           extendedProps: {
             isCompleted,
             isOverdue: isTaskOverdue(task.dueDate, task.isCompleted),
@@ -165,6 +177,21 @@ const MonthViewPage = () => {
       if (target.closest(".fc-event") || target.closest(".fc-daygrid-more-link")) return;
       openCreateTaskModal(toDateString(arg.date));
     };
+  };
+
+  // Arrastar um evento para outro dia muda o prazo da tarefa.
+  const handleEventDrop = (arg: EventDropArg) => {
+    const newStart = arg.event.start;
+    if (!newStart) {
+      arg.revert();
+      return;
+    }
+    const nextDueDate = toDateString(newStart);
+    void persistTaskUpdate(arg.event.id, { dueDate: nextDueDate })
+      .then(() => {
+        toast.success(`Prazo movido para ${newStart.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}`);
+      })
+      .catch(() => arg.revert());
   };
 
   const handleDatesSet = (arg: DatesSetArg) => {
@@ -438,16 +465,23 @@ const MonthViewPage = () => {
           <div className="px-0 sm:px-6 mt-4 sm:mt-6 [@media(max-height:600px)]:mt-2 [@media(max-height:600px)]:px-0">
             <div className="w-full bg-[var(--bg-panel)] border-x-0 border-y border-[var(--border-subtle)] rounded-none shadow-none p-1.5 sm:border sm:rounded-2xl sm:shadow-[var(--panel-shadow)] sm:p-4 [@media(max-height:600px)]:border-x-0 [@media(max-height:600px)]:border-y [@media(max-height:600px)]:border-[var(--border-subtle)] [@media(max-height:600px)]:rounded-none [@media(max-height:600px)]:shadow-none [@media(max-height:600px)]:p-1.5">
               <FullCalendar
-                plugins={[dayGridPlugin]}
+                // Remonta ao trocar de celular para desktop, já que initialView só vale na montagem.
+                key={isNarrowScreen ? "narrow" : "wide"}
+                plugins={[dayGridPlugin, listPlugin, interactionPlugin]}
                 locale={ptBrLocale}
-                initialView="dayGridWeek"
+                initialView={isNarrowScreen ? "listWeek" : "dayGridWeek"}
                 headerToolbar={{
                   left: "prev,next today",
                   center: "title",
-                  right: "dayGridWeek dayGridMonth",
+                  right: isNarrowScreen ? "listWeek dayGridMonth" : "dayGridWeek dayGridMonth",
                 }}
-                buttonText={{ today: "Hoje" }}
+                buttonText={{ today: "Hoje", listWeek: "Agenda" }}
+                noEventsText="Nenhuma tarefa com prazo neste período."
                 events={calendarEvents}
+                editable
+                eventStartEditable
+                eventDurationEditable={false}
+                eventDrop={handleEventDrop}
                 eventClick={handleEventClick}
                 dayCellDidMount={handleDayCellDidMount}
                 datesSet={handleDatesSet}
@@ -456,6 +490,10 @@ const MonthViewPage = () => {
                 eventDidMount={handleEventDidMount}
                 eventClassNames={(arg) => {
                   const { isCompleted, isOverdue, hasProjectColor } = arg.event.extendedProps;
+                  // Na agenda (lista) a cor do projeto aparece no marcador; só sinalizamos o estado.
+                  if (arg.view.type.startsWith("list")) {
+                    return ["klip-fc-list-event", ...(isCompleted ? ["is-completed"] : []), ...(isOverdue ? ["is-overdue"] : [])];
+                  }
                   if (isCompleted) return ["klip-fc-event", "is-completed"];
                   return [
                     "klip-fc-event",
@@ -476,8 +514,8 @@ const MonthViewPage = () => {
             <div className="px-4 sm:px-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h2 className="text-base font-semibold text-slate-900">Tarefas do período</h2>
-                  <p className="text-sm text-slate-500">{visibleRange.title}</p>
+                  <h2 className="text-base font-semibold text-[var(--text-primary)]">Tarefas do período</h2>
+                  <p className="text-sm text-[var(--text-muted)]">{visibleRange.title}</p>
                 </div>
               </div>
             </div>
