@@ -49,7 +49,7 @@ export const DeleteProjectModal: FC<DeleteProjectModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="surface-panel w-[min(100%-1.5rem,32rem)] gap-5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
+      <DialogContent className="surface-panel sm:max-w-[32rem] gap-5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
         <DialogHeader className="gap-2">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-950/50 dark:text-red-400">
