@@ -19,6 +19,7 @@ import { CustomFieldDefinitionsProvider, useCustomFieldDefinitionsContext } from
 import { useLoading } from './contexts/LoadingContext';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
+import { errorMessage } from "./services/gatewayError";
 
 const BootstrapGate = ({ children }: { children: ReactNode }) => {
   const { isAuthenticated } = useAuth();
@@ -47,7 +48,7 @@ const BootstrapGate = ({ children }: { children: ReactNode }) => {
 
       if (failedResult?.status === 'rejected') {
         const error = failedResult.reason as any;
-        toast.error(error?.message ?? 'Erro ao carregar dados iniciais');
+        toast.error(errorMessage(error, 'Erro ao carregar dados iniciais'));
       }
 
       if (isMounted) {

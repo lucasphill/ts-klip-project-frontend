@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import IntegrationsManager from "../components/IntegrationsManager";
 import GoogleCalendarIntegration from "../components/GoogleCalendarIntegration";
 import { googleCalendarApi } from "../services/api";
+import { errorMessage } from "../services/gatewayError";
 
 const SettingsIntegrationsPage: FC = () => {
   const [searchParams] = useSearchParams();
@@ -30,8 +31,7 @@ const SettingsIntegrationsPage: FC = () => {
           await googleCalendarApi.handleCallback({ code, state });
           toast.success('Google Calendar conectado com sucesso!');
         } catch (err: unknown) {
-          const errorMsg = (err as { message?: string })?.message ?? 'Erro ao finalizar integração com Google Calendar';
-          toast.error(errorMsg);
+          toast.error(errorMessage(err, 'Erro ao finalizar integração com Google Calendar'));
         } finally {
           navigate('/settings/integrations', { replace: true });
         }

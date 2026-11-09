@@ -33,6 +33,7 @@ import {
   getCustomFieldValueByDefinition,
   normalizeCustomFieldDefinition,
 } from '../lib/customFields';
+import { errorMessage } from "../services/gatewayError";
 
 type ProjectTask = GetTasksDto & {
   customFields?: Record<string, CustomFieldValue>;
@@ -171,7 +172,7 @@ const ProjectsPage = () => {
       setTasks(projectTasks);
       setCustomFields((projectFieldsResponse.data ?? []).map(normalizeCustomFieldDefinition));
     } catch (error: any) {
-      toast.error(error?.message ?? 'Erro ao carregar o projeto');
+      toast.error(errorMessage(error, 'Erro ao carregar o projeto'));
     } finally {
       setIsLoading(false);
     }
@@ -204,7 +205,7 @@ const ProjectsPage = () => {
       }
       await refreshProjectData();
     } catch (error: any) {
-      toast.error(error?.message ?? 'Erro ao atualizar tarefa');
+      toast.error(errorMessage(error, 'Erro ao atualizar tarefa'));
       await refreshProjectData();
       throw error;
     }
@@ -327,7 +328,7 @@ const ProjectsPage = () => {
       try {
         await request;
       } catch (error: any) {
-        toast.error(error?.message ?? 'Erro ao salvar campo personalizado');
+        toast.error(errorMessage(error, 'Erro ao salvar campo personalizado'));
         setTasks((previousTasks) =>
           previousTasks.map((currentTask) =>
             currentTask.id === taskId
@@ -418,7 +419,7 @@ const ProjectsPage = () => {
       void fetchTasks({ force: true }).catch(() => undefined);
       await refreshProjectData().catch(() => undefined);
     } catch (error: any) {
-      toast.error(error?.message ?? 'Erro ao excluir tarefa');
+      toast.error(errorMessage(error, 'Erro ao excluir tarefa'));
       throw error;
     }
   };
@@ -449,15 +450,7 @@ const ProjectsPage = () => {
         toast.info('Nenhuma tarefa concluída encontrada para exclusão neste projeto.');
       }
     } catch (error: unknown) {
-      console.error('Failed to delete completed project tasks:', error);
-      let message = 'Não foi possível excluir as tarefas concluídas do projeto.';
-      if (typeof error === 'object' && error !== null && 'response' in error) {
-        const res = (error as { response?: { data?: { message?: string } } }).response;
-        if (res?.data?.message) {
-          message = res.data.message;
-        }
-      }
-      toast.error(message);
+      toast.error(errorMessage(error, 'Não foi possível excluir as tarefas concluídas do projeto.'));
       throw error;
     }
   };
@@ -496,7 +489,7 @@ const ProjectsPage = () => {
       }
     } catch (error: any) {
       await refreshProjectData().catch(() => undefined);
-      toast.error(error?.message ?? 'Erro ao salvar tarefa');
+      toast.error(errorMessage(error, 'Erro ao salvar tarefa'));
       throw error;
     }
   };
@@ -531,7 +524,7 @@ const ProjectsPage = () => {
                   await unarchiveProject(currentProject.id);
                   toast.success('Projeto desarquivado com sucesso!');
                 } catch (e: any) {
-                  toast.error(e?.message ?? 'Erro ao desarquivar');
+                  toast.error(errorMessage(e, 'Erro ao desarquivar'));
                 }
               }}
               className="rounded-lg bg-amber-200/80 px-3 py-1 font-semibold text-amber-900 transition-colors hover:bg-amber-300 dark:bg-amber-900/60 dark:text-amber-100"

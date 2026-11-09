@@ -1,4 +1,5 @@
-import axios, { AxiosError } from "axios";
+import axios from "axios";
+import { GatewayError, installGatewayInterceptor } from "./gatewayError";
 import type {
   CreateApiKeyDto,
   CreateCustomFieldDefinitionDto,
@@ -53,7 +54,7 @@ api.interceptors.request.use(async (config) => {
           console.warn('Authentication issue detected. Forcing logout.');
           auth0Client?.logout?.({ logoutParams: { returnTo: window.location.origin } });
         }
-        return Promise.reject(error);
+        return Promise.reject(new GatewayError({ status: null, isAuthFailure: true, serverMessage: errorMessage, cause: error }));
       }
     }
     return config;
@@ -61,28 +62,13 @@ api.interceptors.request.use(async (config) => {
   (error) => Promise.reject(error)
 );
 
-// Se a resposta for 401 mostra no console o erro e faz logout do usuário
-api.interceptors.response.use(
-  (response) => {
-    if (response.data.status === false) {
-      console.error('API returned false response:', response);
-      throw new Error("API returned false");
-    }
-    return response
+// Toda falha (HTTP com erro, `status: false` no envelope, rede) vira GatewayError.
+// Em 401 faz logout do usuário.
+installGatewayInterceptor(api, {
+  onAuthFailure: () => {
+    auth0Client?.logout?.({ logoutParams: { returnTo: window.location.origin } });
   },
-  (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      console.error('Authentication error:', error);
-      if (auth0Client) {
-        auth0Client.logout({ logoutParams: { returnTo: window.location.origin } });
-      }
-    }
-    if (error.response && (error.response.status < 200 || error.response.status > 299)) {
-      console.error('API requisition error:', error);
-    }
-    return Promise.reject(error);
-  },
-);
+});
 
 // Public API instance — no auth interceptor.
 // Used for endpoints that don't require authentication (e.g. /health).
@@ -90,6 +76,7 @@ const publicApi = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
 });
+installGatewayInterceptor(publicApi);
 
 export const healthApi = {
   getHealth: async () => {
