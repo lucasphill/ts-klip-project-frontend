@@ -86,16 +86,16 @@ const AddCustomFieldModal: FC<{
                 onChange={(event) => setField({ ...field, type: event.target.value })}
               >
                 <option value="text">Texto</option>
-                <option value="number">Numero</option>
+                <option value="number">Número</option>
                 {/* <option value="date">Data</option>
                 <option value="boolean">Booleano</option> */}
-                <option value="enum">Selecao</option>
+                <option value="enum">Seleção</option>
               </select>
             </div>
 
             <div className="space-y-1.5 md:col-span-1">
               <label className="text-sm font-semibold text-slate-700">
-                {field.type === "enum" ? "Opcoes" : "Opcional"}
+                {field.type === "enum" ? "Opções" : "Opcional"}
               </label>
               {field.type === "enum" ? (
                 <input
@@ -106,7 +106,7 @@ const AddCustomFieldModal: FC<{
                   onChange={(event) => setField({ ...field, optionsString: event.target.value })}
                 />
               ) : (
-                <div className="field flex h-11 items-center px-3 text-sm text-slate-400">Sem opcoes para este tipo</div>
+                <div className="field flex h-11 items-center px-3 text-sm text-slate-400">Sem opções para este tipo</div>
               )}
             </div>
           </div>

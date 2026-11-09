@@ -35,3 +35,47 @@ export const isTaskOverdue = (dueDate?: string | null, isCompleted?: boolean): b
   const today = getTodayDateString();
   return normalizedDueDate < today;
 };
+
+const shiftDateString = (dateString: string, days: number): string => {
+  const [year, month, day] = dateString.split("-").map(Number);
+  const date = new Date(year, month - 1, day + days);
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
+export type DueDateStatus = "none" | "overdue" | "today" | "tomorrow" | "upcoming";
+
+/**
+ * Classifica o prazo de uma tarefa em relação a hoje (fuso local).
+ * Tarefas concluídas nunca são consideradas vencidas.
+ */
+export const getDueDateStatus = (
+  dueDate?: string | null,
+  isCompleted?: boolean,
+  today: string = getTodayDateString(),
+): DueDateStatus => {
+  const normalizedDueDate = normalizeDateString(dueDate);
+  if (!normalizedDueDate) return "none";
+  if (normalizedDueDate === today) return "today";
+  if (normalizedDueDate === shiftDateString(today, 1)) return "tomorrow";
+  if (normalizedDueDate < today) return isCompleted ? "upcoming" : "overdue";
+  return "upcoming";
+};
+
+/**
+ * Rótulo relativo curto ("Hoje", "Amanhã", "Ontem") para prazos próximos.
+ * Retorna null quando a data deve ser exibida no formato completo.
+ */
+export const getRelativeDueDateLabel = (
+  dueDate?: string | null,
+  today: string = getTodayDateString(),
+): string | null => {
+  const normalizedDueDate = normalizeDateString(dueDate);
+  if (!normalizedDueDate) return null;
+  if (normalizedDueDate === today) return "Hoje";
+  if (normalizedDueDate === shiftDateString(today, 1)) return "Amanhã";
+  if (normalizedDueDate === shiftDateString(today, -1)) return "Ontem";
+  return null;
+};

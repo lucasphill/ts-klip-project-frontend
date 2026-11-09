@@ -52,7 +52,11 @@ const Layout: FC<{ children: ReactNode }> = ({ children }) => {
           </div>
         </div>
       </div>
-      <BottomNavigation onOpenSidebar={() => setIsMobileSidebarOpen(true)} />
+      <BottomNavigation
+        onOpenSidebar={() => setIsMobileSidebarOpen(true)}
+        isSidebarOpen={isMobileSidebarOpen}
+        onCloseSidebar={() => setIsMobileSidebarOpen(false)}
+      />
     </div>
   );
 };

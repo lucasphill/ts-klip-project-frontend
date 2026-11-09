@@ -176,7 +176,7 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
     if (!selectedProjectId) return;
     const field = projectOnlyFields.find((f) => f.id === fieldId);
     if (!field) {
-      toast.error("Campos universais nao podem ser vinculados a projetos");
+      toast.error("Campos universais não podem ser vinculados a projetos");
       return;
     }
 

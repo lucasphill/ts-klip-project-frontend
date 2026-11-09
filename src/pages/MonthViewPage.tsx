@@ -86,7 +86,7 @@ const MonthViewPage = () => {
         .filter((task) => Boolean(task.dueDate))
         .map((task) => ({
           id: task.id,
-          title: task.title || "Sem titulo",
+          title: task.title || "Sem título",
           date: task.dueDate,
           allDay: true,
           extendedProps: {
@@ -404,8 +404,8 @@ const MonthViewPage = () => {
   return (
     <>
       <TaskViewLayout
-        title="Calendario"
-        description="Visualize suas tarefas no mes e clique nos eventos para editar rapidamente."
+        title="Calendário"
+        description="Visualize suas tarefas no mês e clique nos eventos para editar rapidamente."
       >
         <section className="flex min-h-0 flex-1 flex-col overflow-auto bg-[var(--bg-canvas)] pt-0 sm:pt-0">
           <div className="px-0 sm:px-6 mt-4 sm:mt-6 [@media(max-height:600px)]:mt-2 [@media(max-height:600px)]:px-0">
@@ -444,7 +444,7 @@ const MonthViewPage = () => {
             <div className="px-4 sm:px-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h2 className="text-base font-semibold text-slate-900">Tarefas do periodo</h2>
+                  <h2 className="text-base font-semibold text-slate-900">Tarefas do período</h2>
                   <p className="text-sm text-slate-500">{visibleRange.title}</p>
                 </div>
                 <button

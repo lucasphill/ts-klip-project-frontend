@@ -3,14 +3,17 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 type BottomNavigationProps = {
   onOpenSidebar: () => void;
+  onCloseSidebar?: () => void;
+  isSidebarOpen?: boolean;
 };
 
-const BottomNavigation = ({ onOpenSidebar }: BottomNavigationProps) => {
+const BottomNavigation = ({ onOpenSidebar, onCloseSidebar, isSidebarOpen = false }: BottomNavigationProps) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const activeTab =
-    location.pathname === "/"
+  const activeTab = isSidebarOpen
+    ? "projects"
+    : location.pathname === "/"
       ? "home"
       : location.pathname.startsWith("/calendar") || location.pathname.startsWith("/week")
         ? "calendar"
@@ -21,7 +24,16 @@ const BottomNavigation = ({ onOpenSidebar }: BottomNavigationProps) => {
             : "";
 
   const handleNavigate = (path: string) => {
+    onCloseSidebar?.();
     navigate(path);
+  };
+
+  const handleToggleProjects = () => {
+    if (isSidebarOpen) {
+      onCloseSidebar?.();
+    } else {
+      onOpenSidebar();
+    }
   };
 
   return (
@@ -55,7 +67,8 @@ const BottomNavigation = ({ onOpenSidebar }: BottomNavigationProps) => {
 
         {/* Projetos */}
         <button
-          onClick={onOpenSidebar}
+          onClick={handleToggleProjects}
+          aria-expanded={isSidebarOpen}
           className={`flex flex-col items-center justify-center gap-1 w-16 h-full transition-colors ${
             activeTab === "projects"
               ? "text-[var(--brand)] font-semibold"

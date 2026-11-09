@@ -77,7 +77,7 @@ const HomePage = () => {
     const current = projectIdsOf(taskId);
     if (!projectId || current.includes(projectId)) return;
     void setProjects(taskId, [...current, projectId], {
-      success: "Projeto vinculado a tarefa",
+      success: "Projeto vinculado à tarefa",
       error: "Erro ao vincular projeto",
     });
   };

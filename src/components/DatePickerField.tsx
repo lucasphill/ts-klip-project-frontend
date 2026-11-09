@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar as CalendarIcon, X } from "lucide-react";
@@ -14,6 +15,12 @@ type DatePickerFieldProps = {
   className?: string;
   buttonClassName?: string;
   clearable?: boolean;
+  /** Personaliza o texto exibido para a data selecionada (ex.: "Hoje"). */
+  formatLabel?: (date: Date) => ReactNode;
+  /** Substitui o ícone padrão de calendário no botão. */
+  icon?: ReactNode;
+  /** Texto de ajuda exibido ao passar o mouse e usado como rótulo acessível. */
+  title?: string;
 };
 
 const parseDateValue = (value?: string): Date | undefined => {
@@ -39,6 +46,9 @@ const DatePickerField = ({
   className,
   buttonClassName,
   clearable = true,
+  formatLabel,
+  icon,
+  title,
 }: DatePickerFieldProps) => {
   const selectedDate = parseDateValue(value);
 
@@ -50,11 +60,13 @@ const DatePickerField = ({
             type="button"
             variant="outline"
             disabled={disabled}
+            title={title}
+            aria-label={title}
             className={cn("h-10 min-w-0 flex-1 justify-start gap-2 px-3 text-left font-normal", buttonClassName)}
           >
-            <CalendarIcon className="h-4 w-4 text-slate-400" />
+            {icon ?? <CalendarIcon className="h-4 w-4 text-slate-400" />}
             {selectedDate ? (
-              <span>{format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}</span>
+              <span>{formatLabel ? formatLabel(selectedDate) : format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}</span>
             ) : (
               <span className="text-slate-400">{placeholder}</span>
             )}
