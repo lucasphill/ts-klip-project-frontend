@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import ptBrLocale from "@fullcalendar/core/locales/pt-br";
-import type { DatesSetArg, DayCellMountArg, EventClickArg } from "@fullcalendar/core";
-import { Plus } from "lucide-react";
+import type { DatesSetArg, DayCellMountArg, EventClickArg, EventMountArg } from "@fullcalendar/core";
 import { toast } from "sonner";
 import AddTaskModal from "../components/AddTaskModal";
 import TaskTable from "../components/TaskTable";
@@ -18,6 +17,7 @@ import { toTaskPayload } from "../lib/taskPayload";
 import { isMarkdownEmpty } from "../lib/markdown";
 import type { CreateTaskDto, CustomFieldValue, GetProjectsDto, GetTasksDto } from "../types/apiTypes";
 import { errorMessage } from "../services/gatewayError";
+import { isTaskOverdue } from "../lib/taskUtils";
 
 const toDateString = (date: Date): string => {
   const year = date.getFullYear();
@@ -80,21 +80,41 @@ const MonthViewPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const calendarEvents = useMemo(
-    () =>
-      tasks
-        .filter((task) => Boolean(task.dueDate))
-        .map((task) => ({
+  const calendarEvents = useMemo(() => {
+    const projectColorById = new Map(projects.map((project) => [project.id, project.color]));
+    const firstProjectColor = (taskId: string) => {
+      const assignment = projectTasks.find((projectTask) => projectTask.task_id === taskId);
+      const color = assignment ? projectColorById.get(assignment.project_id) : undefined;
+      // Cores no formato de classe Tailwind (bg-*) não servem como valor CSS.
+      return color && !color.startsWith("bg-") ? color : undefined;
+    };
+
+    return tasks
+      .filter((task) => Boolean(task.dueDate))
+      .map((task) => {
+        const isCompleted = task.isCompleted ?? false;
+        const projectColor = isCompleted ? undefined : firstProjectColor(task.id);
+        return {
           id: task.id,
           title: task.title || "Sem título",
           date: task.dueDate,
           allDay: true,
+          // A cor do projeto vai nas propriedades do evento para acompanhar atualizações.
+          ...(projectColor ? { backgroundColor: projectColor, borderColor: projectColor } : {}),
           extendedProps: {
-            isCompleted: task.isCompleted ?? false,
+            isCompleted,
+            isOverdue: isTaskOverdue(task.dueDate, task.isCompleted),
+            hasProjectColor: Boolean(projectColor),
           },
-        })),
-    [tasks]
-  );
+        };
+      });
+  }, [tasks, projects, projectTasks]);
+
+  const handleEventDidMount = (arg: EventMountArg) => {
+    const { isOverdue } = arg.event.extendedProps as { isOverdue?: boolean };
+    // Títulos longos ficam cortados no calendário: mostramos o texto completo ao passar o mouse.
+    arg.el.title = isOverdue ? `${arg.event.title} (prazo vencido)` : arg.event.title;
+  };
 
   const monthTasks = useMemo(
     () =>
@@ -114,9 +134,9 @@ const MonthViewPage = () => {
     setShowEditTaskModal(true);
   };
 
-  const openCreateTaskModal = (dueDate?: string) => {
+  const openCreateTaskModal = (dueDate?: string, initialTitle = "") => {
     openTaskModal({
-      title: "",
+      title: initialTitle,
       isCompleted: false,
       dueDate,
       notes: "",
@@ -202,9 +222,16 @@ const MonthViewPage = () => {
     })();
   };
 
-  const addTask = () => {
-    openCreateTaskModal(toDateString(new Date()));
+  const addTask = (initialTitle = "") => {
+    openCreateTaskModal(toDateString(new Date()), initialTitle);
   };
+
+  // Na adição rápida do calendário, a tarefa nasce com prazo para hoje para aparecer no período.
+  const quickAddTask = (title: string) =>
+    handleSaveTask(
+      { title, isCompleted: false, dueDate: toDateString(new Date()), notes: "", parentTaskId: "" },
+      []
+    );
 
   const updateTaskTitle = (taskId: string, title: string) => {
     void persistTaskUpdate(taskId, { title });
@@ -426,11 +453,16 @@ const MonthViewPage = () => {
                 datesSet={handleDatesSet}
                 fixedWeekCount={false}
                 height="auto"
-                eventClassNames={(arg) =>
-                  arg.event.extendedProps.isCompleted
-                    ? ["klip-fc-event", "is-completed"]
-                    : ["klip-fc-event", "is-pending"]
-                }
+                eventDidMount={handleEventDidMount}
+                eventClassNames={(arg) => {
+                  const { isCompleted, isOverdue, hasProjectColor } = arg.event.extendedProps;
+                  if (isCompleted) return ["klip-fc-event", "is-completed"];
+                  return [
+                    "klip-fc-event",
+                    hasProjectColor ? "is-project-colored" : "is-pending",
+                    ...(isOverdue ? ["is-overdue"] : []),
+                  ];
+                }}
                 eventTimeFormat={{
                   hour: "2-digit",
                   minute: "2-digit",
@@ -447,13 +479,6 @@ const MonthViewPage = () => {
                   <h2 className="text-base font-semibold text-slate-900">Tarefas do período</h2>
                   <p className="text-sm text-slate-500">{visibleRange.title}</p>
                 </div>
-                <button
-                  onClick={addTask}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#2f6fb2] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#225587]"
-                >
-                  <Plus className="h-4 w-4" />
-                  Nova tarefa
-                </button>
               </div>
             </div>
 
@@ -467,6 +492,7 @@ const MonthViewPage = () => {
                 updateCustomValue={updateCustomValue}
                 toggleTaskCompletion={toggleTaskCompletion}
                 addTask={addTask}
+                onQuickAdd={quickAddTask}
                 getTaskProjects={getTaskProjects}
                 addProjectToTask={addProjectToTask}
                 removeProjectFromTask={removeProjectFromTask}
