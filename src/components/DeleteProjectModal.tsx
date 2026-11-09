@@ -132,7 +132,7 @@ export const DeleteProjectModal: FC<DeleteProjectModalProps> = ({
           </button>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-2">
+        <DialogFooter className="-mx-5 -mb-5 gap-2 rounded-b-2xl px-5 sm:gap-2">
           <Button
             type="button"
             variant="outline"
