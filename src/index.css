@@ -115,9 +115,6 @@ body {
   background: var(--bg-canvas);
 }
 
-a {
-  color: inherit;
-}
 
 button,
 input,
@@ -501,6 +498,10 @@ textarea {
 }
 
 @layer base {
+  /* Em camada base para que utilitários como text-white possam sobrescrever. */
+  a {
+    color: inherit;
+  }
   * {
     @apply border-border outline-ring/50;
   }

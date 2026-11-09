@@ -147,10 +147,10 @@ const AddTaskModal: FC<AddTaskModalProps> = ({
         <form onSubmit={handleSubmit} className="flex h-full flex-col">
           <SheetHeader className="border-b border-slate-200 px-5 py-4 sm:px-6">
             <SheetTitle className="text-xl font-bold text-slate-900">
-              {task ? "Editar tarefa" : "Nova tarefa"}
+              {task?.id ? "Editar tarefa" : "Nova tarefa"}
             </SheetTitle>
             <SheetDescription className="mt-1 flex items-center gap-2 text-sm text-slate-500">
-              <span>Defina titulo, prazo e contexto para organizar o trabalho.</span>
+              <span>Defina título, prazo e contexto para organizar o trabalho.</span>
               <HoverCard openDelay={150}>
                 <HoverCardTrigger asChild>
                   <button
@@ -170,7 +170,7 @@ const AddTaskModal: FC<AddTaskModalProps> = ({
 
           <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5 sm:px-6">
             <div className="space-y-1.5">
-              <Label className="text-sm font-semibold text-slate-700">Titulo da tarefa *</Label>
+              <Label className="text-sm font-semibold text-slate-700">Título da tarefa *</Label>
               <Input
                 type="text"
                 value={formData.title}
@@ -239,13 +239,13 @@ const AddTaskModal: FC<AddTaskModalProps> = ({
               </Select>
 
               {parentTaskOptions.length === 0 ? (
-                <p className="text-xs text-slate-500">Nenhuma tarefa disponivel para ser usada como pai nesta visualizacao.</p>
+                <p className="text-xs text-slate-500">Nenhuma tarefa disponível para ser usada como pai nesta visualização.</p>
               ) : selectedParentTask ? (
                 <p className="text-xs text-sky-700">
-                  Esta tarefa sera criada como subtarefa de <span className="font-semibold">{selectedParentTask.title}</span>.
+                  Esta tarefa será criada como subtarefa de <span className="font-semibold">{selectedParentTask.title}</span>.
                 </p>
               ) : (
-                <p className="text-xs text-slate-500">Deixe vazio para manter esta tarefa no nivel principal.</p>
+                <p className="text-xs text-slate-500">Deixe vazio para manter esta tarefa no nível principal.</p>
               )}
             </div>
 
@@ -256,14 +256,14 @@ const AddTaskModal: FC<AddTaskModalProps> = ({
                   <HoverCardTrigger asChild>
                     <button
                       type="button"
-                      aria-label="Ajuda sobre selecao de projetos"
+                      aria-label="Ajuda sobre seleção de projetos"
                       className="inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
                     >
                       <CircleHelp className="h-4 w-4" />
                     </button>
                   </HoverCardTrigger>
                   <HoverCardContent className="w-72">
-                    Voce pode vincular a tarefa a varios projetos. Esse campo pode ficar vazio se preferir.
+                    Você pode vincular a tarefa a vários projetos. Esse campo pode ficar vazio se preferir.
                   </HoverCardContent>
                 </HoverCard>
               </div>
@@ -282,7 +282,7 @@ const AddTaskModal: FC<AddTaskModalProps> = ({
                 >
                   <Plus className="h-3.5 w-3.5 text-slate-500" />
                   <span className="sr-only">
-                    {availableProjects.length > 0 ? "Adicionar projeto" : "Todos os projetos ja selecionados"}
+                    {availableProjects.length > 0 ? "Adicionar projeto" : "Todos os projetos já selecionados"}
                   </span>
                   <SelectValue className="hidden" />
                 </SelectTrigger>
@@ -325,7 +325,7 @@ const AddTaskModal: FC<AddTaskModalProps> = ({
                 onCheckedChange={(checked) => setFormData({ ...formData, isCompleted: checked === true })}
                 className="border-slate-300 data-checked:border-[#2f6fb2] data-checked:bg-[#2f6fb2]"
               />
-              <span className="text-sm font-medium text-slate-700">Marcar como concluida</span>
+              <span className="text-sm font-medium text-slate-700">Marcar como concluída</span>
             </label>
 
             <div className="space-y-1.5">
