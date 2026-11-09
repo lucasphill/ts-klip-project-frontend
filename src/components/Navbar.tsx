@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import { LogOut, Menu, Moon, Settings, Sun } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { LogOut, Menu, Moon, Sun } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
 
@@ -8,7 +8,6 @@ const Navbar = ({ onOpenSidebar }: { onOpenSidebar: () => void }) => {
   const { logout, user } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const location = useLocation();
-  const navigate = useNavigate();
 
   const currentViewLabel =
     location.pathname === "/"
@@ -53,15 +52,6 @@ const Navbar = ({ onOpenSidebar }: { onOpenSidebar: () => void }) => {
             <p className="max-w-[180px] truncate text-xs text-[var(--text-muted)]">{user?.email}</p>
           )}
         </div>
-
-        <button
-          onClick={() => navigate("/settings/profile")}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-soft)] hover:text-[var(--text-primary)]"
-          aria-label="Configurações"
-          title="Configurações"
-        >
-          <Settings className="h-4 w-4" />
-        </button>
 
         <button
           onClick={toggleTheme}

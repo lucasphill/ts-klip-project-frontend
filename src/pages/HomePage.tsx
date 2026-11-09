@@ -98,9 +98,12 @@ const HomePage = () => {
     setShowEditTaskModal(true);
   };
 
-  const addTask = () => {
-    openTaskModal({ title: "", isCompleted: false, dueDate: "", notes: "", parentTaskId: "" });
+  const addTask = (initialTitle = "") => {
+    openTaskModal({ title: initialTitle, isCompleted: false, dueDate: "", notes: "", parentTaskId: "" });
   };
+
+  const quickAddTask = (title: string) =>
+    handleSaveTask({ title, isCompleted: false, dueDate: "", notes: "", parentTaskId: "" }, []);
 
   const handleEditTask = (task: TaskTableTask) => {
     openTaskModal(task, projectIdsOf(task.id));
@@ -151,8 +154,8 @@ const HomePage = () => {
 
   return (
     <TaskViewLayout
-      title="Todas as tarefas"
-      description="Visualize e gerencie todas as suas tarefas aqui."
+      title="Inbox"
+      description="Todas as suas tarefas em um só lugar."
     >
       <TaskTable
         visibleTasks={tableTasks}
@@ -162,6 +165,7 @@ const HomePage = () => {
         updateCustomValue={updateCustomValue}
         toggleTaskCompletion={(taskId) => void toggle(taskId)}
         addTask={addTask}
+        onQuickAdd={quickAddTask}
         projects={projects}
         getTaskProjects={getTaskProjects}
         addProjectToTask={addProjectToTask}
