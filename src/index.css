@@ -401,6 +401,56 @@ body {
   border: 1px solid #52525b !important;
 }
 
+/* Agenda (visão em lista do calendário, usada no celular) */
+.fc .fc-list {
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.fc .fc-list-day-cushion {
+  background: var(--bg-soft) !important;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+/* "domingo" → "Domingo" (sem capitalizar cada palavra da data). */
+.fc .fc-list-day-cushion a {
+  display: inline-block;
+}
+
+.fc .fc-list-day-cushion a::first-letter {
+  text-transform: uppercase;
+}
+
+.fc .klip-fc-list-event {
+  cursor: pointer;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+.fc .klip-fc-list-event .fc-list-event-time {
+  display: none;
+}
+
+.fc .klip-fc-list-event.is-overdue .fc-list-event-title {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+:root.dark .fc .klip-fc-list-event.is-overdue .fc-list-event-title {
+  color: #f87171;
+}
+
+.fc .klip-fc-list-event.is-completed .fc-list-event-title {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.fc .fc-list-empty {
+  background: var(--bg-panel) !important;
+  color: var(--text-muted);
+}
+
 @media (max-width: 768px) {
   .fc .fc-daygrid-day-events {
     margin-left: 3px;

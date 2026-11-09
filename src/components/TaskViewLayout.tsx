@@ -33,14 +33,14 @@ const TaskViewLayout: FC<TaskViewLayoutProps & { children: ReactNode }> = ({
 
   return (
     <>
-      <header className="border-b border-slate-200 bg-white/90 px-4 py-2.5 backdrop-blur md:py-4 sm:px-6 [@media(max-height:600px)]:hidden">
+      <header className="border-b border-[var(--border-subtle)] bg-[var(--bg-panel)]/90 px-4 py-2.5 backdrop-blur md:py-4 sm:px-6 [@media(max-height:600px)]:hidden">
         <div className="flex flex-row items-center justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="flex items-center gap-3 text-xl md:text-2xl font-bold tracking-tight text-slate-900">
+            <h1 className="flex items-center gap-3 text-xl md:text-2xl font-bold tracking-tight text-[var(--text-primary)]">
               <span className="truncate">{title || "Todas as tarefas"}</span>
               {colorDot && <span className={`h-3 w-3 shrink-0 rounded-full ${colorDot.className}`} style={colorDot.style} />}
             </h1>
-            <p className="mt-1 text-sm text-slate-500 hidden sm:block">{description}</p>
+            <p className="mt-1 text-sm text-[var(--text-muted)] hidden sm:block">{description}</p>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">

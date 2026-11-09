@@ -52,7 +52,7 @@ const ScopeBadge: FC<{ isUniversal?: boolean }> = ({ isUniversal }) => (
     className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
       isUniversal
         ? "bg-sky-50 text-sky-700 ring-1 ring-sky-100"
-        : "bg-slate-100 text-slate-600 ring-1 ring-slate-200"
+        : "bg-[var(--bg-soft-strong)] text-[var(--text-secondary)] ring-1 ring-slate-200"
     }`}
   >
     {isUniversal ? "Universal" : "Projeto"}

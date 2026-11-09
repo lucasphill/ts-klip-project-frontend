@@ -161,12 +161,12 @@ const AuthenticatedApp = () => {
           path="*"
           element={
             <div className="flex min-h-screen items-center justify-center px-4">
-              <div className="surface-panel max-w-md rounded-2xl bg-white p-8 text-center">
-                <h1 className="text-5xl font-bold text-slate-900">404</h1>
-                <p className="mt-2 text-sm text-slate-500">Página não encontrada.</p>
+              <div className="surface-panel max-w-md rounded-2xl bg-[var(--bg-panel)] p-8 text-center">
+                <h1 className="text-5xl font-bold text-[var(--text-primary)]">404</h1>
+                <p className="mt-2 text-sm text-[var(--text-muted)]">Página não encontrada.</p>
                 <a
                   href="/"
-                  className="mt-5 inline-flex items-center justify-center rounded-xl bg-[#2f6fb2] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#225587]"
+                  className="mt-5 inline-flex items-center justify-center rounded-xl bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-strong)]"
                 >
                   Voltar para a home
                 </a>

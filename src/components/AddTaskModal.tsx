@@ -142,21 +142,21 @@ const AddTaskModal: FC<AddTaskModalProps> = ({
       <SheetContent
         side="right"
         showCloseButton={!isSubmitting && !isDeleting}
-        className="h-full w-full max-w-none rounded-none border-l border-slate-200 bg-white p-0 sm:max-w-2xl"
+        className="h-full w-full max-w-none rounded-none border-l border-[var(--border-subtle)] bg-[var(--bg-panel)] p-0 sm:max-w-2xl"
       >
         <form onSubmit={handleSubmit} className="flex h-full flex-col">
-          <SheetHeader className="border-b border-slate-200 px-5 py-4 sm:px-6">
-            <SheetTitle className="text-xl font-bold text-slate-900">
+          <SheetHeader className="border-b border-[var(--border-subtle)] px-5 py-4 sm:px-6">
+            <SheetTitle className="text-xl font-bold text-[var(--text-primary)]">
               {task?.id ? "Editar tarefa" : "Nova tarefa"}
             </SheetTitle>
-            <SheetDescription className="mt-1 flex items-center gap-2 text-sm text-slate-500">
+            <SheetDescription className="mt-1 flex items-center gap-2 text-sm text-[var(--text-muted)]">
               <span>Defina título, prazo e contexto para organizar o trabalho.</span>
               <HoverCard openDelay={150}>
                 <HoverCardTrigger asChild>
                   <button
                     type="button"
                     aria-label="Ajuda sobre preenchimento da tarefa"
-                    className="inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                    className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[var(--text-faint)] transition-colors hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-secondary)]"
                   >
                     <CircleHelp className="h-4 w-4" />
                   </button>
@@ -170,7 +170,7 @@ const AddTaskModal: FC<AddTaskModalProps> = ({
 
           <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5 sm:px-6">
             <div className="space-y-1.5">
-              <Label className="text-sm font-semibold text-slate-700">Título da tarefa *</Label>
+              <Label className="text-sm font-semibold text-[var(--text-secondary)]">Título da tarefa *</Label>
               <Input
                 type="text"
                 value={formData.title}
@@ -183,25 +183,25 @@ const AddTaskModal: FC<AddTaskModalProps> = ({
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-sm font-semibold text-slate-700">Prazo</Label>
+              <Label className="text-sm font-semibold text-[var(--text-secondary)]">Prazo</Label>
               <DatePickerField
                 value={formData.dueDate ?? ""}
                 onChange={(nextDate) => setFormData({ ...formData, dueDate: nextDate })}
                 className="w-full"
-                buttonClassName="field h-11 bg-white text-sm"
+                buttonClassName="field h-11 bg-[var(--bg-panel)] text-sm"
                 placeholder="Selecione o prazo"
               />
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Label className="text-sm font-semibold text-slate-700">Tarefa pai</Label>
+                <Label className="text-sm font-semibold text-[var(--text-secondary)]">Tarefa pai</Label>
                 <HoverCard openDelay={150}>
                   <HoverCardTrigger asChild>
                     <button
                       type="button"
                       aria-label="Ajuda sobre subtarefas"
-                      className="inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                      className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[var(--text-faint)] transition-colors hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-secondary)]"
                     >
                       <CircleHelp className="h-4 w-4" />
                     </button>
@@ -222,7 +222,7 @@ const AddTaskModal: FC<AddTaskModalProps> = ({
                 }
               >
                 <SelectTrigger
-                  className="field h-11 bg-white text-sm"
+                  className="field h-11 bg-[var(--bg-panel)] text-sm"
                   disabled={parentTaskOptions.length === 0}
                   aria-label="Selecionar tarefa pai"
                 >
@@ -239,25 +239,25 @@ const AddTaskModal: FC<AddTaskModalProps> = ({
               </Select>
 
               {parentTaskOptions.length === 0 ? (
-                <p className="text-xs text-slate-500">Nenhuma tarefa disponível para ser usada como pai nesta visualização.</p>
+                <p className="text-xs text-[var(--text-muted)]">Nenhuma tarefa disponível para ser usada como pai nesta visualização.</p>
               ) : selectedParentTask ? (
                 <p className="text-xs text-sky-700">
                   Esta tarefa será criada como subtarefa de <span className="font-semibold">{selectedParentTask.title}</span>.
                 </p>
               ) : (
-                <p className="text-xs text-slate-500">Deixe vazio para manter esta tarefa no nível principal.</p>
+                <p className="text-xs text-[var(--text-muted)]">Deixe vazio para manter esta tarefa no nível principal.</p>
               )}
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Label className="text-sm font-semibold text-slate-700">Projetos</Label>
+                <Label className="text-sm font-semibold text-[var(--text-secondary)]">Projetos</Label>
                 <HoverCard openDelay={150}>
                   <HoverCardTrigger asChild>
                     <button
                       type="button"
                       aria-label="Ajuda sobre seleção de projetos"
-                      className="inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                      className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[var(--text-faint)] transition-colors hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-secondary)]"
                     >
                       <CircleHelp className="h-4 w-4" />
                     </button>
@@ -276,11 +276,11 @@ const AddTaskModal: FC<AddTaskModalProps> = ({
                 }}
               >
                 <SelectTrigger
-                  className="h-7 w-8 justify-center border-dashed border-slate-300 bg-white p-0 text-slate-700 [&_svg.pointer-events-none]:hidden"
+                  className="h-7 w-8 justify-center border-dashed border-[var(--border-muted)] bg-[var(--bg-panel)] p-0 text-[var(--text-secondary)] [&_svg.pointer-events-none]:hidden"
                   disabled={availableProjects.length === 0}
                   aria-label="Adicionar projeto"
                 >
-                  <Plus className="h-3.5 w-3.5 text-slate-500" />
+                  <Plus className="h-3.5 w-3.5 text-[var(--text-muted)]" />
                   <span className="sr-only">
                     {availableProjects.length > 0 ? "Adicionar projeto" : "Todos os projetos já selecionados"}
                   </span>
@@ -300,7 +300,7 @@ const AddTaskModal: FC<AddTaskModalProps> = ({
                   {selectedProjects.map((project) => (
                     <span
                       key={project.id}
-                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-700"
+                      className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-soft)] px-2 py-1 text-xs font-medium text-[var(--text-secondary)]"
                     >
                       {project.name}
                       <button
@@ -308,7 +308,7 @@ const AddTaskModal: FC<AddTaskModalProps> = ({
                         onClick={() =>
                           setSelectedProjectIds((previous) => previous.filter((projectId) => projectId !== project.id))
                         }
-                        className="text-slate-400 transition-colors hover:text-rose-600"
+                        className="text-[var(--text-faint)] transition-colors hover:text-rose-600"
                         aria-label={`Remover projeto ${project.name}`}
                       >
                         <X className="h-3 w-3" />
@@ -319,17 +319,17 @@ const AddTaskModal: FC<AddTaskModalProps> = ({
               )}
             </div>
 
-            <label className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+            <label className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-soft)] px-3 py-2">
               <Checkbox
                 checked={formData.isCompleted ?? false}
                 onCheckedChange={(checked) => setFormData({ ...formData, isCompleted: checked === true })}
-                className="border-slate-300 data-checked:border-[#2f6fb2] data-checked:bg-[#2f6fb2]"
+                className="border-[var(--border-muted)] data-checked:border-[var(--brand)] data-checked:bg-[var(--brand)]"
               />
-              <span className="text-sm font-medium text-slate-700">Marcar como concluída</span>
+              <span className="text-sm font-medium text-[var(--text-secondary)]">Marcar como concluída</span>
             </label>
 
             <div className="space-y-1.5">
-              <Label className="text-sm font-semibold text-slate-700">Notas</Label>
+              <Label className="text-sm font-semibold text-[var(--text-secondary)]">Notas</Label>
               <MarkdownEditor
                 key={task?.id || (isOpen ? "new-task-open" : "new-task-closed")}
                 value={formData.notes ?? ""}
@@ -341,7 +341,7 @@ const AddTaskModal: FC<AddTaskModalProps> = ({
             </div>
           </div>
 
-          <SheetFooter className="border-t border-slate-200 bg-white px-5 py-4 sm:px-6">
+          <SheetFooter className="border-t border-[var(--border-subtle)] bg-[var(--bg-panel)] px-5 py-4 sm:px-6">
             {task?.id && onDelete && (
               <Button
                 type="button"
@@ -359,14 +359,14 @@ const AddTaskModal: FC<AddTaskModalProps> = ({
               variant="outline"
               onClick={onClose}
               disabled={isSubmitting || isDeleting}
-              className="border-slate-200 text-slate-700 hover:bg-slate-50"
+              className="border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-soft)]"
             >
               Cancelar
             </Button>
             <Button
               type="submit"
               disabled={isSubmitting || isDeleting}
-              className="bg-[#2f6fb2] text-white hover:bg-[#225587]"
+              className="bg-[var(--brand)] text-white hover:bg-[var(--brand-strong)]"
             >
               {isSubmitting ? "Salvando..." : task?.id ? "Salvar tarefa" : "Criar tarefa"}
             </Button>

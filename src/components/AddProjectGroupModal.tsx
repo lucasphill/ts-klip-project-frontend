@@ -203,7 +203,7 @@ export const AddProjectGroupModal: FC<AddProjectGroupModalProps> = ({
             </div>
           </div>
 
-          <DialogFooter className="border-t border-[var(--border-subtle)] bg-[var(--bg-panel)] px-5 py-3.5 sm:px-6">
+          <DialogFooter className="mx-0 mb-0 rounded-b-2xl border-t border-[var(--border-subtle)] bg-[var(--bg-panel)] px-5 py-3.5 sm:px-6">
             <Button
               type="button"
               variant="outline"

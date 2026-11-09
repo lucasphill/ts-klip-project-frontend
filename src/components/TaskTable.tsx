@@ -13,6 +13,7 @@ import {
   Maximize2,
   Pencil,
   Plus,
+  StickyNote,
   Trash2,
   X,
   XCircle,
@@ -20,6 +21,8 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getOptionTone, OPTION_TONE_CLASSES } from "../lib/optionTone";
+import { NARROW_SCREEN_QUERY, useMediaQuery } from "../hooks/useMediaQuery";
+import { isMarkdownEmpty } from "../lib/markdown";
 import DatePickerField from "./DatePickerField";
 import TaskNotePopover from "./TaskNotePopover";
 import { getDueDateStatus, getRelativeDueDateLabel } from "../lib/taskUtils";
@@ -124,8 +127,6 @@ const INLINE_FIELD_CLASS =
 
 const EMPTY_OPTION_VALUE = "__empty__";
 
-const NARROW_SCREEN_QUERY = "(max-width: 767px)";
-const ALWAYS_VISIBLE_ON_NARROW_SCREEN = new Set(["status", "task"]);
 
 interface CustomFieldInputProps {
   task: TaskTableTask;
@@ -249,7 +250,7 @@ const parseStoredTaskTableState = (rawValue: string | null) => {
 
 const getProjectTagColorProps = (color?: string): { className: string; style?: CSSProperties } => {
   if (!color) {
-    return { className: "border-slate-200 bg-slate-50 text-slate-700" };
+    return { className: "border-[var(--border-subtle)] bg-[var(--bg-soft)] text-[var(--text-secondary)]" };
   }
 
   if (color.startsWith("bg-")) {
@@ -443,7 +444,7 @@ const TaskTable = ({
     if (field.type === "boolean") {
       return (
         <span
-          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${value ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
+          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${value ? "bg-emerald-100 text-emerald-700" : "bg-[var(--bg-soft-strong)] text-[var(--text-muted)]"
             }`}
         >
           {value ? "Sim" : "Não"}
@@ -524,7 +525,7 @@ const TaskTable = ({
             type="checkbox"
             checked={Boolean(fieldValue)}
             onChange={(event) => updateCustomValue(task.id, field.id, event.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-[#2f6fb2]"
+            className="h-4 w-4 rounded border-[var(--border-muted)] text-[var(--brand)]"
           />
           {fieldValue ? "Sim" : "Não"}
         </label>
@@ -571,7 +572,7 @@ const TaskTable = ({
             <div className="flex h-full items-center px-3">
               <button
                 onClick={() => toggleTaskCompletion(task.id)}
-                className="text-slate-400 transition-colors hover:text-emerald-600"
+                className="text-[var(--text-faint)] transition-colors hover:text-emerald-600"
                 aria-label={task.isCompleted ? "Marcar como pendente" : "Marcar como concluída"}
                 title={task.isCompleted ? "Marcar como pendente" : "Marcar como concluída"}
               >
@@ -604,7 +605,7 @@ const TaskTable = ({
                   <button
                     type="button"
                     onClick={info.row.getToggleExpandedHandler()}
-                    className="inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700"
+                    className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[var(--text-faint)] transition-colors hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-secondary)]"
                   >
                     {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                   </button>
@@ -807,7 +808,7 @@ const TaskTable = ({
               {onAddSubtask && (
                 <button
                   onClick={() => onAddSubtask(task)}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-sky-100 hover:text-sky-700"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-sky-100 hover:text-sky-700"
                   title="Adicionar subtarefa"
                 >
                   <Plus className="h-4 w-4" />
@@ -816,7 +817,7 @@ const TaskTable = ({
               {onEditTask && (
                 <button
                   onClick={() => onEditTask(task)}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-200 hover:text-slate-700"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-secondary)]"
                   title="Editar tarefa"
                 >
                   <Pencil className="h-4 w-4" />
@@ -825,7 +826,7 @@ const TaskTable = ({
               {onDeleteTask && (
                 <button
                   onClick={() => onDeleteTask(task.id)}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-rose-100 hover:text-rose-700"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-rose-100 hover:text-rose-700"
                   title="Excluir tarefa"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -877,33 +878,16 @@ const TaskTable = ({
     [sorting]
   );
 
-  // No celular a tabela mostra só status e título; as demais colunas ficariam cortadas.
-  const [isNarrowScreen, setIsNarrowScreen] = useState(
-    () => typeof window !== "undefined" && window.matchMedia(NARROW_SCREEN_QUERY).matches
-  );
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mediaQuery = window.matchMedia(NARROW_SCREEN_QUERY);
-    const handleChange = () => setIsNarrowScreen(mediaQuery.matches);
-    mediaQuery.addEventListener("change", handleChange);
-    return () => mediaQuery.removeEventListener("change", handleChange);
-  }, []);
+  // No celular a tabela vira uma lista de cartões (ver TaskCardList abaixo).
+  const isNarrowScreen = useMediaQuery(NARROW_SCREEN_QUERY);
 
   const columnVisibility = useMemo(() => {
     const visibility: Record<string, boolean> = { [COMPLETION_SORT_COLUMN_ID]: false };
     hiddenColumns.forEach((columnId) => {
       visibility[columnId] = false;
     });
-    if (isNarrowScreen) {
-      columns.forEach((column) => {
-        if (column.id && !ALWAYS_VISIBLE_ON_NARROW_SCREEN.has(column.id)) {
-          visibility[column.id] = false;
-        }
-      });
-    }
     return visibility;
-  }, [hiddenColumns, isNarrowScreen, columns]);
+  }, [hiddenColumns]);
 
   const toggleColumnHidden = (columnId: string, isVisible: boolean) => {
     setHiddenColumns((previous) =>
@@ -963,7 +947,7 @@ const TaskTable = ({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="border-b border-slate-200 bg-white/90 p-2.5 md:px-4 md:py-3 backdrop-blur [@media(max-height:600px)]:p-1.5">
+      <div className="border-b border-[var(--border-subtle)] bg-[var(--bg-panel)]/90 p-2.5 md:px-4 md:py-3 backdrop-blur [@media(max-height:600px)]:p-1.5">
         <div className="flex w-full flex-wrap items-center justify-between gap-2 md:gap-3">
           {!hideAddTaskButton && onQuickAdd ? (
             <form
@@ -1104,70 +1088,183 @@ const TaskTable = ({
         </div>
       </div>
 
-      <div className={`min-h-0 flex-1 overflow-auto bg-white ${hideAddTaskButton ? "" : "pb-20 md:pb-0 [@media(max-height:600px)]:pb-20"}`}>
-        <div className="flex flex-col min-w-full">
-          <div className="flex border-b border-slate-200 bg-slate-100/95 backdrop-blur sticky top-0 z-10" style={{ minWidth: table.getTotalSize(), width: '100%' }}>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <div key={headerGroup.id} className="flex w-full">
-                {headerGroup.headers.map((header) => {
-                  const isSorted = header.column.getIsSorted();
-                  return (
-                    <div
-                      key={header.id}
-                      className={`relative flex items-center px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 group shrink-0 overflow-hidden ${header.column.id === 'task' ? 'flex-1' : ''}`}
-                      style={{ width: header.column.id === 'task' ? undefined : header.getSize() }}
-                    >
-                      {header.isPlaceholder ? null : (
-                        <div
-                          className={`flex items-center gap-1 ${header.column.getCanSort() ? "cursor-pointer select-none hover:text-slate-900" : ""}`}
-                          onClick={header.column.getToggleSortingHandler()}
-                        >
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                          {header.column.getCanSort() && (
-                            <ArrowUpDown className={`h-3.5 w-3.5 ${isSorted ? "text-slate-800" : "text-slate-400 opacity-0 group-hover:opacity-100"}`} />
-                          )}
-                        </div>
-                      )}
-                      {header.column.getCanResize() && (
-                        <div
-                          onMouseDown={header.getResizeHandler()}
-                          onTouchStart={header.getResizeHandler()}
-                          className={`absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none bg-slate-300 opacity-0 hover:opacity-100 ${header.column.getIsResizing() ? "bg-blue-500 opacity-100" : ""
-                            }`}
-                        />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
+      <div className={`min-h-0 flex-1 overflow-auto bg-[var(--bg-panel)] ${hideAddTaskButton ? "" : "pb-20 md:pb-0 [@media(max-height:600px)]:pb-20"}`}>
+        {isNarrowScreen ? (
+          <ul className="flex flex-col divide-y divide-[var(--border-subtle)]">
+            {table.getRowModel().rows.map((row) => {
+              const task = row.original;
+              const depth = row.depth;
+              const taskProjects = activeView === "all" ? getTaskProjects(task.id) : [];
+              const dueStatus = getDueDateStatus(task.dueDate, task.isCompleted);
+              const dueLabel = getRelativeDueDateLabel(task.dueDate) ?? formatDueDate(task.dueDate);
+              const enumBadges = safeCustomFields
+                .filter((field) => field.type === "enum")
+                .map((field) => ({ field, value: String(getResolvedFieldValue(task, field) ?? "") }))
+                .filter(({ value }) => value);
+              const hasChildren = row.getCanExpand();
+              const hasNotes = !isMarkdownEmpty(task.notes);
 
-          <div className="flex flex-col" style={{ minWidth: table.getTotalSize(), width: '100%' }}>
-            {table.getRowModel().rows.map((row) => (
-              <div
-                key={row.id}
-                className={`flex border-b border-slate-100 transition-colors group group/task-row hover:bg-slate-50`}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <div
-                    key={cell.id}
-                    className={`flex items-center shrink-0 overflow-hidden ${cell.column.id === 'task' ? 'flex-1' : ''}`}
-                    style={{ width: cell.column.id === 'task' ? undefined : cell.column.getSize() }}
+              return (
+                <li
+                  key={row.id}
+                  className="flex items-start gap-3 px-4 py-3"
+                  style={{ paddingLeft: `${16 + depth * 20}px` }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleTaskCompletion(task.id)}
+                    className="mt-0.5 shrink-0 text-[var(--text-faint)] transition-colors hover:text-emerald-600"
+                    aria-label={task.isCompleted ? "Marcar como pendente" : "Marcar como concluída"}
                   >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
+                    {task.isCompleted ? (
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                    ) : (
+                      <Circle className="h-5 w-5" />
+                    )}
+                  </button>
 
-          {table.getRowModel().rows.length === 0 && (
-            <div className="px-4 py-12 text-center text-sm text-slate-500">
-              Nenhuma tarefa para os filtros atuais.
+                  <div className="min-w-0 flex-1">
+                    <button
+                      type="button"
+                      onClick={() => onEditTask?.(task)}
+                      disabled={!onEditTask}
+                      className={`block w-full text-left text-sm font-medium leading-snug ${
+                        task.isCompleted ? "text-[var(--text-muted)] line-through" : "text-[var(--text-primary)]"
+                      }`}
+                    >
+                      {task.title || "Sem título"}
+                    </button>
+
+                    {(dueLabel || taskProjects.length > 0 || enumBadges.length > 0 || hasNotes) && (
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
+                        {dueLabel && (
+                          <span
+                            className={`inline-flex items-center gap-1 ${
+                              dueStatus === "overdue"
+                                ? "font-medium text-red-600 dark:text-red-400"
+                                : dueStatus === "today" && !task.isCompleted
+                                  ? "font-medium text-amber-600 dark:text-amber-400"
+                                  : "text-[var(--text-muted)]"
+                            }`}
+                          >
+                            {dueStatus === "overdue" ? (
+                              <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />
+                            ) : (
+                              <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
+                            )}
+                            {dueStatus === "overdue" ? `Atrasada · ${dueLabel}` : dueLabel}
+                          </span>
+                        )}
+                        {taskProjects.map((project) => (
+                          <span key={project.id} className="inline-flex min-w-0 items-center gap-1 text-[var(--text-muted)]">
+                            <span
+                              className="h-2 w-2 shrink-0 rounded-full"
+                              style={project.color && !project.color.startsWith("bg-") ? { backgroundColor: project.color } : undefined}
+                            />
+                            <span className="max-w-[9rem] truncate">{project.name}</span>
+                          </span>
+                        ))}
+                        {enumBadges.map(({ field, value }) => (
+                          <span
+                            key={field.id}
+                            className={`rounded-full px-2 py-0.5 font-medium ${
+                              OPTION_TONE_CLASSES[getOptionTone(value, getFieldOptions(field).indexOf(value))]
+                            }`}
+                          >
+                            {value}
+                          </span>
+                        ))}
+                        {hasNotes && (
+                          <span className="inline-flex items-center gap-1 text-[var(--text-faint)]" title="Tem observações">
+                            <StickyNote className="h-3.5 w-3.5" aria-hidden="true" />
+                            Notas
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {hasChildren && (
+                      <button
+                        type="button"
+                        onClick={row.getToggleExpandedHandler()}
+                        className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                        aria-expanded={row.getIsExpanded()}
+                      >
+                        {row.getIsExpanded() ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                        {row.subRows.length} {row.subRows.length === 1 ? "subtarefa" : "subtarefas"}
+                      </button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <div className="flex flex-col min-w-full">
+            <div className="flex border-b border-[var(--border-subtle)] bg-[var(--bg-soft-strong)]/95 backdrop-blur sticky top-0 z-10" style={{ minWidth: table.getTotalSize(), width: '100%' }}>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <div key={headerGroup.id} className="flex w-full">
+                  {headerGroup.headers.map((header) => {
+                    const isSorted = header.column.getIsSorted();
+                    return (
+                      <div
+                        key={header.id}
+                        className={`relative flex items-center px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)] group shrink-0 overflow-hidden ${header.column.id === 'task' ? 'flex-1' : ''}`}
+                        style={{ width: header.column.id === 'task' ? undefined : header.getSize() }}
+                      >
+                        {header.isPlaceholder ? null : (
+                          <div
+                            className={`flex items-center gap-1 ${header.column.getCanSort() ? "cursor-pointer select-none hover:text-[var(--text-primary)]" : ""}`}
+                            onClick={header.column.getToggleSortingHandler()}
+                          >
+                            {flexRender(header.column.columnDef.header, header.getContext())}
+                            {header.column.getCanSort() && (
+                              <ArrowUpDown className={`h-3.5 w-3.5 ${isSorted ? "text-[var(--text-primary)]" : "text-[var(--text-faint)] opacity-0 group-hover:opacity-100"}`} />
+                            )}
+                          </div>
+                        )}
+                        {header.column.getCanResize() && (
+                          <div
+                            onMouseDown={header.getResizeHandler()}
+                            onTouchStart={header.getResizeHandler()}
+                            className={`absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none bg-[var(--border-muted)] opacity-0 hover:opacity-100 ${header.column.getIsResizing() ? "bg-blue-500 opacity-100" : ""
+                              }`}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
-          )}
-        </div>
+
+            <div className="flex flex-col" style={{ minWidth: table.getTotalSize(), width: '100%' }}>
+              {table.getRowModel().rows.map((row) => (
+                <div
+                  key={row.id}
+                  className={`flex border-b border-[var(--border-subtle)] transition-colors group group/task-row hover:bg-[var(--bg-soft)]`}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <div
+                      key={cell.id}
+                      className={`flex items-center shrink-0 overflow-hidden ${cell.column.id === 'task' ? 'flex-1' : ''}`}
+                      style={{ width: cell.column.id === 'task' ? undefined : cell.column.getSize() }}
+                    >
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+
+          </div>
+        )}
+
+        {table.getRowModel().rows.length === 0 && (
+          <div className="px-4 py-12 text-center text-sm text-[var(--text-muted)]">
+            Nenhuma tarefa para os filtros atuais.
+          </div>
+        )}
       </div>
 
       <div className="border-t border-[var(--border-subtle)] bg-[var(--bg-soft)] px-4 py-2 md:py-3 flex items-center justify-between gap-4">

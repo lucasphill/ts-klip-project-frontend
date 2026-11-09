@@ -544,7 +544,7 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
                               }`}
                             >
                               <span
-                                className={`h-2.5 w-2.5 shrink-0 rounded-full ${colorDot?.className ?? "bg-slate-400"}`}
+                                className={`h-2.5 w-2.5 shrink-0 rounded-full ${colorDot?.className ?? "bg-[var(--text-faint)]"}`}
                                 style={colorDot?.style}
                               />
                             </button>
@@ -563,7 +563,7 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
                                 className="flex items-center gap-2 min-w-0 cursor-pointer flex-1"
                               >
                                 <span
-                                  className={`h-2.5 w-2.5 shrink-0 rounded-full ${colorDot?.className ?? "bg-slate-400"}`}
+                                  className={`h-2.5 w-2.5 shrink-0 rounded-full ${colorDot?.className ?? "bg-[var(--text-faint)]"}`}
                                   style={colorDot?.style}
                                 />
                                 <span className="font-medium text-xs text-[var(--text-primary)] truncate">{project.name}</span>
@@ -625,7 +625,7 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
                           className="flex flex-1 min-w-0 cursor-pointer items-center gap-2"
                         >
                           <span
-                            className={`h-2 w-2 shrink-0 rounded-full ${colorDot?.className ?? "bg-slate-400"}`}
+                            className={`h-2 w-2 shrink-0 rounded-full ${colorDot?.className ?? "bg-[var(--text-faint)]"}`}
                             style={colorDot?.style}
                           />
                           <span className="truncate text-sm font-medium">{project.name}</span>
@@ -747,7 +747,7 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
                                     className="flex flex-1 min-w-0 cursor-pointer items-center gap-2"
                                   >
                                     <span
-                                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${colorDot?.className ?? "bg-slate-400"}`}
+                                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${colorDot?.className ?? "bg-[var(--text-faint)]"}`}
                                       style={colorDot?.style}
                                     />
                                     <span className="truncate">{project.name}</span>
@@ -882,7 +882,7 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
                                 className="flex flex-1 min-w-0 cursor-pointer items-center gap-2"
                               >
                                 <span
-                                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${colorDot?.className ?? "bg-slate-400"}`}
+                                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${colorDot?.className ?? "bg-[var(--text-faint)]"}`}
                                   style={colorDot?.style}
                                 />
                                 <span className="truncate">{project.name}</span>
