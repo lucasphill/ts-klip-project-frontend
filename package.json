@@ -23,6 +23,7 @@
     "@platejs/list": "^53.1.3",
     "@platejs/markdown": "^53.3.3",
     "@tailwindcss/vite": "^4.1.18",
+    "@tanstack/react-query": "^5.107.1",
     "@tanstack/react-table": "^8.21.3",
     "@untitledui/icons": "^0.0.21",
     "@vercel/analytics": "^2.0.1",

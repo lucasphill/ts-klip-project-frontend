@@ -169,7 +169,11 @@ interface TaskTableProps {
   updateTaskTitle: (taskId: string, title: string) => void;
   updateTaskDueDate: (taskId: string, dueDate: string) => void;
   updateTaskNotes?: (taskId: string, notes: string) => void;
-  updateTaskInline?: (taskId: string, updates: { title?: string; dueDate?: string; notes?: string }) => void;
+  /** May resolve to a command result; `{ ok: false }` keeps the notes popover open. */
+  updateTaskInline?: (
+    taskId: string,
+    updates: { title?: string; dueDate?: string; notes?: string }
+  ) => void | Promise<unknown>;
   onEditTask?: (task: TaskTableTask) => void;
   onDeleteTask?: (taskId: string) => void;
   onAddSubtask?: (task: TaskTableTask) => void;
@@ -232,6 +236,9 @@ const getProjectTagColorProps = (color?: string): { className: string; style?: C
     style: { backgroundColor: color },
   };
 };
+
+const isFailedResult = (result: unknown) =>
+  typeof result === "object" && result !== null && (result as { ok?: unknown }).ok === false;
 
 const normalizeDate = (value?: string | null) => {
   if (!value) return "";
@@ -361,10 +368,12 @@ const TaskTable = ({
     }));
   };
 
-  const saveTaskField = (taskId: string, updates: { title?: string; dueDate?: string; notes?: string }) => {
+  const saveTaskField = (
+    taskId: string,
+    updates: { title?: string; dueDate?: string; notes?: string }
+  ): void | Promise<unknown> => {
     if (updateTaskInline) {
-      updateTaskInline(taskId, updates);
-      return;
+      return updateTaskInline(taskId, updates);
     }
 
     if (updates.title !== undefined) {
@@ -528,7 +537,11 @@ const TaskTable = ({
                     taskId={task.id}
                     taskTitle={task.title}
                     notes={task.notes}
-                    onSave={(nextNotes) => saveTaskField(task.id, { notes: nextNotes })}
+                    onSave={async (nextNotes) => {
+                      const result = await saveTaskField(task.id, { notes: nextNotes });
+                      // A failed save rejects so the popover stays open with the text.
+                      if (isFailedResult(result)) throw new Error("notes not saved");
+                    }}
                   />
                   {(task.googleCalendarEventId || task.google_calendar_event_id) && (
                     <span
@@ -717,7 +730,27 @@ const TaskTable = ({
     );
 
     return cols;
-  }, [activeView, projects, safeCustomFields, getTaskProjects, toggleTaskCompletion, projectSelectVersion]);
+    // Every prop and state the cells read: a missing one makes cells keep stale closures.
+  }, [
+    activeView,
+    projects,
+    safeCustomFields,
+    getTaskProjects,
+    toggleTaskCompletion,
+    projectSelectVersion,
+    editingTaskId,
+    updateTaskInline,
+    updateTaskTitle,
+    updateTaskDueDate,
+    updateTaskNotes,
+    getFieldValue,
+    updateCustomValue,
+    addProjectToTask,
+    removeProjectFromTask,
+    onEditTask,
+    onDeleteTask,
+    onAddSubtask,
+  ]);
 
   const table = useReactTable({
     data,

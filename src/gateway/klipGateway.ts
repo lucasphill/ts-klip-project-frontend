@@ -9,6 +9,8 @@
  * GatewayError. See CONTEXT.md and docs/adr 0001/0002.
  */
 
+import type { CustomFieldValue } from "../types/apiTypes";
+
 /** A unit of work. `parentTaskId` set means it is a Subtask. */
 export interface Task {
   id: string;
@@ -22,8 +24,11 @@ export interface Task {
   projectIds: string[];
   createdAt: string | null;
   googleCalendarEventId: string | null;
-  /** Universal custom-field values, keyed by field name, as the server sends them. */
-  customFields: Record<string, string>;
+  /**
+   * Universal custom-field values, keyed by field name. The server sends text;
+   * values set in this session keep the type the UI gave them.
+   */
+  customFields: Record<string, CustomFieldValue>;
 }
 
 /** Everything the server stores for a task. Update always sends all of it. */
@@ -78,7 +83,7 @@ export interface CustomValue {
 }
 
 /** Custom-field values of a project's tasks: taskId → field name → value. */
-export type ProjectCustomValues = Record<string, Record<string, string>>;
+export type ProjectCustomValues = Record<string, Record<string, CustomFieldValue>>;
 
 export interface KlipGateway {
   listTasks(): Promise<Task[]>;

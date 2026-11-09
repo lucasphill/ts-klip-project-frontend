@@ -20,6 +20,8 @@ import { useLoading } from './contexts/LoadingContext';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { errorMessage } from "./services/gatewayError";
+import { QueryClientProvider } from '@tanstack/react-query';
+import { createAppQueryClient } from './taskOperations/queryClient';
 
 const BootstrapGate = ({ children }: { children: ReactNode }) => {
   const { isAuthenticated } = useAuth();
@@ -201,9 +203,11 @@ const AppRoutes = () => {
   );
 };
 
+const queryClient = createAppQueryClient();
+
 const App = () => {
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
       <Analytics />
       <SpeedInsights />
       <AuthProvider>
@@ -217,7 +221,7 @@ const App = () => {
           </ProjectsProvider>
         </Router>
       </AuthProvider>
-    </>
+    </QueryClientProvider>
   )
 }
 
