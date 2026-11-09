@@ -17,6 +17,7 @@ import { projectsTasksApi, tasksApi } from "../services/api";
 import { toTaskPayload } from "../lib/taskPayload";
 import { isMarkdownEmpty } from "../lib/markdown";
 import type { CreateTaskDto, CustomFieldValue, GetProjectsDto, GetTasksDto } from "../types/apiTypes";
+import { errorMessage } from "../services/gatewayError";
 
 const toDateString = (date: Date): string => {
   const year = date.getFullYear();
@@ -73,9 +74,9 @@ const MonthViewPage = () => {
   useEffect(() => {
     fetchProjects()
       .then((projectsList) => loadProjectTaskAssignments(projectsList))
-      .catch((error: any) => toast.error(error?.message ?? "Erro ao buscar projetos"));
+      .catch((error: any) => toast.error(errorMessage(error, "Erro ao buscar projetos")));
 
-    fetchTasks().catch((error: any) => toast.error(error?.message ?? "Erro ao buscar tarefas"));
+    fetchTasks().catch((error: any) => toast.error(errorMessage(error, "Erro ao buscar tarefas")));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -170,7 +171,7 @@ const MonthViewPage = () => {
         toast.success("Observação da tarefa atualizada");
       }
     } catch (error: any) {
-      toast.error(error?.message ?? "Erro ao atualizar tarefa");
+      toast.error(errorMessage(error, "Erro ao atualizar tarefa"));
       updateTaskLocal(taskId, existingTask);
       throw error;
     }
@@ -195,7 +196,7 @@ const MonthViewPage = () => {
       try {
         await tasksApi.update(task.id, payload);
       } catch (error: any) {
-        toast.error(error?.message ?? "Erro ao atualizar status");
+        toast.error(errorMessage(error, "Erro ao atualizar status"));
         updateTaskLocal(taskId, { isCompleted: !newCompleted });
       }
     })();
@@ -233,7 +234,7 @@ const MonthViewPage = () => {
       try {
         await projectsTasksApi.assign(projectId, taskId);
       } catch (error: any) {
-        toast.error(error?.message ?? "Erro ao vincular projeto");
+        toast.error(errorMessage(error, "Erro ao vincular projeto"));
         setProjectTasks((previous) =>
           previous.filter((projectTask) => !(projectTask.task_id === taskId && projectTask.project_id === projectId))
         );
@@ -265,7 +266,7 @@ const MonthViewPage = () => {
         ...normalizedNextProjectIds.map((projectId) => ({ project_id: projectId, task_id: taskId })),
       ]);
     } catch (error: any) {
-      toast.error(error?.message ?? "Erro ao atualizar projetos da tarefa");
+      toast.error(errorMessage(error, "Erro ao atualizar projetos da tarefa"));
       if (projects.length > 0) {
         await loadProjectTaskAssignments(projects);
       }
@@ -285,7 +286,7 @@ const MonthViewPage = () => {
       try {
         await projectsTasksApi.unassign(projectId, taskId);
       } catch (error: any) {
-        toast.error(error?.message ?? "Erro ao desvincular projeto");
+        toast.error(errorMessage(error, "Erro ao desvincular projeto"));
         setProjectTasks((previous) => [...previous, { project_id: projectId, task_id: taskId }]);
       }
     })();
@@ -360,7 +361,7 @@ const MonthViewPage = () => {
         toast.success("Tarefa excluída e subtarefas mantidas");
       }
     } catch (error: any) {
-      toast.error(error?.message ?? "Erro ao excluir tarefa");
+      toast.error(errorMessage(error, "Erro ao excluir tarefa"));
       throw error;
     }
   };
@@ -383,7 +384,7 @@ const MonthViewPage = () => {
         await tasksApi.update(task.id, payload);
         await syncTaskProjects(task.id, selectedProjectIds);
       } catch (error: any) {
-        toast.error(error?.message ?? "Erro ao atualizar tarefa");
+        toast.error(errorMessage(error, "Erro ao atualizar tarefa"));
         throw error;
       }
       return;
@@ -395,7 +396,7 @@ const MonthViewPage = () => {
       await syncTaskProjects(createdTask.id, selectedProjectIds);
       appendTask(createdTask);
     } catch (error: any) {
-      toast.error(error?.message ?? "Erro ao criar tarefa");
+      toast.error(errorMessage(error, "Erro ao criar tarefa"));
       throw error;
     }
   };

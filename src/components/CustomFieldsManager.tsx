@@ -14,6 +14,7 @@ import type {
   GetProjectsDto,
 } from "../types/apiTypes";
 import CustomFieldFormModal from "./CustomFieldFormModal";
+import { errorMessage } from "../services/gatewayError";
 
 const normalizeFieldOptions = (options?: string | string[] | null): string[] => {
   if (Array.isArray(options)) return options.map((o) => o.trim()).filter(Boolean);
@@ -89,7 +90,7 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
       const res = await customFieldDefinitionsApi.getAll();
       setAllFields((res.data ?? []).map(normalizeCustomField));
     } catch (err: any) {
-      toast.error(err?.message ?? "Erro ao carregar campos personalizados");
+      toast.error(errorMessage(err, "Erro ao carregar campos personalizados"));
     } finally {
       setIsLoadingFields(false);
     }
@@ -108,7 +109,7 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
     projectsCustomFieldDefinitionsApi
       .getByProject(selectedProjectId)
       .then((res) => setProjectFields((res.data ?? []).map(normalizeCustomField)))
-      .catch((err: any) => toast.error(err?.message ?? "Erro ao carregar campos do projeto"))
+      .catch((err: any) => toast.error(errorMessage(err, "Erro ao carregar campos do projeto")))
       .finally(() => setIsLoadingProjectFields(false));
   }, [selectedProjectId]);
 
@@ -126,7 +127,7 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
       await loadAllFields();
       await fetchCustomFieldDefinitions({ force: true });
     } catch (err: any) {
-      toast.error(err?.message ?? "Erro ao criar campo");
+      toast.error(errorMessage(err, "Erro ao criar campo"));
       throw err;
     }
   };
@@ -144,7 +145,7 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
       await loadAllFields();
       await fetchCustomFieldDefinitions({ force: true });
     } catch (err: any) {
-      toast.error(err?.message ?? "Erro ao atualizar campo");
+      toast.error(errorMessage(err, "Erro ao atualizar campo"));
       throw err;
     }
   };
@@ -158,7 +159,7 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
       await fetchCustomFieldDefinitions({ force: true });
       toast.success(`Campo "${field.name}" excluído`);
     } catch (err: any) {
-      toast.error(err?.message ?? "Erro ao excluir campo");
+      toast.error(errorMessage(err, "Erro ao excluir campo"));
     }
   };
 
@@ -184,7 +185,7 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
       setProjectFields((prev) => [...prev, field]);
       toast.success("Campo vinculado ao projeto");
     } catch (err: any) {
-      toast.error(err?.message ?? "Erro ao vincular campo");
+      toast.error(errorMessage(err, "Erro ao vincular campo"));
     }
   };
 
@@ -196,7 +197,7 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
       setProjectFields((prev) => prev.filter((f) => f.id !== field.id));
       toast.success("Campo desvinculado do projeto");
     } catch (err: any) {
-      toast.error(err?.message ?? "Erro ao desvincular campo");
+      toast.error(errorMessage(err, "Erro ao desvincular campo"));
     }
   };
 
@@ -222,7 +223,7 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
       await fetchCustomFieldDefinitions({ force: true });
       toast.success(`Campo "${data.name}" criado e vinculado`);
     } catch (err: any) {
-      toast.error(err?.message ?? "Erro ao criar e vincular campo");
+      toast.error(errorMessage(err, "Erro ao criar e vincular campo"));
       throw err;
     }
   };

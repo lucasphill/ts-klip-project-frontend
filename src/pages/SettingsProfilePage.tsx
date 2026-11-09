@@ -6,6 +6,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
 import { useTasksContext } from "../contexts/TasksContext";
 import { tasksApi, usersApi } from "../services/api";
+import { errorMessage } from "../services/gatewayError";
 import DeleteAccountModal from "../components/DeleteAccountModal";
 import DeleteCompletedTasksModal from "../components/DeleteCompletedTasksModal";
 
@@ -37,15 +38,7 @@ const SettingsProfilePage = () => {
         toast.info("Nenhuma tarefa concluída encontrada para exclusão.");
       }
     } catch (error: unknown) {
-      console.error("Failed to delete completed tasks:", error);
-      let message = "Não foi possível excluir as tarefas concluídas no momento. Tente novamente mais tarde.";
-      if (typeof error === "object" && error !== null && "response" in error) {
-        const res = (error as { response?: { data?: { message?: string } } }).response;
-        if (res?.data?.message) {
-          message = res.data.message;
-        }
-      }
-      toast.error(message);
+      toast.error(errorMessage(error, "Não foi possível excluir as tarefas concluídas no momento. Tente novamente mais tarde."));
       throw error;
     }
   };
@@ -56,15 +49,7 @@ const SettingsProfilePage = () => {
       toast.success("Sua conta e todos os dados foram excluídos com sucesso.");
       logout();
     } catch (error: unknown) {
-      console.error("Failed to delete account:", error);
-      let message = "Não foi possível excluir sua conta no momento. Tente novamente mais tarde.";
-      if (typeof error === "object" && error !== null && "response" in error) {
-        const res = (error as { response?: { data?: { message?: string } } }).response;
-        if (res?.data?.message) {
-          message = res.data.message;
-        }
-      }
-      toast.error(message);
+      toast.error(errorMessage(error, "Não foi possível excluir sua conta no momento. Tente novamente mais tarde."));
       throw error;
     }
   };

@@ -44,6 +44,7 @@ import AddProjectGroupModal from "./AddProjectGroupModal";
 import DeleteProjectModal from "./DeleteProjectModal";
 import ArchivedProjectsModal from "./ArchivedProjectsModal";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "./ui/hover-card";
+import { errorMessage } from "../services/gatewayError";
 
 type SidebarProps = {
   isDesktopExpanded: boolean;
@@ -164,8 +165,8 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
 
   useEffect(() => {
     Promise.all([
-      fetchProjects().catch((err: any) => toast.error(err?.message ?? "Erro ao buscar projetos")),
-      fetchProjectGroups().catch((err: any) => toast.error(err?.message ?? "Erro ao buscar grupos")),
+      fetchProjects().catch((err: any) => toast.error(errorMessage(err, "Erro ao buscar projetos"))),
+      fetchProjectGroups().catch((err: any) => toast.error(errorMessage(err, "Erro ao buscar grupos"))),
     ]).finally(() => {
       setIsInitialLoading(false);
     });
@@ -235,7 +236,7 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
       appendTask(createdTask);
       toast.success(`Tarefa criada com sucesso: ${task.title}`);
     } catch (error: any) {
-      toast.error(error?.message ?? "Erro ao criar tarefa");
+      toast.error(errorMessage(error, "Erro ao criar tarefa"));
       throw error;
     }
   };
@@ -254,7 +255,7 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
       setProjectToEdit(null);
       setTargetGroupIdForNewProject(null);
     } catch (error: any) {
-      toast.error(error?.message ?? "Erro ao salvar projeto");
+      toast.error(errorMessage(error, "Erro ao salvar projeto"));
       throw error;
     }
   };
@@ -271,7 +272,7 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
       }
       setGroupToEdit(null);
     } catch (error: any) {
-      toast.error(error?.message ?? "Erro ao salvar grupo");
+      toast.error(errorMessage(error, "Erro ao salvar grupo"));
       throw error;
     }
   };
@@ -291,7 +292,7 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
       await deleteProjectGroup(group.id);
       toast.success(`Grupo "${group.name}" excluído`);
     } catch (error: any) {
-      toast.error(error?.message ?? "Erro ao excluir grupo");
+      toast.error(errorMessage(error, "Erro ao excluir grupo"));
     }
   };
 
@@ -318,7 +319,7 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
         navigate("/");
       }
     } catch (error: any) {
-      toast.error(error?.message ?? "Erro ao arquivar projeto");
+      toast.error(errorMessage(error, "Erro ao arquivar projeto"));
     }
   };
 
@@ -335,7 +336,7 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
         navigate("/");
       }
     } catch (error: any) {
-      toast.error(error?.message ?? "Erro ao excluir projeto");
+      toast.error(errorMessage(error, "Erro ao excluir projeto"));
       throw error;
     }
   };

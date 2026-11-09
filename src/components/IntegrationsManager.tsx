@@ -7,6 +7,7 @@ import ApiKeyFormModal from "./ApiKeyFormModal";
 import ApiKeyRevealModal from "./ApiKeyRevealModal";
 import { CollapsibleSection, type CollapsibleBadge } from "./CollapsibleSection";
 import { Button } from "./ui/button";
+import { errorMessage } from "../services/gatewayError";
 
 interface IntegrationsManagerProps {
   isOpen?: boolean;
@@ -39,7 +40,7 @@ const IntegrationsManager: FC<IntegrationsManagerProps> = ({
       setKeys(res.data ?? []);
     } catch (err: unknown) {
       const error = err as { message?: string };
-      toast.error(error?.message ?? "Erro ao carregar chaves de API");
+      toast.error(errorMessage(error, "Erro ao carregar chaves de API"));
     } finally {
       setIsLoading(false);
     }
@@ -61,7 +62,7 @@ const IntegrationsManager: FC<IntegrationsManagerProps> = ({
       await loadApiKeys();
     } catch (err: unknown) {
       const error = err as { message?: string };
-      toast.error(error?.message ?? "Erro ao criar chave de API");
+      toast.error(errorMessage(error, "Erro ao criar chave de API"));
       throw err;
     }
   };
@@ -74,7 +75,7 @@ const IntegrationsManager: FC<IntegrationsManagerProps> = ({
       await loadApiKeys();
     } catch (err: unknown) {
       const error = err as { message?: string };
-      toast.error(error?.message ?? "Erro ao atualizar chave de API");
+      toast.error(errorMessage(error, "Erro ao atualizar chave de API"));
       throw err;
     }
   };
@@ -87,7 +88,7 @@ const IntegrationsManager: FC<IntegrationsManagerProps> = ({
       toast.success(`Chave "${key.name}" excluída.`);
     } catch (err: unknown) {
       const error = err as { message?: string };
-      toast.error(error?.message ?? "Erro ao excluir chave de API");
+      toast.error(errorMessage(error, "Erro ao excluir chave de API"));
     }
   };
 

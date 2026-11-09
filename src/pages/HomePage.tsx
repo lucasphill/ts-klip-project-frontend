@@ -14,6 +14,7 @@ import { toTaskPayload } from "../lib/taskPayload";
 import { isMarkdownEmpty } from "../lib/markdown";
 import { DeleteTaskModal } from "../components/DeleteTaskModal";
 import type { DeleteTaskTarget } from "../types/taskDeletion";
+import { errorMessage } from "../services/gatewayError";
 
 const HomePage = () => {
   const { tasks, fetchTasks, appendTask, updateTaskLocal, removeTasksLocal } = useTasksContext();
@@ -61,7 +62,7 @@ const HomePage = () => {
         await loadProjectTaskAssignments(projectsList);
       } catch (error: any) {
         if (!isSilent) {
-          toast.error(error?.message ?? "Erro ao sincronizar tarefas");
+          toast.error(errorMessage(error, "Erro ao sincronizar tarefas"));
         }
       }
     },
@@ -110,7 +111,7 @@ const HomePage = () => {
         toast.success("Observação da tarefa atualizada");
       }
     } catch (error: any) {
-      toast.error(error?.message ?? "Erro ao atualizar tarefa");
+      toast.error(errorMessage(error, "Erro ao atualizar tarefa"));
       updateTaskLocal(taskId, existingTask);
       throw error;
     }
@@ -136,7 +137,7 @@ const HomePage = () => {
         await tasksApi.update(task.id, payload);
         toast.success("Status da tarefa atualizado");
       } catch (error: any) {
-        toast.error(error?.message ?? "Erro ao atualizar status");
+        toast.error(errorMessage(error, "Erro ao atualizar status"));
         updateTaskLocal(taskId, { isCompleted: !newCompleted });
       }
     })();
@@ -182,7 +183,7 @@ const HomePage = () => {
         ...normalizedNextProjectIds.map((projectId) => ({ project_id: projectId, task_id: taskId })),
       ]);
     } catch (error: any) {
-      toast.error(error?.message ?? "Erro ao atualizar projetos da tarefa");
+      toast.error(errorMessage(error, "Erro ao atualizar projetos da tarefa"));
       if (projects.length > 0) {
         await loadProjectTaskAssignments(projects);
       }
@@ -200,7 +201,7 @@ const HomePage = () => {
         await projectsTasksApi.assign(projectId, taskId);
         toast.success("Projeto vinculado a tarefa");
       } catch (error: any) {
-        toast.error(error?.message ?? "Erro ao vincular projeto");
+        toast.error(errorMessage(error, "Erro ao vincular projeto"));
         setProjectTasks((previous) =>
           previous.filter((projectTask) => !(projectTask.task_id === taskId && projectTask.project_id === projectId))
         );
@@ -221,7 +222,7 @@ const HomePage = () => {
         await projectsTasksApi.unassign(projectId, taskId);
         toast.success("Projeto desvinculado da tarefa");
       } catch (error: any) {
-        toast.error(error?.message ?? "Erro ao desvincular projeto");
+        toast.error(errorMessage(error, "Erro ao desvincular projeto"));
         setProjectTasks((previous) => [...previous, { project_id: projectId, task_id: taskId }]);
       }
     })();
@@ -279,7 +280,7 @@ const HomePage = () => {
       try {
         await request;
       } catch (error: any) {
-        toast.error(error?.message ?? "Erro ao salvar campo personalizado");
+        toast.error(errorMessage(error, "Erro ao salvar campo personalizado"));
         updateTaskLocal(taskId, { customFields: previousCustomFields });
       }
     })();
@@ -344,7 +345,7 @@ const HomePage = () => {
         toast.success("Tarefa excluída e subtarefas mantidas");
       }
     } catch (error: any) {
-      toast.error(error?.message ?? "Erro ao excluir tarefa");
+      toast.error(errorMessage(error, "Erro ao excluir tarefa"));
       throw error;
     }
   };
@@ -369,7 +370,7 @@ const HomePage = () => {
         appendTask(created);
         toast.success("Tarefa criada com sucesso");
       } catch (error: any) {
-        toast.error(error?.message ?? "Erro ao criar tarefa");
+        toast.error(errorMessage(error, "Erro ao criar tarefa"));
         throw error;
       }
       return;
@@ -382,7 +383,7 @@ const HomePage = () => {
         await syncTaskProjects(task.id, selectedProjectIds);
         toast.success("Tarefa atualizada");
       } catch (error: any) {
-        toast.error(error?.message ?? "Erro ao atualizar tarefa");
+        toast.error(errorMessage(error, "Erro ao atualizar tarefa"));
         throw error;
       }
       return;
@@ -395,7 +396,7 @@ const HomePage = () => {
       appendTask(created);
       toast.success("Tarefa criada com sucesso");
     } catch (error: any) {
-      toast.error(error?.message ?? "Erro ao criar tarefa");
+      toast.error(errorMessage(error, "Erro ao criar tarefa"));
       throw error;
     }
   };

@@ -12,6 +12,7 @@ import {
 import { useProjectsContext } from "@/contexts/ProjectsContext";
 import type { GetProjectsDto } from "@/types/apiTypes";
 import DeleteProjectModal from "./DeleteProjectModal";
+import { errorMessage } from "../services/gatewayError";
 
 interface ArchivedProjectsModalProps {
   isOpen: boolean;
@@ -33,7 +34,7 @@ export const ArchivedProjectsModal: FC<ArchivedProjectsModalProps> = ({
     if (isOpen) {
       setIsLoading(true);
       fetchArchivedProjects({ force: true })
-        .catch((err) => toast.error(err?.message ?? "Erro ao carregar projetos arquivados"))
+        .catch((err) => toast.error(errorMessage(err, "Erro ao carregar projetos arquivados")))
         .finally(() => setIsLoading(false));
     }
   }, [isOpen, fetchArchivedProjects]);
@@ -44,7 +45,7 @@ export const ArchivedProjectsModal: FC<ArchivedProjectsModalProps> = ({
       await unarchiveProject(projectId);
       toast.success(`Projeto "${projectName}" desarquivado com sucesso!`);
     } catch (err: any) {
-      toast.error(err?.message ?? "Erro ao desarquivar projeto");
+      toast.error(errorMessage(err, "Erro ao desarquivar projeto"));
     } finally {
       setActionInProgressId(null);
     }
@@ -60,7 +61,7 @@ export const ArchivedProjectsModal: FC<ArchivedProjectsModalProps> = ({
       await deleteProject(projectId, { deleteTasks });
       toast.success("Projeto excluído com sucesso!");
     } catch (err: any) {
-      toast.error(err?.message ?? "Erro ao excluir projeto");
+      toast.error(errorMessage(err, "Erro ao excluir projeto"));
       throw err;
     }
   };

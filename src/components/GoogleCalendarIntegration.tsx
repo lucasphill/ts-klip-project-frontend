@@ -7,6 +7,7 @@ import type { GoogleCalendarStatusDto } from '../types/apiTypes';
 import { CollapsibleSection, type CollapsibleBadge } from './CollapsibleSection';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
+import { errorMessage } from "../services/gatewayError";
 
 interface GoogleCalendarIntegrationProps {
   isOpen: boolean;
@@ -38,8 +39,7 @@ export const GoogleCalendarIntegration: FC<GoogleCalendarIntegrationProps> = ({
         onStatusChange(data);
       }
     } catch (err: unknown) {
-      const error = err as { message?: string };
-      const msg = error?.message ?? 'Erro ao verificar status do Google Calendar';
+      const msg = errorMessage(err,'Erro ao verificar status do Google Calendar');
       setFetchError(msg);
       setStatus({ isConnected: false, accountEmail: null, connectedAtUtc: null });
     } finally {
@@ -63,7 +63,7 @@ export const GoogleCalendarIntegration: FC<GoogleCalendarIntegrationProps> = ({
       }
     } catch (err: unknown) {
       const error = err as { message?: string };
-      toast.error(error?.message ?? 'Erro ao iniciar conexão com o Google Calendar.');
+      toast.error(errorMessage(error, 'Erro ao iniciar conexão com o Google Calendar.'));
     } finally {
       setIsConnecting(false);
     }
@@ -78,7 +78,7 @@ export const GoogleCalendarIntegration: FC<GoogleCalendarIntegrationProps> = ({
       await fetchStatus();
     } catch (err: unknown) {
       const error = err as { message?: string };
-      toast.error(error?.message ?? 'Erro ao desconectar Google Calendar.');
+      toast.error(errorMessage(error, 'Erro ao desconectar Google Calendar.'));
     } finally {
       setIsDisconnecting(false);
     }
