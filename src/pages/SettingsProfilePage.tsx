@@ -147,26 +147,17 @@ const SettingsProfilePage = () => {
 
               <hr className="my-5 border-[var(--border-subtle)]" />
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">Nome</label>
-                  <input
-                    type="text"
-                    value={user?.name ?? ""}
-                    readOnly
-                    className="field w-full cursor-not-allowed opacity-60"
-                  />
+              {/* Dados somente leitura: exibidos como texto, sem aparência de campo editável. */}
+              <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="min-w-0">
+                  <dt className="mb-1 text-xs font-medium text-[var(--text-muted)]">Nome</dt>
+                  <dd className="truncate text-sm text-[var(--text-primary)]">{user?.name || "—"}</dd>
                 </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">Email</label>
-                  <input
-                    type="email"
-                    value={user?.email ?? ""}
-                    readOnly
-                    className="field w-full cursor-not-allowed opacity-60"
-                  />
+                <div className="min-w-0">
+                  <dt className="mb-1 text-xs font-medium text-[var(--text-muted)]">Email</dt>
+                  <dd className="truncate text-sm text-[var(--text-primary)]">{user?.email || "—"}</dd>
                 </div>
-              </div>
+              </dl>
 
               <p className="mt-4 text-xs text-[var(--text-faint)]">
                 As informações de perfil são gerenciadas pelo provedor de identidade (Auth0).

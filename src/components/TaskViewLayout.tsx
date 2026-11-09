@@ -1,6 +1,6 @@
 import { type CSSProperties, type FC, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { Settings } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 
 type TaskViewLayoutProps = {
   title?: string;
@@ -47,10 +47,11 @@ const TaskViewLayout: FC<TaskViewLayoutProps & { children: ReactNode }> = ({
             {actions}
             <Link
               to="/settings/custom-fields"
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-2 md:px-3 md:py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-              title="Gerenciar campos"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-2 md:px-3 md:py-2 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-soft)] hover:text-[var(--text-primary)]"
+              title="Gerenciar campos personalizados"
+              aria-label="Gerenciar campos personalizados"
             >
-              <Settings className="h-4 w-4 shrink-0" />
+              <SlidersHorizontal className="h-4 w-4 shrink-0" />
               <span className="hidden md:inline">Gerenciar campos</span>
             </Link>
           </div>
