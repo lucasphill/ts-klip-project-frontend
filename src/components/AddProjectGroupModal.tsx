@@ -112,7 +112,7 @@ export const AddProjectGroupModal: FC<AddProjectGroupModalProps> = ({
       }}
     >
       <DialogContent
-        className="surface-panel w-[min(100%-1.5rem,36rem)] rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-0"
+        className="surface-panel sm:max-w-[36rem] rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-0"
         showCloseButton={!isSubmitting}
       >
         <form onSubmit={handleSubmit}>

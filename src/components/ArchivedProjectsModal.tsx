@@ -83,7 +83,7 @@ export const ArchivedProjectsModal: FC<ArchivedProjectsModalProps> = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="surface-panel w-[min(100%-1.5rem,42rem)] gap-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
+        <DialogContent className="surface-panel sm:max-w-[42rem] gap-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-5">
           <DialogHeader className="border-b border-[var(--border-subtle)] pb-3">
             <div className="flex items-center gap-2.5">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--bg-soft)] text-[var(--text-muted)]">
