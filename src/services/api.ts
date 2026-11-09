@@ -29,7 +29,7 @@ export const setAuth0Client = (client: any) => {
   auth0Client = client;
 };
 
-const api = axios.create({
+export const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
 });
