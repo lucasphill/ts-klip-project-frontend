@@ -224,9 +224,15 @@ const ProjectsPage = () => {
     setShowEditTaskModal(true);
   };
 
-  const addTask = () => {
+  const quickAddTask = (title: string) =>
+    handleSaveTask(
+      { title, isCompleted: false, dueDate: '', notes: '', parentTaskId: '' },
+      currentProject ? [currentProject.id] : []
+    );
+
+  const addTask = (initialTitle = '') => {
     openTaskModal({
-      title: '',
+      title: initialTitle,
       isCompleted: false,
       dueDate: '',
       notes: '',
@@ -550,6 +556,7 @@ const ProjectsPage = () => {
             updateCustomValue={updateCustomValue}
             toggleTaskCompletion={toggleTaskCompletion}
             addTask={addTask}
+            onQuickAdd={quickAddTask}
             projects={projects}
             getTaskProjects={getTaskProjects}
             addProjectToTask={() => undefined}

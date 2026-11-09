@@ -8,13 +8,18 @@ import {
   ChevronDown,
   ChevronRight,
   Circle,
-  Filter,
+  Columns3,
+  CornerDownLeft,
+  Maximize2,
   Pencil,
   Plus,
   Trash2,
   X,
   XCircle,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { getOptionTone, OPTION_TONE_CLASSES } from "../lib/optionTone";
 import DatePickerField from "./DatePickerField";
 import TaskNotePopover from "./TaskNotePopover";
 import { getDueDateStatus, getRelativeDueDateLabel } from "../lib/taskUtils";
@@ -113,6 +118,15 @@ const TaskTitleInput = ({ task, saveTaskField, editingTaskId, setEditingTaskId }
   );
 };
 
+// Campos da tabela parecem texto comum e só mostram a borda ao passar o mouse ou focar.
+const INLINE_FIELD_CLASS =
+  "h-7 w-full rounded-md border border-transparent bg-transparent px-2 text-sm text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-faint)] hover:border-[var(--border-subtle)] hover:bg-[var(--bg-soft)] focus:border-[var(--field-focus)] focus:bg-[var(--bg-panel)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
+
+const EMPTY_OPTION_VALUE = "__empty__";
+
+const NARROW_SCREEN_QUERY = "(max-width: 767px)";
+const ALWAYS_VISIBLE_ON_NARROW_SCREEN = new Set(["status", "task"]);
+
 interface CustomFieldInputProps {
   task: TaskTableTask;
   field: GetCustomFieldDefinitionDto;
@@ -149,8 +163,9 @@ const CustomFieldInput = ({ task, field, initialValue, onSave }: CustomFieldInpu
           e.currentTarget.blur();
         }
       }}
-      className="field h-7 w-full bg-transparent px-1 text-sm text-[var(--text-primary)] outline-none hover:bg-[var(--bg-soft)] focus:bg-[var(--bg-soft-strong)] focus:ring-1 focus:ring-slate-200 rounded transition-colors"
-      placeholder="-"
+      className={INLINE_FIELD_CLASS}
+      placeholder="—"
+      aria-label={field.name}
     />
   );
 };
@@ -163,7 +178,10 @@ interface TaskTableProps {
   getFieldValue?: (taskId: string, fieldId: string) => CustomFieldValue;
   updateCustomValue?: (taskId: string, fieldId: string, value: CustomFieldValue) => void;
   toggleTaskCompletion: (taskId: string) => void;
-  addTask: () => void;
+  /** Abre o formulário completo de tarefa, opcionalmente com um título já preenchido. */
+  addTask: (initialTitle?: string) => void;
+  /** Cria uma tarefa só com o título (adição rápida). Sem ele, o campo de adição rápida não aparece. */
+  onQuickAdd?: (title: string) => Promise<unknown> | void;
   getTaskProjects: (taskId: string) => GetProjectsDto[];
   addProjectToTask: (taskId: string, projectId: string) => void;
   removeProjectFromTask: (taskId: string, projectId: string) => void;
@@ -188,6 +206,7 @@ type StoredTaskTableState = {
   statusFilter?: TaskStatusFilter;
   sorting?: SortingState;
   expanded?: ExpandedState;
+  hiddenColumns?: string[];
 };
 
 const TASK_TABLE_STORAGE_PREFIX = "klip:task-table-state";
@@ -204,6 +223,7 @@ const parseStoredTaskTableState = (rawValue: string | null) => {
       statusFilter: DEFAULT_STATUS_FILTER,
       sorting: [{ id: "dueDate", desc: false }] as SortingState,
       expanded: {} as ExpandedState,
+      hiddenColumns: [] as string[],
     };
   }
 
@@ -212,13 +232,17 @@ const parseStoredTaskTableState = (rawValue: string | null) => {
     const statusFilter = isStatusFilter(parsed.statusFilter) ? parsed.statusFilter : DEFAULT_STATUS_FILTER;
     const sorting = Array.isArray(parsed.sorting) ? parsed.sorting : [{ id: "dueDate", desc: false }];
     const expanded = typeof parsed.expanded === "object" && parsed.expanded !== null ? parsed.expanded : {};
+    const hiddenColumns = Array.isArray(parsed.hiddenColumns)
+      ? parsed.hiddenColumns.filter((id): id is string => typeof id === "string")
+      : [];
 
-    return { statusFilter, sorting, expanded };
+    return { statusFilter, sorting, expanded, hiddenColumns };
   } catch {
     return {
       statusFilter: DEFAULT_STATUS_FILTER,
       sorting: [{ id: "dueDate", desc: false }] as SortingState,
       expanded: {} as ExpandedState,
+      hiddenColumns: [] as string[],
     };
   }
 };
@@ -296,6 +320,7 @@ const TaskTable = ({
   onDeleteTask,
   onAddSubtask,
   hideAddTaskButton = false,
+  onQuickAdd,
 }: TaskTableProps) => {
   const location = useLocation();
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -307,6 +332,9 @@ const TaskTable = ({
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [expanded, setExpanded] = useState<ExpandedState>({});
+  const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
+  const [quickAddTitle, setQuickAddTitle] = useState("");
+  const [isQuickAdding, setIsQuickAdding] = useState(false);
 
   const skipNextTableStatePersist = useRef(false);
 
@@ -324,6 +352,7 @@ const TaskTable = ({
     setStatusFilter(parsedState.statusFilter);
     setSorting(parsedState.sorting);
     setExpanded(parsedState.expanded);
+    setHiddenColumns(parsedState.hiddenColumns);
   }, [tableStateStorageKey]);
 
   useEffect(() => {
@@ -339,10 +368,11 @@ const TaskTable = ({
       statusFilter,
       sorting,
       expanded,
+      hiddenColumns,
     };
 
     window.localStorage.setItem(tableStateStorageKey, JSON.stringify(payload));
-  }, [statusFilter, sorting, expanded, tableStateStorageKey]);
+  }, [statusFilter, sorting, expanded, hiddenColumns, tableStateStorageKey]);
 
   const safeCustomFields = Array.isArray(activeCustomFields) ? activeCustomFields : [];
 
@@ -420,7 +450,19 @@ const TaskTable = ({
         </span>
       );
     }
-    return <span className="text-sm text-slate-700">{String(value ?? "-")}</span>;
+    if (field.type === "enum" && value) {
+      const option = String(value);
+      return (
+        <span
+          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+            OPTION_TONE_CLASSES[getOptionTone(option, getFieldOptions(field).indexOf(option))]
+          }`}
+        >
+          {option}
+        </span>
+      );
+    }
+    return <span className="text-sm text-[var(--text-primary)]">{value === "" || value == null ? "—" : String(value)}</span>;
   };
 
   const renderCustomFieldEditor = (task: TaskTableTask, field: GetCustomFieldDefinitionDto) => {
@@ -431,19 +473,47 @@ const TaskTable = ({
     }
 
     if (field.type === "enum") {
+      const currentValue = String(fieldValue ?? "");
+      const currentIndex = fieldOptions.indexOf(currentValue);
       return (
-        <select
-          className="field h-7 w-full bg-transparent px-1 text-sm text-[var(--text-primary)] outline-none hover:bg-[var(--bg-soft)] focus:bg-[var(--bg-soft-strong)] focus:ring-1 focus:ring-slate-200 rounded transition-colors"
-          value={String(fieldValue ?? "")}
-          onChange={(event) => updateCustomValue(task.id, field.id, event.target.value)}
+        <Select
+          value={currentValue || EMPTY_OPTION_VALUE}
+          onValueChange={(nextValue) =>
+            updateCustomValue(task.id, field.id, nextValue === EMPTY_OPTION_VALUE ? "" : nextValue)
+          }
         >
-          <option value="">-</option>
-          {fieldOptions.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger
+            size="sm"
+            aria-label={field.name}
+            className="h-7 w-full justify-start gap-1 border-transparent bg-transparent px-1.5 shadow-none hover:border-[var(--border-subtle)] hover:bg-[var(--bg-soft)] dark:bg-transparent [&>svg]:ml-auto [&>svg]:opacity-0 hover:[&>svg]:opacity-100 focus-visible:[&>svg]:opacity-100"
+          >
+            {currentValue ? (
+              <span
+                className={`inline-flex max-w-full truncate rounded-full px-2 py-0.5 text-xs font-medium ${
+                  OPTION_TONE_CLASSES[getOptionTone(currentValue, currentIndex)]
+                }`}
+              >
+                {currentValue}
+              </span>
+            ) : (
+              <span className="px-0.5 text-sm text-[var(--text-faint)]">—</span>
+            )}
+          </SelectTrigger>
+          <SelectContent position="popper" align="start">
+            <SelectItem value={EMPTY_OPTION_VALUE}>
+              <span className="text-[var(--text-muted)]">Sem valor</span>
+            </SelectItem>
+            {fieldOptions.map((option, index) => (
+              <SelectItem key={option} value={option}>
+                <span
+                  className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${OPTION_TONE_CLASSES[getOptionTone(option, index)]}`}
+                >
+                  {option}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       );
     }
 
@@ -467,8 +537,9 @@ const TaskTable = ({
           value={String(fieldValue ?? "")}
           onChange={(nextDate) => updateCustomValue(task.id, field.id, nextDate)}
           className="w-full"
-          buttonClassName="field h-7 flex-1 bg-transparent hover:bg-[var(--bg-soft)] text-sm text-[var(--text-primary)] border-transparent focus:bg-[var(--bg-soft-strong)] focus:border-[var(--border-subtle)] px-2 rounded transition-colors text-left"
-          placeholder="Sem data"
+          buttonClassName="h-7 flex-1 bg-transparent dark:bg-transparent hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-soft)] hover:border-[var(--border-subtle)] dark:border-transparent dark:hover:border-[var(--border-subtle)] text-sm text-[var(--text-primary)] border-transparent shadow-none focus:bg-[var(--bg-soft-strong)] focus:border-[var(--border-subtle)] px-2 rounded-md transition-colors text-left"
+          clearButtonClassName="opacity-0 group-hover/task-row:opacity-100 focus-visible:opacity-100"
+          placeholder="—"
         />
       );
     }
@@ -489,8 +560,10 @@ const TaskTable = ({
     const cols: ColumnDef<TaskTableTreeNode, any>[] = [
       columnHelper.accessor("isCompleted", {
         id: "status",
-        header: "Status",
-        size: 80,
+        header: () => <span className="sr-only">Status</span>,
+        size: 48,
+        enableHiding: false,
+        enableSorting: false,
         enableColumnFilter: false,
         cell: (info) => {
           const task = info.row.original;
@@ -499,6 +572,8 @@ const TaskTable = ({
               <button
                 onClick={() => toggleTaskCompletion(task.id)}
                 className="text-slate-400 transition-colors hover:text-emerald-600"
+                aria-label={task.isCompleted ? "Marcar como pendente" : "Marcar como concluída"}
+                title={task.isCompleted ? "Marcar como pendente" : "Marcar como concluída"}
               >
                 {task.isCompleted ? (
                   <CheckCircle2 className="h-5 w-5 text-emerald-600" />
@@ -513,7 +588,8 @@ const TaskTable = ({
       columnHelper.accessor("title", {
         id: "task",
         header: "Tarefa",
-        size: 350,
+        enableHiding: false,
+        size: 280,
         filterFn: 'includesString',
         cell: (info) => {
           const task = info.row.original;
@@ -585,7 +661,7 @@ const TaskTable = ({
           {
             id: "projects",
             header: "Projetos",
-            size: 280,
+            size: 220,
             sortingFn: "alphanumeric",
             cell: (info) => {
               const task = info.row.original;
@@ -682,7 +758,7 @@ const TaskTable = ({
                     <AlertCircle className="h-4 w-4 text-red-500" aria-hidden="true" />
                   ) : undefined
                 }
-                buttonClassName={`field h-7 flex-1 bg-transparent hover:bg-[var(--bg-soft)] text-sm border-transparent focus:bg-[var(--bg-soft-strong)] focus:border-[var(--border-subtle)] px-2 rounded transition-colors text-left ${
+                buttonClassName={`h-7 flex-1 bg-transparent dark:bg-transparent hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-soft)] hover:border-[var(--border-subtle)] shadow-none text-sm border-transparent dark:border-transparent dark:hover:border-[var(--border-subtle)] focus:bg-[var(--bg-soft-strong)] focus:border-[var(--border-subtle)] px-2 rounded transition-colors text-left ${
                   isOverdue
                     ? "!text-red-600 dark:!text-red-400 font-medium hover:!text-red-700 dark:hover:!text-red-300"
                     : isDueToday
@@ -702,7 +778,7 @@ const TaskTable = ({
         columnHelper.accessor((row) => getCustomFieldValueLabel(row, field), {
           id: `cf-${field.id}`,
           header: field.name,
-          size: 200,
+          size: 160,
           filterFn: 'includesString',
           cell: (info) => {
             const task = info.row.original;
@@ -720,8 +796,9 @@ const TaskTable = ({
       columnHelper.display({
         id: "actions",
         header: "Ações",
-        size: 140,
+        size: 120,
         enableColumnFilter: false,
+        enableHiding: false,
         cell: (info) => {
           const task = info.row.original;
 
@@ -766,7 +843,7 @@ const TaskTable = ({
       columnHelper.accessor((row) => (row.isCompleted ? 1 : 0), {
         id: COMPLETION_SORT_COLUMN_ID,
         header: "",
-        enableHiding: true,
+        enableHiding: false,
         enableColumnFilter: false,
         sortingFn: "basic",
       })
@@ -800,6 +877,61 @@ const TaskTable = ({
     [sorting]
   );
 
+  // No celular a tabela mostra só status e título; as demais colunas ficariam cortadas.
+  const [isNarrowScreen, setIsNarrowScreen] = useState(
+    () => typeof window !== "undefined" && window.matchMedia(NARROW_SCREEN_QUERY).matches
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mediaQuery = window.matchMedia(NARROW_SCREEN_QUERY);
+    const handleChange = () => setIsNarrowScreen(mediaQuery.matches);
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
+
+  const columnVisibility = useMemo(() => {
+    const visibility: Record<string, boolean> = { [COMPLETION_SORT_COLUMN_ID]: false };
+    hiddenColumns.forEach((columnId) => {
+      visibility[columnId] = false;
+    });
+    if (isNarrowScreen) {
+      columns.forEach((column) => {
+        if (column.id && !ALWAYS_VISIBLE_ON_NARROW_SCREEN.has(column.id)) {
+          visibility[column.id] = false;
+        }
+      });
+    }
+    return visibility;
+  }, [hiddenColumns, isNarrowScreen, columns]);
+
+  const toggleColumnHidden = (columnId: string, isVisible: boolean) => {
+    setHiddenColumns((previous) =>
+      isVisible ? previous.filter((id) => id !== columnId) : Array.from(new Set([...previous, columnId]))
+    );
+  };
+
+  const hasActiveFilters = statusFilter !== DEFAULT_STATUS_FILTER || columnFilters.length > 0;
+
+  const clearFilters = () => {
+    setStatusFilter(DEFAULT_STATUS_FILTER);
+    setColumnFilters([]);
+  };
+
+  const submitQuickAdd = async () => {
+    const title = quickAddTitle.trim();
+    if (!title || !onQuickAdd || isQuickAdding) return;
+    setIsQuickAdding(true);
+    try {
+      const result = await onQuickAdd(title);
+      if (!isFailedResult(result)) setQuickAddTitle("");
+    } catch {
+      // A página já mostra o erro; mantemos o texto para a pessoa tentar de novo.
+    } finally {
+      setIsQuickAdding(false);
+    }
+  };
+
   const table = useReactTable({
     data,
     columns,
@@ -807,7 +939,7 @@ const TaskTable = ({
       sorting: effectiveSorting,
       columnFilters,
       expanded,
-      columnVisibility: { [COMPLETION_SORT_COLUMN_ID]: false },
+      columnVisibility,
     },
     onSortingChange: (updater) => {
       setSorting((previous) => {
@@ -831,50 +963,143 @@ const TaskTable = ({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="border-b border-slate-200 bg-white/90 p-2.5 md:p-4 backdrop-blur [@media(max-height:600px)]:p-1.5">
-        <div className="flex items-center justify-between gap-3 w-full flex-wrap sm:flex-nowrap">
-          <div className="flex items-center gap-4">
-            {!hideAddTaskButton && (
+      <div className="border-b border-slate-200 bg-white/90 p-2.5 md:px-4 md:py-3 backdrop-blur [@media(max-height:600px)]:p-1.5">
+        <div className="flex w-full flex-wrap items-center justify-between gap-2 md:gap-3">
+          {!hideAddTaskButton && onQuickAdd ? (
+            <form
+              className="hidden min-w-0 flex-1 items-center gap-1.5 md:flex md:max-w-md [@media(max-height:600px)]:hidden"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void submitQuickAdd();
+              }}
+            >
+              <div className="relative min-w-0 flex-1">
+                <Plus className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--brand)]" />
+                <input
+                  type="text"
+                  value={quickAddTitle}
+                  onChange={(event) => setQuickAddTitle(event.target.value)}
+                  placeholder="Adicionar tarefa…"
+                  aria-label="Adicionar tarefa rapidamente"
+                  disabled={isQuickAdding}
+                  className="field h-9 w-full pl-9 pr-9 text-sm placeholder:text-[var(--text-faint)] disabled:opacity-60"
+                />
+                {quickAddTitle.trim() && (
+                  <kbd className="pointer-events-none absolute right-2.5 top-1/2 inline-flex -translate-y-1/2 items-center text-[var(--text-faint)]" title="Enter para adicionar">
+                    <CornerDownLeft className="h-3.5 w-3.5" />
+                  </kbd>
+                )}
+              </div>
               <button
-                onClick={addTask}
-                className="h-9 hidden md:inline-flex [@media(max-height:600px)]:hidden items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700 shadow-sm"
+                type="button"
+                onClick={() => {
+                  addTask(quickAddTitle.trim() || undefined);
+                  setQuickAddTitle("");
+                }}
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--border-subtle)] text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-soft)] hover:text-[var(--text-primary)]"
+                title="Abrir formulário completo"
+                aria-label="Abrir formulário completo de tarefa"
+              >
+                <Maximize2 className="h-4 w-4" />
+              </button>
+            </form>
+          ) : (
+            !hideAddTaskButton && (
+              <button
+                onClick={() => addTask()}
+                className="hidden h-9 items-center justify-center gap-2 rounded-xl bg-[var(--brand)] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-strong)] md:inline-flex [@media(max-height:600px)]:hidden"
               >
                 <Plus className="h-4 w-4" />
                 Adicionar tarefa
               </button>
-            )}
-            <p className="text-sm text-slate-500 hidden sm:block [@media(max-height:600px)]:hidden">
-              Mostrando <span className="font-semibold text-slate-700">{table.getRowModel().rows.length}</span> tarefas
-            </p>
-          </div>
+            )
+          )}
 
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-            <div className="h-9 [@media(max-height:600px)]:h-8 flex-1 sm:flex-none inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 shadow-sm hover:border-slate-300 transition-colors">
-              <Filter className="h-4 w-4 text-slate-400 shrink-0" />
-              <select
-                className="bg-transparent text-sm text-slate-600 outline-none cursor-pointer pr-1 font-medium hover:text-slate-900 transition-colors w-full"
-                value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value as TaskStatusFilter)}
-              >
-                <option value="all">Todas</option>
-                <option value="completed">Concluídas</option>
-                <option value="pending">Pendentes</option>
-              </select>
+          <div className="flex w-full items-center justify-between gap-2 md:w-auto md:justify-end">
+            <div
+              role="radiogroup"
+              aria-label="Filtrar por status"
+              className="inline-flex h-9 flex-1 items-center rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-soft)] p-0.5 md:flex-none [@media(max-height:600px)]:h-8"
+            >
+              {(
+                [
+                  ["all", "Todas"],
+                  ["pending", "Pendentes"],
+                  ["completed", "Concluídas"],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={statusFilter === value}
+                  onClick={() => setStatusFilter(value)}
+                  className={`h-full flex-1 rounded-lg px-3 text-sm font-medium transition-colors md:flex-none ${
+                    statusFilter === value
+                      ? "bg-[var(--bg-panel)] text-[var(--text-primary)] shadow-sm"
+                      : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
 
-            <button
-              onClick={() => {
-                setStatusFilter(DEFAULT_STATUS_FILTER);
-                setColumnFilters([]);
-                setSorting([]);
-              }}
-              className="h-9 [@media(max-height:600px)]:h-8 inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 sm:px-4 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 shadow-sm whitespace-nowrap"
-              title="Limpar filtros"
-            >
-              <XCircle className="h-4 w-4 shrink-0" />
-              <span className="hidden xs:inline">Limpar</span>
-              <span className="hidden sm:inline"> filtros</span>
-            </button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="hidden h-9 items-center justify-center gap-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] px-3 text-sm font-medium text-[var(--text-secondary)] shadow-sm transition-colors hover:bg-[var(--bg-soft)] hover:text-[var(--text-primary)] md:inline-flex"
+                  title="Escolher colunas visíveis"
+                >
+                  <Columns3 className="h-4 w-4" />
+                  Colunas
+                  {hiddenColumns.length > 0 && (
+                    <span className="rounded-full bg-[var(--bg-soft-strong)] px-1.5 text-xs text-[var(--text-muted)]">
+                      {hiddenColumns.length} oculta{hiddenColumns.length > 1 ? "s" : ""}
+                    </span>
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-60 p-2">
+                <p className="px-2 pb-2 pt-1 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                  Colunas visíveis
+                </p>
+                <div className="flex flex-col">
+                  {table
+                    .getAllLeafColumns()
+                    .filter((column) => column.getCanHide())
+                    .map((column) => {
+                      const header = column.columnDef.header;
+                      const label = typeof header === "string" ? header : column.id;
+                      const isVisible = !hiddenColumns.includes(column.id);
+                      return (
+                        <label
+                          key={column.id}
+                          className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-soft)]"
+                        >
+                          <Checkbox
+                            checked={isVisible}
+                            onCheckedChange={(checked) => toggleColumnHidden(column.id, checked === true)}
+                          />
+                          <span className="truncate">{label}</span>
+                        </label>
+                      );
+                    })}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-soft)] hover:text-[var(--text-primary)] [@media(max-height:600px)]:h-8"
+                title="Limpar filtros"
+              >
+                <XCircle className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">Limpar filtros</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -954,8 +1179,8 @@ const TaskTable = ({
       </div>
       {!hideAddTaskButton && (
         <button
-          onClick={addTask}
-          className="fixed bottom-20 right-6 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-500/30 hover:bg-blue-700 active:scale-95 transition-all duration-150 focus:outline-none md:hidden [@media(max-height:600px)]:flex"
+          onClick={() => addTask()}
+          className="fixed bottom-20 right-6 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--brand)] text-white shadow-lg shadow-black/20 hover:bg-[var(--brand-strong)] active:scale-95 transition-all duration-150 focus:outline-none md:hidden [@media(max-height:600px)]:flex"
           title="Adicionar tarefa"
           aria-label="Adicionar tarefa"
         >

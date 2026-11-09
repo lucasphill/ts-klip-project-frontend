@@ -136,19 +136,22 @@ body {
   border: 1px solid var(--border-subtle);
 }
 
-.field {
-  border: 1px solid var(--field-border);
-  border-radius: 8px;
-  background: var(--field-bg);
-  color: var(--text-primary);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
-}
+/* Em camada de componentes para que utilitários (ex.: border-transparent) possam sobrescrever. */
+@layer components {
+  .field {
+    border: 1px solid var(--field-border);
+    border-radius: 8px;
+    background: var(--field-bg);
+    color: var(--text-primary);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+  }
 
-.field:focus-visible {
-  outline: none;
-  border-color: var(--field-focus);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--field-focus) 20%, transparent);
-  background: var(--field-focus-bg);
+  .field:focus-visible {
+    outline: none;
+    border-color: var(--field-focus);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--field-focus) 20%, transparent);
+    background: var(--field-focus-bg);
+  }
 }
 
 :root.dark .text-slate-900,
@@ -345,10 +348,26 @@ body {
   border: 1px solid #1e40af !important;
 }
 
+/* Fundo e borda vêm da cor do projeto, aplicada pelo FullCalendar no próprio evento. */
+.fc .klip-fc-event.is-project-colored,
+.fc .klip-fc-event.is-project-colored .fc-event-main {
+  color: #ffffff !important;
+}
+
+.fc .klip-fc-event.is-overdue {
+  box-shadow: inset 3px 0 0 #dc2626 !important;
+}
+
+.fc .klip-fc-event.is-completed .fc-event-main {
+  color: inherit !important;
+  text-decoration: line-through;
+}
+
 .fc .klip-fc-event.is-completed {
-  background: #166534 !important;
-  color: #ecfdf5 !important;
-  border: 1px solid #14532d !important;
+  /* Neutro para não se confundir com projetos de cor verde. */
+  background: #e2e8f0 !important;
+  color: #64748b !important;
+  border: 1px solid #cbd5e1 !important;
   text-decoration: line-through;
 }
 
@@ -377,9 +396,9 @@ body {
 }
 
 :root.dark .fc .klip-fc-event.is-completed {
-  background: #15803d !important;
-  color: #ecfdf5 !important;
-  border: 1px solid #166534 !important;
+  background: #3f3f46 !important;
+  color: #a1a1aa !important;
+  border: 1px solid #52525b !important;
 }
 
 @media (max-width: 768px) {
