@@ -651,7 +651,7 @@ const TaskTable = ({
       columnHelper.accessor("dueDate", {
         id: "dueDate",
         header: "Prazo",
-        size: 150,
+        size: 170,
         filterFn: 'includesString',
         cell: (info) => {
           const task = info.row.original;
@@ -675,6 +675,7 @@ const TaskTable = ({
                 onChange={(nextDate) => saveTaskField(task.id, { dueDate: nextDate })}
                 className="w-full"
                 title={dueTitle}
+                clearButtonClassName="opacity-0 group-hover/task-row:opacity-100 focus-visible:opacity-100"
                 formatLabel={() => relativeLabel ?? fullDateLabel}
                 icon={
                   isOverdue ? (

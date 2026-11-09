@@ -21,6 +21,8 @@ type DatePickerFieldProps = {
   icon?: ReactNode;
   /** Texto de ajuda exibido ao passar o mouse e usado como rótulo acessível. */
   title?: string;
+  /** Classes extras para o botão de limpar a data. */
+  clearButtonClassName?: string;
 };
 
 const parseDateValue = (value?: string): Date | undefined => {
@@ -49,6 +51,7 @@ const DatePickerField = ({
   formatLabel,
   icon,
   title,
+  clearButtonClassName,
 }: DatePickerFieldProps) => {
   const selectedDate = parseDateValue(value);
 
@@ -93,7 +96,7 @@ const DatePickerField = ({
           disabled={disabled}
           onClick={() => onChange("")}
           aria-label="Limpar data"
-          className="shrink-0 text-slate-500 hover:text-slate-800"
+          className={cn("shrink-0 text-slate-500 hover:text-slate-800", clearButtonClassName)}
         >
           <X className="h-4 w-4" />
         </Button>
