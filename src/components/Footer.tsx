@@ -21,7 +21,7 @@ const Footer = () => {
   const showServiceWarning = health !== null && health.status !== "Healthy";
 
   return (
-    <footer className="flex flex-col items-center gap-3 text-center text-xs text-slate-500 md:flex-row md:items-center md:justify-between md:text-left">
+    <footer className="flex flex-col items-center gap-3 text-center text-xs text-[var(--text-muted)] md:flex-row md:items-center md:justify-between md:text-left">
       <div className="flex flex-wrap items-center justify-center gap-3 md:justify-start">
         <p className="font-medium">
           Desenvolvido por{" "}
@@ -29,23 +29,23 @@ const Footer = () => {
             href="https://github.com/lucasphill"
             target="_blank"
             rel="noopener noreferrer"
-            className="underline decoration-slate-300 underline-offset-4 transition-colors hover:text-slate-700 dark:hover:text-slate-300"
+            className="underline decoration-[var(--border-muted)] underline-offset-4 transition-colors hover:text-[var(--text-secondary)]"
           >
             Lucas Phill
           </a>
         </p>
-        <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">•</span>
+        <span className="text-[var(--border-muted)] hidden sm:inline">•</span>
         <div className="flex items-center gap-2.5">
           <Link
             to="/terms"
-            className="transition-colors hover:text-slate-700 dark:hover:text-slate-300 hover:underline"
+            className="transition-colors hover:text-[var(--text-secondary)] hover:underline"
           >
             Termos de Uso
           </Link>
-          <span className="text-slate-300 dark:text-slate-700">|</span>
+          <span className="text-[var(--border-muted)]">|</span>
           <Link
             to="/privacy"
-            className="transition-colors hover:text-slate-700 dark:hover:text-slate-300 hover:underline"
+            className="transition-colors hover:text-[var(--text-secondary)] hover:underline"
           >
             Política de Privacidade
           </Link>
@@ -63,10 +63,10 @@ const Footer = () => {
               <span className="inline-flex h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />
               Instabilidade no serviço
             </span>
-            <span className="text-slate-400">|</span>
+            <span className="text-[var(--text-faint)]">|</span>
           </>
         )}
-        <span className="text-slate-500">© {new Date().getFullYear()} Klip</span>
+        <span className="text-[var(--text-muted)]">© {new Date().getFullYear()} Klip</span>
       </div>
     </footer>
   );

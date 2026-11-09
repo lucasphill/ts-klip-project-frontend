@@ -74,7 +74,7 @@ const TodoListNode = (props: PlateElementProps) => {
         <Checkbox
           checked={isChecked}
           onCheckedChange={handleCheckedChange}
-          className="h-3.5 w-3.5 rounded border-slate-300 dark:border-slate-600 data-checked:bg-[var(--brand)] data-checked:border-[var(--brand)] cursor-pointer"
+          className="h-3.5 w-3.5 rounded border-[var(--border-muted)] data-checked:bg-[var(--brand)] data-checked:border-[var(--brand)] cursor-pointer"
         />
       </span>
       <span className={cn("flex-1 min-w-0", isChecked && "line-through opacity-60 text-[var(--text-muted)]")}>

@@ -511,10 +511,10 @@ const ProjectsPage = () => {
             <button
               type="button"
               onClick={() => setShowDeleteCompletedModal(true)}
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white p-2 md:px-3 md:py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-700 dark:border-[var(--border-subtle)] dark:bg-[var(--bg-panel)] dark:text-[var(--text-secondary)] dark:hover:border-red-900/50 dark:hover:bg-red-950/30 dark:hover:text-red-400"
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-2 md:px-3 md:py-2 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-700 dark:border-[var(--border-subtle)] dark:bg-[var(--bg-panel)] dark:text-[var(--text-secondary)] dark:hover:border-red-900/50 dark:hover:bg-red-950/30 dark:hover:text-red-400"
               title="Excluir tarefas concluídas deste projeto"
             >
-              <Trash2 className="h-4 w-4 shrink-0 text-slate-400 hover:text-red-600" />
+              <Trash2 className="h-4 w-4 shrink-0 text-[var(--text-faint)] hover:text-red-600" />
               <span className="hidden md:inline">Limpar concluídas</span>
             </button>
           )
@@ -543,10 +543,10 @@ const ProjectsPage = () => {
         {isLoading ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-8">
             <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600" />
-            <p className="text-sm font-medium text-slate-500">Carregando projeto...</p>
+            <p className="text-sm font-medium text-[var(--text-muted)]">Carregando projeto...</p>
           </div>
         ) : !currentProject ? (
-          <div className="flex flex-1 items-center justify-center px-6 py-8 text-sm text-slate-500">Projeto não encontrado.</div>
+          <div className="flex flex-1 items-center justify-center px-6 py-8 text-sm text-[var(--text-muted)]">Projeto não encontrado.</div>
         ) : (
           <TaskTable
             visibleTasks={visibleTasks}

@@ -67,11 +67,11 @@ const DatePickerField = ({
             aria-label={title}
             className={cn("h-10 min-w-0 flex-1 justify-start gap-2 px-3 text-left font-normal", buttonClassName)}
           >
-            {icon ?? <CalendarIcon className="h-4 w-4 text-slate-400" />}
+            {icon ?? <CalendarIcon className="h-4 w-4 text-[var(--text-faint)]" />}
             {selectedDate ? (
               <span>{formatLabel ? formatLabel(selectedDate) : format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}</span>
             ) : (
-              <span className="text-slate-400">{placeholder}</span>
+              <span className="text-[var(--text-faint)]">{placeholder}</span>
             )}
           </Button>
         </PopoverTrigger>
@@ -96,7 +96,7 @@ const DatePickerField = ({
           disabled={disabled}
           onClick={() => onChange("")}
           aria-label="Limpar data"
-          className={cn("shrink-0 text-slate-500 hover:text-slate-800", clearButtonClassName)}
+          className={cn("shrink-0 text-[var(--text-muted)] hover:text-[var(--text-primary)]", clearButtonClassName)}
         >
           <X className="h-4 w-4" />
         </Button>
