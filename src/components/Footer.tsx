@@ -10,10 +10,15 @@ const Footer = () => {
     healthApi
       .getHealth()
       .then(setHealth)
-      .catch(console.error)
+      .catch((error) => {
+        console.error(error);
+        setHealth({ status: "Unreachable" });
+      });
   }, []);
 
-  const apiStatusIsHealthy = health?.status === "Healthy";
+  // Só exibimos o status quando há um problema confirmado; enquanto carrega ou
+  // quando está tudo certo, o rodapé não chama atenção para detalhes técnicos.
+  const showServiceWarning = health !== null && health.status !== "Healthy";
 
   return (
     <footer className="flex flex-col items-center gap-3 text-center text-xs text-slate-500 md:flex-row md:items-center md:justify-between md:text-left">
@@ -48,9 +53,19 @@ const Footer = () => {
       </div>
 
       <div className="flex items-center justify-center gap-2 md:justify-start">
-        <span className={`inline-flex h-2.5 w-2.5 rounded-full ${apiStatusIsHealthy ? "bg-emerald-500" : "bg-rose-500"}`} />
-        <span className="font-medium">{apiStatusIsHealthy ? "API online" : "API com alerta"}</span>
-        <span className="text-slate-400">|</span>
+        {showServiceWarning && (
+          <>
+            <span
+              role="status"
+              className="inline-flex items-center gap-1.5 font-medium text-amber-600 dark:text-amber-400"
+              title="Alguns recursos podem ficar lentos ou indisponíveis temporariamente."
+            >
+              <span className="inline-flex h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />
+              Instabilidade no serviço
+            </span>
+            <span className="text-slate-400">|</span>
+          </>
+        )}
         <span className="text-slate-500">© {new Date().getFullYear()} Klip</span>
       </div>
     </footer>

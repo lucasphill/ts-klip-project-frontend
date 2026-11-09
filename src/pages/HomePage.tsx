@@ -199,7 +199,7 @@ const HomePage = () => {
     void (async () => {
       try {
         await projectsTasksApi.assign(projectId, taskId);
-        toast.success("Projeto vinculado a tarefa");
+        toast.success("Projeto vinculado à tarefa");
       } catch (error: any) {
         toast.error(errorMessage(error, "Erro ao vincular projeto"));
         setProjectTasks((previous) =>

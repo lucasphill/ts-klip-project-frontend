@@ -540,7 +540,7 @@ const ProjectsPage = () => {
             <p className="text-sm font-medium text-slate-500">Carregando projeto...</p>
           </div>
         ) : !currentProject ? (
-          <div className="flex flex-1 items-center justify-center px-6 py-8 text-sm text-slate-500">Projeto nao encontrado.</div>
+          <div className="flex flex-1 items-center justify-center px-6 py-8 text-sm text-slate-500">Projeto não encontrado.</div>
         ) : (
           <TaskTable
             visibleTasks={visibleTasks}
