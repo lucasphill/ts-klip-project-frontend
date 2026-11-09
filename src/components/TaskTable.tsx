@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import { useLocation } from "react-router-dom";
 import {
+  AlertCircle,
   ArrowUpDown,
   Calendar,
   CheckCircle2,
@@ -16,7 +17,7 @@ import {
 } from "lucide-react";
 import DatePickerField from "./DatePickerField";
 import TaskNotePopover from "./TaskNotePopover";
-import { isTaskOverdue } from "../lib/taskUtils";
+import { getDueDateStatus, getRelativeDueDateLabel } from "../lib/taskUtils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   useReactTable,
@@ -238,6 +239,15 @@ const normalizeDate = (value?: string | null) => {
   return String(value).split("T")[0];
 };
 
+const COMPLETION_SORT_COLUMN_ID = "__completion";
+const COMPLETION_SORT = { id: COMPLETION_SORT_COLUMN_ID, desc: false };
+
+const formatDueDate = (value?: string | null) => {
+  const [year, month, day] = normalizeDate(value).split("-");
+  if (!year || !month || !day) return "";
+  return `${day}/${month}/${year}`;
+};
+
 const buildTree = (tasks: TaskTableTask[]): TaskTableTreeNode[] => {
   const taskMap = new Map<string, TaskTableTreeNode>();
   const roots: TaskTableTreeNode[] = [];
@@ -349,7 +359,7 @@ const TaskTable = ({
   const getCustomFieldValueLabel = (task: TaskTableTask, field: GetCustomFieldDefinitionDto) => {
     const value = getResolvedFieldValue(task, field);
     if (field.type === "boolean") {
-      return value ? "sim" : "nao";
+      return value ? "sim" : "não";
     }
     return String(value ?? "");
   };
@@ -397,7 +407,7 @@ const TaskTable = ({
           className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${value ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
             }`}
         >
-          {value ? "Sim" : "Nao"}
+          {value ? "Sim" : "Não"}
         </span>
       );
     }
@@ -437,7 +447,7 @@ const TaskTable = ({
             onChange={(event) => updateCustomValue(task.id, field.id, event.target.checked)}
             className="h-4 w-4 rounded border-slate-300 text-[#2f6fb2]"
           />
-          {fieldValue ? "Sim" : "Nao"}
+          {fieldValue ? "Sim" : "Não"}
         </label>
       );
     }
@@ -632,7 +642,18 @@ const TaskTable = ({
         filterFn: 'includesString',
         cell: (info) => {
           const task = info.row.original;
-          const isOverdue = isTaskOverdue(task.dueDate, task.isCompleted);
+          const dueStatus = getDueDateStatus(task.dueDate, task.isCompleted);
+          const isOverdue = dueStatus === "overdue";
+          const isDueToday = dueStatus === "today" && !task.isCompleted;
+          const relativeLabel = getRelativeDueDateLabel(task.dueDate);
+          const fullDateLabel = formatDueDate(task.dueDate);
+          const dueTitle = !fullDateLabel
+            ? "Definir prazo"
+            : isOverdue
+              ? `Prazo vencido em ${fullDateLabel}`
+              : isDueToday
+                ? `Vence hoje (${fullDateLabel})`
+                : `Prazo: ${fullDateLabel}`;
 
           return (
             <div className="flex h-full items-center px-3">
@@ -640,10 +661,19 @@ const TaskTable = ({
                 value={normalizeDate(task.dueDate)}
                 onChange={(nextDate) => saveTaskField(task.id, { dueDate: nextDate })}
                 className="w-full"
+                title={dueTitle}
+                formatLabel={() => relativeLabel ?? fullDateLabel}
+                icon={
+                  isOverdue ? (
+                    <AlertCircle className="h-4 w-4 text-red-500" aria-hidden="true" />
+                  ) : undefined
+                }
                 buttonClassName={`field h-7 flex-1 bg-transparent hover:bg-[var(--bg-soft)] text-sm border-transparent focus:bg-[var(--bg-soft-strong)] focus:border-[var(--border-subtle)] px-2 rounded transition-colors text-left ${
                   isOverdue
                     ? "!text-red-600 dark:!text-red-400 font-medium hover:!text-red-700 dark:hover:!text-red-300"
-                    : "text-[var(--text-primary)]"
+                    : isDueToday
+                      ? "!text-amber-600 dark:!text-amber-400 font-medium"
+                      : "text-[var(--text-primary)]"
                 }`}
                 placeholder="Sem prazo"
               />
@@ -716,18 +746,44 @@ const TaskTable = ({
       })
     );
 
+    // Coluna oculta usada apenas para manter tarefas concluídas no fim da lista,
+    // independentemente da ordenação escolhida pelo usuário.
+    cols.push(
+      columnHelper.accessor((row) => (row.isCompleted ? 1 : 0), {
+        id: COMPLETION_SORT_COLUMN_ID,
+        header: "",
+        enableHiding: true,
+        enableColumnFilter: false,
+        sortingFn: "basic",
+      })
+    );
+
     return cols;
   }, [activeView, projects, safeCustomFields, getTaskProjects, toggleTaskCompletion, projectSelectVersion]);
+
+  const effectiveSorting = useMemo<SortingState>(
+    () => [COMPLETION_SORT, ...sorting.filter((sort) => sort.id !== COMPLETION_SORT_COLUMN_ID)],
+    [sorting]
+  );
 
   const table = useReactTable({
     data,
     columns,
     state: {
-      sorting,
+      sorting: effectiveSorting,
       columnFilters,
       expanded,
+      columnVisibility: { [COMPLETION_SORT_COLUMN_ID]: false },
     },
-    onSortingChange: setSorting,
+    onSortingChange: (updater) => {
+      setSorting((previous) => {
+        const next =
+          typeof updater === "function"
+            ? updater([COMPLETION_SORT, ...previous])
+            : updater;
+        return next.filter((sort) => sort.id !== COMPLETION_SORT_COLUMN_ID);
+      });
+    },
     onColumnFiltersChange: setColumnFilters,
     onExpandedChange: setExpanded,
     getCoreRowModel: getCoreRowModel(),
@@ -789,7 +845,7 @@ const TaskTable = ({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto bg-white">
+      <div className={`min-h-0 flex-1 overflow-auto bg-white ${hideAddTaskButton ? "" : "pb-20 md:pb-0 [@media(max-height:600px)]:pb-20"}`}>
         <div className="flex flex-col min-w-full">
           <div className="flex border-b border-slate-200 bg-slate-100/95 backdrop-blur sticky top-0 z-10" style={{ minWidth: table.getTotalSize(), width: '100%' }}>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -865,7 +921,7 @@ const TaskTable = ({
       {!hideAddTaskButton && (
         <button
           onClick={addTask}
-          className="fixed bottom-20 right-6 z-45 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-500/30 hover:bg-blue-700 active:scale-95 transition-all duration-150 focus:outline-none md:hidden [@media(max-height:600px)]:flex"
+          className="fixed bottom-20 right-6 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-500/30 hover:bg-blue-700 active:scale-95 transition-all duration-150 focus:outline-none md:hidden [@media(max-height:600px)]:flex"
           title="Adicionar tarefa"
           aria-label="Adicionar tarefa"
         >
