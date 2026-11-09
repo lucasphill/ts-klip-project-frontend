@@ -115,14 +115,6 @@ body {
   background: var(--bg-canvas);
 }
 
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
-
 .surface-panel {
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
@@ -501,6 +493,12 @@ textarea {
   /* Em camada base para que utilitários como text-white possam sobrescrever. */
   a {
     color: inherit;
+  }
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
   }
   * {
     @apply border-border outline-ring/50;
