@@ -176,7 +176,7 @@ const AddTaskModal: FC<AddTaskModalProps> = ({
                 value={formData.title}
                 onChange={(event) => setFormData({ ...formData, title: event.target.value })}
                 placeholder="Ex: Revisar backlog da sprint"
-                className="field h-11 px-3 text-sm"
+                className="field h-11 px-3 text-base md:text-sm"
                 autoFocus
                 required
               />

@@ -148,7 +148,7 @@ export const AddProjectGroupModal: FC<AddProjectGroupModalProps> = ({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ex: Trabalho, Pessoal, Clientes..."
-                className="field h-10 px-3 text-sm"
+                className="field h-10 px-3 text-base md:text-sm"
                 autoFocus
                 required
               />
