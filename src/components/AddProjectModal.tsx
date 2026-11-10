@@ -135,7 +135,7 @@ export const AddProjectModal: FC<AddProjectModalProps> = ({
                 value={formData.name}
                 onChange={(event) => setFormData({ ...formData, name: event.target.value })}
                 placeholder="Ex: Roadmap Produto 2026"
-                className="field h-10 px-3 text-sm"
+                className="field h-10 px-3 text-base md:text-sm"
                 autoFocus
                 required
               />
@@ -148,7 +148,7 @@ export const AddProjectModal: FC<AddProjectModalProps> = ({
                 <select
                   value={formData.groupId ?? ""}
                   onChange={(e) => setFormData({ ...formData, groupId: e.target.value ? e.target.value : null })}
-                  className="field h-10 w-full appearance-none rounded-lg bg-[var(--field-bg)] px-3 pr-8 text-xs text-[var(--text-primary)] transition-colors"
+                  className="field h-10 w-full appearance-none rounded-lg bg-[var(--field-bg)] px-3 pr-8 text-base md:text-xs text-[var(--text-primary)] transition-colors"
                 >
                   <option value="">Nenhum (Raiz - Sem pasta)</option>
                   {projectGroups.map((g) => (
@@ -169,7 +169,7 @@ export const AddProjectModal: FC<AddProjectModalProps> = ({
                 onChange={(event) => setFormData({ ...formData, description: event.target.value })}
                 placeholder="Contexto e objetivo principal do projeto."
                 rows={3}
-                className="field resize-none px-3 py-2 text-xs"
+                className="field resize-none px-3 py-2 text-base md:text-xs"
               />
             </div>
 

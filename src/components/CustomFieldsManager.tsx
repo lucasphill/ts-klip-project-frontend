@@ -367,7 +367,7 @@ const CustomFieldsManager: FC<CustomFieldsManagerProps> = ({ projects }) => {
               <p className="mt-0.5 text-xs text-[var(--text-muted)]">Selecione um projeto para gerenciar seus campos.</p>
             </div>
             <select
-              className="field h-9 w-full bg-[var(--field-bg)] px-3 text-sm sm:w-56"
+              className="field h-9 w-full bg-[var(--field-bg)] px-3 text-base md:text-sm sm:w-56"
               value={selectedProjectId}
               onChange={(e) => setSelectedProjectId(e.target.value)}
             >

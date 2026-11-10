@@ -123,7 +123,7 @@ export const DeleteCompletedTasksModal: FC<DeleteCompletedTasksModalProps> = ({
               placeholder={`Digite ${REQUIRED_CONFIRMATION_KEYWORD} para confirmar`}
               disabled={isSubmitting}
               autoFocus
-              className="h-10 text-sm"
+              className="h-10 text-base md:text-sm"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && isMatch && !isSubmitting) {
                   e.preventDefault();

@@ -67,7 +67,7 @@ const ApiKeyFormModal: FC<ApiKeyFormModalProps> = ({ isOpen, onClose, onSave, in
             <input
               type="text"
               placeholder="Ex: Cursor Desktop, Windsurf, Claude Code"
-              className="field h-9 w-full px-3 text-sm bg-[var(--field-bg)] border border-[var(--border-subtle)] rounded-lg text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--brand)]"
+              className="field h-9 w-full px-3 text-base md:text-sm bg-[var(--field-bg)] border border-[var(--border-subtle)] rounded-lg text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--brand)]"
               value={name}
               autoFocus
               onChange={(e) => setName(e.target.value)}
