@@ -595,7 +595,6 @@ body {
   background: var(--landing-glass-bg);
   border: 1px solid var(--landing-glass-border);
   backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
 }
 .landing-blob {
   position: absolute;
