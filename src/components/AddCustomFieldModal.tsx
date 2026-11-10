@@ -72,7 +72,7 @@ const AddCustomFieldModal: FC<{
               <input
                 type="text"
                 placeholder="Ex: Prioridade"
-                className="field h-11 w-full px-3 text-sm"
+                className="field h-11 w-full px-3 text-base md:text-sm"
                 value={field.name}
                 onChange={(event) => setField({ ...field, name: event.target.value })}
               />
@@ -81,7 +81,7 @@ const AddCustomFieldModal: FC<{
             <div className="space-y-1.5 md:col-span-1">
               <label className="text-sm font-semibold text-[var(--text-secondary)]">Tipo</label>
               <select
-                className="field h-11 w-full bg-[var(--bg-panel)] px-3 text-sm"
+                className="field h-11 w-full bg-[var(--bg-panel)] px-3 text-base md:text-sm"
                 value={field.type}
                 onChange={(event) => setField({ ...field, type: event.target.value })}
               >
@@ -101,7 +101,7 @@ const AddCustomFieldModal: FC<{
                 <input
                   type="text"
                   placeholder="Alta, Media, Baixa"
-                  className="field h-11 w-full px-3 text-sm"
+                  className="field h-11 w-full px-3 text-base md:text-sm"
                   value={field.optionsString}
                   onChange={(event) => setField({ ...field, optionsString: event.target.value })}
                 />

@@ -101,7 +101,7 @@ const TaskTitleInput = ({ task, saveTaskField, editingTaskId, setEditingTaskId }
         onBlur={handleSave}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        className={`w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm outline-none transition-colors hover:bg-[var(--bg-soft)] focus:border-[var(--brand)] focus:ring-1 focus:ring-[var(--brand)] focus:bg-[var(--bg-panel)] truncate ${
+        className={`w-full rounded-md border border-transparent bg-transparent px-2 py-1.5 text-base md:text-sm outline-none transition-colors hover:bg-[var(--bg-soft)] focus:border-[var(--brand)] focus:ring-1 focus:ring-[var(--brand)] focus:bg-[var(--bg-panel)] truncate ${
           task.isCompleted ? "text-[var(--text-muted)] line-through" : "text-[var(--text-primary)]"
         }`}
       />
@@ -123,7 +123,7 @@ const TaskTitleInput = ({ task, saveTaskField, editingTaskId, setEditingTaskId }
 
 // Campos da tabela parecem texto comum e só mostram a borda ao passar o mouse ou focar.
 const INLINE_FIELD_CLASS =
-  "h-7 w-full rounded-md border border-transparent bg-transparent px-2 text-sm text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-faint)] hover:border-[var(--border-subtle)] hover:bg-[var(--bg-soft)] focus:border-[var(--field-focus)] focus:bg-[var(--bg-panel)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
+  "h-7 w-full rounded-md border border-transparent bg-transparent px-2 text-base md:text-sm text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-faint)] hover:border-[var(--border-subtle)] hover:bg-[var(--bg-soft)] focus:border-[var(--field-focus)] focus:bg-[var(--bg-panel)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
 
 const EMPTY_OPTION_VALUE = "__empty__";
 
@@ -966,7 +966,7 @@ const TaskTable = ({
                   placeholder="Adicionar tarefa…"
                   aria-label="Adicionar tarefa rapidamente"
                   disabled={isQuickAdding}
-                  className="field h-9 w-full pl-9 pr-9 text-sm placeholder:text-[var(--text-faint)] disabled:opacity-60"
+                  className="field h-9 w-full pl-9 pr-9 text-base md:text-sm placeholder:text-[var(--text-faint)] disabled:opacity-60"
                 />
                 {quickAddTitle.trim() && (
                   <kbd className="pointer-events-none absolute right-2.5 top-1/2 inline-flex -translate-y-1/2 items-center text-[var(--text-faint)]" title="Enter para adicionar">

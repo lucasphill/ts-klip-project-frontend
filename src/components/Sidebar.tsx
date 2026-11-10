@@ -459,7 +459,7 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
               <input
                 type="text"
                 placeholder="Buscar projeto..."
-                className="field h-8 w-full bg-[var(--field-bg)] pl-8 pr-3 text-xs"
+                className="field h-8 w-full bg-[var(--field-bg)] pl-8 pr-3 text-base md:text-xs"
                 value={projectSearch}
                 onChange={(event) => setProjectSearch(event.target.value)}
               />

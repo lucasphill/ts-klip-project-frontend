@@ -78,7 +78,7 @@ const CustomFieldFormModal: FC<CustomFieldFormModalProps> = ({ isOpen, onClose, 
               <input
                 type="text"
                 placeholder="Ex: Prioridade"
-                className="field h-9 w-full px-3 text-sm"
+                className="field h-9 w-full px-3 text-base md:text-sm"
                 value={field.name}
                 autoFocus
                 onChange={(e) => setField({ ...field, name: e.target.value })}
@@ -88,7 +88,7 @@ const CustomFieldFormModal: FC<CustomFieldFormModalProps> = ({ isOpen, onClose, 
             <div className="space-y-1.5">
               <label className="block text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">Tipo</label>
               <select
-                className="field h-9 w-full bg-[var(--field-bg)] px-3 text-sm"
+                className="field h-9 w-full bg-[var(--field-bg)] px-3 text-base md:text-sm"
                 value={field.type}
                 onChange={(e) => setField({ ...field, type: e.target.value })}
               >
@@ -103,7 +103,7 @@ const CustomFieldFormModal: FC<CustomFieldFormModalProps> = ({ isOpen, onClose, 
                 <input
                   type="text"
                   placeholder="Alta, Média, Baixa"
-                  className="field h-9 w-full px-3 text-sm"
+                  className="field h-9 w-full px-3 text-base md:text-sm"
                   value={field.optionsString}
                   onChange={(e) => setField({ ...field, optionsString: e.target.value })}
                 />
