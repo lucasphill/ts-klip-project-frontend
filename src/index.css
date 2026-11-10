@@ -579,3 +579,58 @@ body {
     @apply font-sans;
   }
 }
+/* ── Landing page: fundo ambiente + vidro (exclusivo da landing) ── */
+.landing {
+  background-color: var(--bg-canvas);
+  --landing-glass-bg: rgba(255, 255, 255, 0.55);
+  --landing-glass-border: rgba(15, 23, 42, 0.08);
+  --landing-blob-opacity: 0.35;
+}
+.dark .landing {
+  --landing-glass-bg: rgba(42, 42, 42, 0.5);
+  --landing-glass-border: rgba(255, 255, 255, 0.08);
+  --landing-blob-opacity: 0.22;
+}
+.landing-glass {
+  background: var(--landing-glass-bg);
+  border: 1px solid var(--landing-glass-border);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+}
+.landing-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(110px);
+  opacity: var(--landing-blob-opacity);
+  will-change: transform;
+}
+.landing-blob--a {
+  width: 520px; height: 520px; top: -120px; left: -80px;
+  background: #66accb;
+  animation: landingDriftA 26s ease-in-out infinite alternate;
+}
+.landing-blob--b {
+  width: 460px; height: 460px; top: 30%; right: -120px;
+  background: #ee805b;
+  animation: landingDriftB 32s ease-in-out infinite alternate;
+}
+.landing-blob--c {
+  width: 380px; height: 380px; bottom: -100px; left: 35%;
+  background: #66accb;
+  opacity: calc(var(--landing-blob-opacity) * 0.7);
+  animation: landingDriftC 38s ease-in-out infinite alternate;
+}
+.landing-grid {
+  background-image:
+    linear-gradient(var(--landing-glass-border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--landing-glass-border) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse at 50% 0%, black 0%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 0%, black 0%, transparent 70%);
+}
+@keyframes landingDriftA { to { transform: translate(18vw, 22vh) scale(1.15); } }
+@keyframes landingDriftB { to { transform: translate(-22vw, 18vh) scale(0.9); } }
+@keyframes landingDriftC { to { transform: translate(-14vw, -28vh) scale(1.1); } }
+@media (prefers-reduced-motion: reduce) {
+  .landing-blob { animation: none; }
+}
