@@ -56,7 +56,7 @@ export default function IndieSection() {
 
             <div className="group relative">
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-900 text-white text-center text-[10px] py-1.5 px-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md z-20 font-semibold border border-slate-800">
-                Apoio financeiro estará disponível nas próximas semanas! ☕
+                Apoio financeiro disponível em breve! ☕
               </div>
 
               <button
