@@ -60,7 +60,7 @@ export const content = {
       "O Klip é feito para gestão pessoal: suas tarefas não são compartilhadas com ninguém.",
     items: [
       { id: "personal", title: "100% pessoal", text: "Sem workspaces nem compartilhamento — ninguém além de você vê seus dados." },
-      { id: "encrypted", title: "Criptografia", text: "Tudo trafega via HTTPS/TLS. No banco, tarefas, notas e tokens são salvos cifrados com AES-256 — legíveis apenas pelo dono." },
+      { id: "encrypted", title: "Criptografia", text: "Tudo trafega via HTTPS/TLS. No banco, tarefas, notas e tokens são salvos cifrados com AES-256 e uma chave exclusiva por conta." },
       { id: "control", title: "Você no controle", text: "Revogue acessos ou exclua sua conta definitivamente quando quiser." },
     ],
   },
