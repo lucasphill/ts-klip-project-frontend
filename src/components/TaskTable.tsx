@@ -13,7 +13,6 @@ import {
   Maximize2,
   Pencil,
   Plus,
-  StickyNote,
   Trash2,
   X,
   XCircle,
@@ -22,7 +21,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { getOptionTone, OPTION_TONE_CLASSES } from "../lib/optionTone";
 import { NARROW_SCREEN_QUERY, useMediaQuery } from "../hooks/useMediaQuery";
-import { isMarkdownEmpty } from "../lib/markdown";
 import DatePickerField from "./DatePickerField";
 import TaskNotePopover from "./TaskNotePopover";
 import { getDueDateStatus, getRelativeDueDateLabel } from "../lib/taskUtils";
@@ -123,7 +121,22 @@ const TaskTitleInput = ({ task, saveTaskField, editingTaskId, setEditingTaskId }
 
 // Campos da tabela parecem texto comum e só mostram a borda ao passar o mouse ou focar.
 const INLINE_FIELD_CLASS =
-  "h-7 w-full rounded-md border border-transparent bg-transparent px-2 text-base md:text-sm text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-faint)] hover:border-[var(--border-subtle)] hover:bg-[var(--bg-soft)] focus:border-[var(--field-focus)] focus:bg-[var(--bg-panel)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
+  "h-10 md:h-7 w-full rounded-md border border-transparent bg-transparent px-2 text-base md:text-sm text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-faint)] hover:border-[var(--border-subtle)] hover:bg-[var(--bg-soft)] focus:border-[var(--field-focus)] focus:bg-[var(--bg-panel)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
+
+// No celular as colunas de status e tarefa ficam presas à esquerda enquanto o resto rola.
+const stickyColumnClass = (columnId: string, isHeader: boolean) => {
+  if (columnId === "status") {
+    return isHeader
+      ? "max-md:sticky max-md:left-0 max-md:z-[5] max-md:bg-[var(--bg-soft-strong)]"
+      : "max-md:sticky max-md:left-0 max-md:z-[5] max-md:bg-[var(--bg-panel)] max-md:group-hover/task-row:bg-[var(--bg-soft)]";
+  }
+  if (columnId === "task") {
+    return isHeader
+      ? "max-md:sticky max-md:left-12 max-md:z-[5] max-md:min-w-[11rem] max-md:bg-[var(--bg-soft-strong)] max-md:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.12)]"
+      : "max-md:sticky max-md:left-12 max-md:z-[5] max-md:min-w-[11rem] max-md:bg-[var(--bg-panel)] max-md:group-hover/task-row:bg-[var(--bg-soft)] max-md:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.12)]";
+  }
+  return "";
+};
 
 const EMPTY_OPTION_VALUE = "__empty__";
 
@@ -224,7 +237,7 @@ const parseStoredTaskTableState = (rawValue: string | null) => {
       statusFilter: DEFAULT_STATUS_FILTER,
       sorting: [{ id: "dueDate", desc: false }] as SortingState,
       expanded: {} as ExpandedState,
-      hiddenColumns: [] as string[],
+      hiddenColumns: null as string[] | null,
     };
   }
 
@@ -235,7 +248,7 @@ const parseStoredTaskTableState = (rawValue: string | null) => {
     const expanded = typeof parsed.expanded === "object" && parsed.expanded !== null ? parsed.expanded : {};
     const hiddenColumns = Array.isArray(parsed.hiddenColumns)
       ? parsed.hiddenColumns.filter((id): id is string => typeof id === "string")
-      : [];
+      : null;
 
     return { statusFilter, sorting, expanded, hiddenColumns };
   } catch {
@@ -243,7 +256,7 @@ const parseStoredTaskTableState = (rawValue: string | null) => {
       statusFilter: DEFAULT_STATUS_FILTER,
       sorting: [{ id: "dueDate", desc: false }] as SortingState,
       expanded: {} as ExpandedState,
-      hiddenColumns: [] as string[],
+      hiddenColumns: null as string[] | null,
     };
   }
 };
@@ -333,7 +346,8 @@ const TaskTable = ({
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [expanded, setExpanded] = useState<ExpandedState>({});
-  const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
+  // null = a pessoa ainda não escolheu colunas; vale o padrão (que difere no celular).
+  const [storedHiddenColumns, setHiddenColumns] = useState<string[] | null>(null);
   const [quickAddTitle, setQuickAddTitle] = useState("");
   const [isQuickAdding, setIsQuickAdding] = useState(false);
 
@@ -369,11 +383,11 @@ const TaskTable = ({
       statusFilter,
       sorting,
       expanded,
-      hiddenColumns,
+      hiddenColumns: storedHiddenColumns ?? undefined,
     };
 
     window.localStorage.setItem(tableStateStorageKey, JSON.stringify(payload));
-  }, [statusFilter, sorting, expanded, hiddenColumns, tableStateStorageKey]);
+  }, [statusFilter, sorting, expanded, storedHiddenColumns, tableStateStorageKey]);
 
   const safeCustomFields = Array.isArray(activeCustomFields) ? activeCustomFields : [];
 
@@ -486,7 +500,7 @@ const TaskTable = ({
           <SelectTrigger
             size="sm"
             aria-label={field.name}
-            className="h-7 w-full justify-start gap-1 border-transparent bg-transparent px-1.5 shadow-none hover:border-[var(--border-subtle)] hover:bg-[var(--bg-soft)] dark:bg-transparent [&>svg]:ml-auto [&>svg]:opacity-0 hover:[&>svg]:opacity-100 focus-visible:[&>svg]:opacity-100"
+            className="data-[size=sm]:h-10 md:data-[size=sm]:h-7 h-10 md:h-7 w-full justify-start gap-1 border-transparent bg-transparent px-1.5 shadow-none hover:border-[var(--border-subtle)] hover:bg-[var(--bg-soft)] dark:bg-transparent [&>svg]:ml-auto [&>svg]:opacity-0 hover:[&>svg]:opacity-100 focus-visible:[&>svg]:opacity-100"
           >
             {currentValue ? (
               <span
@@ -538,7 +552,7 @@ const TaskTable = ({
           value={String(fieldValue ?? "")}
           onChange={(nextDate) => updateCustomValue(task.id, field.id, nextDate)}
           className="w-full"
-          buttonClassName="h-7 flex-1 bg-transparent dark:bg-transparent hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-soft)] hover:border-[var(--border-subtle)] dark:border-transparent dark:hover:border-[var(--border-subtle)] text-sm text-[var(--text-primary)] border-transparent shadow-none focus:bg-[var(--bg-soft-strong)] focus:border-[var(--border-subtle)] px-2 rounded-md transition-colors text-left"
+          buttonClassName="h-10 md:h-7 flex-1 bg-transparent dark:bg-transparent hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-soft)] hover:border-[var(--border-subtle)] dark:border-transparent dark:hover:border-[var(--border-subtle)] text-sm text-[var(--text-primary)] border-transparent shadow-none focus:bg-[var(--bg-soft-strong)] focus:border-[var(--border-subtle)] px-2 rounded-md transition-colors text-left"
           clearButtonClassName="opacity-0 group-hover/task-row:opacity-100 focus-visible:opacity-100"
           placeholder="—"
         />
@@ -572,7 +586,7 @@ const TaskTable = ({
             <div className="flex h-full items-center px-3">
               <button
                 onClick={() => toggleTaskCompletion(task.id)}
-                className="text-[var(--text-faint)] transition-colors hover:text-emerald-600"
+                className="inline-flex h-9 w-9 -m-1.5 items-center justify-center text-[var(--text-faint)] transition-colors hover:text-emerald-600 md:m-0 md:h-auto md:w-auto"
                 aria-label={task.isCompleted ? "Marcar como pendente" : "Marcar como concluída"}
                 title={task.isCompleted ? "Marcar como pendente" : "Marcar como concluída"}
               >
@@ -605,7 +619,7 @@ const TaskTable = ({
                   <button
                     type="button"
                     onClick={info.row.getToggleExpandedHandler()}
-                    className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[var(--text-faint)] transition-colors hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-secondary)]"
+                    className="inline-flex h-8 w-8 md:h-6 md:w-6 items-center justify-center rounded-md text-[var(--text-faint)] transition-colors hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-secondary)]"
                   >
                     {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                   </button>
@@ -759,7 +773,7 @@ const TaskTable = ({
                     <AlertCircle className="h-4 w-4 text-red-500" aria-hidden="true" />
                   ) : undefined
                 }
-                buttonClassName={`h-7 flex-1 bg-transparent dark:bg-transparent hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-soft)] hover:border-[var(--border-subtle)] shadow-none text-sm border-transparent dark:border-transparent dark:hover:border-[var(--border-subtle)] focus:bg-[var(--bg-soft-strong)] focus:border-[var(--border-subtle)] px-2 rounded transition-colors text-left ${
+                buttonClassName={`h-10 md:h-7 flex-1 bg-transparent dark:bg-transparent hover:bg-[var(--bg-soft)] dark:hover:bg-[var(--bg-soft)] hover:border-[var(--border-subtle)] shadow-none text-sm border-transparent dark:border-transparent dark:hover:border-[var(--border-subtle)] focus:bg-[var(--bg-soft-strong)] focus:border-[var(--border-subtle)] px-2 rounded transition-colors text-left ${
                   isOverdue
                     ? "!text-red-600 dark:!text-red-400 font-medium hover:!text-red-700 dark:hover:!text-red-300"
                     : isDueToday
@@ -808,7 +822,7 @@ const TaskTable = ({
               {onAddSubtask && (
                 <button
                   onClick={() => onAddSubtask(task)}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-sky-100 hover:text-sky-700"
+                  className="inline-flex h-9 w-9 md:h-7 md:w-7 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-sky-100 hover:text-sky-700"
                   title="Adicionar subtarefa"
                 >
                   <Plus className="h-4 w-4" />
@@ -817,7 +831,7 @@ const TaskTable = ({
               {onEditTask && (
                 <button
                   onClick={() => onEditTask(task)}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-secondary)]"
+                  className="inline-flex h-9 w-9 md:h-7 md:w-7 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-soft-strong)] hover:text-[var(--text-secondary)]"
                   title="Editar tarefa"
                 >
                   <Pencil className="h-4 w-4" />
@@ -826,7 +840,7 @@ const TaskTable = ({
               {onDeleteTask && (
                 <button
                   onClick={() => onDeleteTask(task.id)}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-rose-100 hover:text-rose-700"
+                  className="inline-flex h-9 w-9 md:h-7 md:w-7 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-rose-100 hover:text-rose-700"
                   title="Excluir tarefa"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -878,8 +892,16 @@ const TaskTable = ({
     [sorting]
   );
 
-  // No celular a tabela vira uma lista de cartões (ver TaskCardList abaixo).
   const isNarrowScreen = useMediaQuery(NARROW_SCREEN_QUERY);
+
+  const hiddenColumns = useMemo(() => {
+    if (storedHiddenColumns) return storedHiddenColumns;
+    if (!isNarrowScreen) return [];
+    return [
+      ...(activeView === "all" ? ["projects"] : []),
+      ...safeCustomFields.filter((field) => field.type !== "enum").map((field) => `cf-${field.id}`),
+    ];
+  }, [storedHiddenColumns, isNarrowScreen, activeView, safeCustomFields]);
 
   const columnVisibility = useMemo(() => {
     const visibility: Record<string, boolean> = { [COMPLETION_SORT_COLUMN_ID]: false };
@@ -890,9 +912,10 @@ const TaskTable = ({
   }, [hiddenColumns]);
 
   const toggleColumnHidden = (columnId: string, isVisible: boolean) => {
-    setHiddenColumns((previous) =>
-      isVisible ? previous.filter((id) => id !== columnId) : Array.from(new Set([...previous, columnId]))
-    );
+    const next = isVisible
+      ? hiddenColumns.filter((id) => id !== columnId)
+      : Array.from(new Set([...hiddenColumns, columnId]));
+    setHiddenColumns(next);
   };
 
   const hasActiveFilters = statusFilter !== DEFAULT_STATUS_FILTER || columnFilters.length > 0;
@@ -942,6 +965,7 @@ const TaskTable = ({
     getExpandedRowModel: getExpandedRowModel(),
     getSubRows: (row) => row.subRows,
     columnResizeMode: "onChange",
+    enableColumnResizing: !isNarrowScreen,
   });
 
 
@@ -1033,13 +1057,13 @@ const TaskTable = ({
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="hidden h-9 items-center justify-center gap-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] px-3 text-sm font-medium text-[var(--text-secondary)] shadow-sm transition-colors hover:bg-[var(--bg-soft)] hover:text-[var(--text-primary)] md:inline-flex"
+                  className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] px-3 text-sm font-medium text-[var(--text-secondary)] shadow-sm transition-colors hover:bg-[var(--bg-soft)] hover:text-[var(--text-primary)]"
                   title="Escolher colunas visíveis"
                 >
                   <Columns3 className="h-4 w-4" />
-                  Colunas
+                  <span className="hidden sm:inline">Colunas</span>
                   {hiddenColumns.length > 0 && (
-                    <span className="rounded-full bg-[var(--bg-soft-strong)] px-1.5 text-xs text-[var(--text-muted)]">
+                    <span className="hidden rounded-full bg-[var(--bg-soft-strong)] px-1.5 text-xs text-[var(--text-muted)] sm:inline">
                       {hiddenColumns.length} oculta{hiddenColumns.length > 1 ? "s" : ""}
                     </span>
                   )}
@@ -1089,117 +1113,7 @@ const TaskTable = ({
       </div>
 
       <div className={`min-h-0 flex-1 overflow-auto bg-[var(--bg-panel)] ${hideAddTaskButton ? "" : "pb-20 md:pb-0 [@media(max-height:600px)]:pb-20"}`}>
-        {isNarrowScreen ? (
-          <ul className="flex flex-col divide-y divide-[var(--border-subtle)]">
-            {table.getRowModel().rows.map((row) => {
-              const task = row.original;
-              const depth = row.depth;
-              const taskProjects = activeView === "all" ? getTaskProjects(task.id) : [];
-              const dueStatus = getDueDateStatus(task.dueDate, task.isCompleted);
-              const dueLabel = getRelativeDueDateLabel(task.dueDate) ?? formatDueDate(task.dueDate);
-              const enumBadges = safeCustomFields
-                .filter((field) => field.type === "enum")
-                .map((field) => ({ field, value: String(getResolvedFieldValue(task, field) ?? "") }))
-                .filter(({ value }) => value);
-              const hasChildren = row.getCanExpand();
-              const hasNotes = !isMarkdownEmpty(task.notes);
-
-              return (
-                <li
-                  key={row.id}
-                  className="flex items-start gap-3 px-4 py-3"
-                  style={{ paddingLeft: `${16 + depth * 20}px` }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => toggleTaskCompletion(task.id)}
-                    className="mt-0.5 shrink-0 text-[var(--text-faint)] transition-colors hover:text-emerald-600"
-                    aria-label={task.isCompleted ? "Marcar como pendente" : "Marcar como concluída"}
-                  >
-                    {task.isCompleted ? (
-                      <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                    ) : (
-                      <Circle className="h-5 w-5" />
-                    )}
-                  </button>
-
-                  <div className="min-w-0 flex-1">
-                    <button
-                      type="button"
-                      onClick={() => onEditTask?.(task)}
-                      disabled={!onEditTask}
-                      className={`block w-full text-left text-sm font-medium leading-snug ${
-                        task.isCompleted ? "text-[var(--text-muted)] line-through" : "text-[var(--text-primary)]"
-                      }`}
-                    >
-                      {task.title || "Sem título"}
-                    </button>
-
-                    {(dueLabel || taskProjects.length > 0 || enumBadges.length > 0 || hasNotes) && (
-                      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
-                        {dueLabel && (
-                          <span
-                            className={`inline-flex items-center gap-1 ${
-                              dueStatus === "overdue"
-                                ? "font-medium text-red-600 dark:text-red-400"
-                                : dueStatus === "today" && !task.isCompleted
-                                  ? "font-medium text-amber-600 dark:text-amber-400"
-                                  : "text-[var(--text-muted)]"
-                            }`}
-                          >
-                            {dueStatus === "overdue" ? (
-                              <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />
-                            ) : (
-                              <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
-                            )}
-                            {dueStatus === "overdue" ? `Atrasada · ${dueLabel}` : dueLabel}
-                          </span>
-                        )}
-                        {taskProjects.map((project) => (
-                          <span key={project.id} className="inline-flex min-w-0 items-center gap-1 text-[var(--text-muted)]">
-                            <span
-                              className="h-2 w-2 shrink-0 rounded-full"
-                              style={project.color && !project.color.startsWith("bg-") ? { backgroundColor: project.color } : undefined}
-                            />
-                            <span className="max-w-[9rem] truncate">{project.name}</span>
-                          </span>
-                        ))}
-                        {enumBadges.map(({ field, value }) => (
-                          <span
-                            key={field.id}
-                            className={`rounded-full px-2 py-0.5 font-medium ${
-                              OPTION_TONE_CLASSES[getOptionTone(value, getFieldOptions(field).indexOf(value))]
-                            }`}
-                          >
-                            {value}
-                          </span>
-                        ))}
-                        {hasNotes && (
-                          <span className="inline-flex items-center gap-1 text-[var(--text-faint)]" title="Tem observações">
-                            <StickyNote className="h-3.5 w-3.5" aria-hidden="true" />
-                            Notas
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    {hasChildren && (
-                      <button
-                        type="button"
-                        onClick={row.getToggleExpandedHandler()}
-                        className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-                        aria-expanded={row.getIsExpanded()}
-                      >
-                        {row.getIsExpanded() ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                        {row.subRows.length} {row.subRows.length === 1 ? "subtarefa" : "subtarefas"}
-                      </button>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
+        {(
           <div className="flex flex-col min-w-full">
             <div className="flex border-b border-[var(--border-subtle)] bg-[var(--bg-soft-strong)]/95 backdrop-blur sticky top-0 z-10" style={{ minWidth: table.getTotalSize(), width: '100%' }}>
               {table.getHeaderGroups().map((headerGroup) => (
@@ -1209,7 +1123,7 @@ const TaskTable = ({
                     return (
                       <div
                         key={header.id}
-                        className={`relative flex items-center px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)] group shrink-0 overflow-hidden ${header.column.id === 'task' ? 'flex-1' : ''}`}
+                        className={`relative flex items-center px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)] group shrink-0 overflow-hidden ${header.column.id === 'task' ? 'flex-1' : ''} ${stickyColumnClass(header.column.id, true)}`}
                         style={{ width: header.column.id === 'task' ? undefined : header.getSize() }}
                       >
                         {header.isPlaceholder ? null : (
@@ -1247,7 +1161,7 @@ const TaskTable = ({
                   {row.getVisibleCells().map((cell) => (
                     <div
                       key={cell.id}
-                      className={`flex items-center shrink-0 overflow-hidden ${cell.column.id === 'task' ? 'flex-1' : ''}`}
+                      className={`flex min-h-11 items-center shrink-0 overflow-hidden md:min-h-0 ${cell.column.id === 'task' ? 'flex-1' : ''} ${stickyColumnClass(cell.column.id, false)}`}
                       style={{ width: cell.column.id === 'task' ? undefined : cell.column.getSize() }}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
