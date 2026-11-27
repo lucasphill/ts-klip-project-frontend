@@ -123,21 +123,6 @@ const TaskTitleInput = ({ task, saveTaskField, editingTaskId, setEditingTaskId }
 const INLINE_FIELD_CLASS =
   "h-10 md:h-7 w-full rounded-md border border-transparent bg-transparent px-2 text-base md:text-sm text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-faint)] hover:border-[var(--border-subtle)] hover:bg-[var(--bg-soft)] focus:border-[var(--field-focus)] focus:bg-[var(--bg-panel)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
 
-// No celular as colunas de status e tarefa ficam presas à esquerda enquanto o resto rola.
-const stickyColumnClass = (columnId: string, isHeader: boolean) => {
-  if (columnId === "status") {
-    return isHeader
-      ? "max-md:sticky max-md:left-0 max-md:z-[5] max-md:bg-[var(--bg-soft-strong)]"
-      : "max-md:sticky max-md:left-0 max-md:z-[5] max-md:bg-[var(--bg-panel)] max-md:group-hover/task-row:bg-[var(--bg-soft)]";
-  }
-  if (columnId === "task") {
-    return isHeader
-      ? "max-md:sticky max-md:left-12 max-md:z-[5] max-md:min-w-[11rem] max-md:bg-[var(--bg-soft-strong)] max-md:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.12)]"
-      : "max-md:sticky max-md:left-12 max-md:z-[5] max-md:min-w-[11rem] max-md:bg-[var(--bg-panel)] max-md:group-hover/task-row:bg-[var(--bg-soft)] max-md:shadow-[2px_0_4px_-2px_rgba(0,0,0,0.12)]";
-  }
-  return "";
-};
-
 const EMPTY_OPTION_VALUE = "__empty__";
 
 
@@ -1123,7 +1108,7 @@ const TaskTable = ({
                     return (
                       <div
                         key={header.id}
-                        className={`relative flex items-center px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)] group shrink-0 overflow-hidden ${header.column.id === 'task' ? 'flex-1' : ''} ${stickyColumnClass(header.column.id, true)}`}
+                        className={`relative flex items-center px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)] group shrink-0 overflow-hidden ${header.column.id === 'task' ? 'flex-1' : ''}`}
                         style={{ width: header.column.id === 'task' ? undefined : header.getSize() }}
                       >
                         {header.isPlaceholder ? null : (
@@ -1161,7 +1146,7 @@ const TaskTable = ({
                   {row.getVisibleCells().map((cell) => (
                     <div
                       key={cell.id}
-                      className={`flex min-h-11 items-center shrink-0 overflow-hidden md:min-h-0 ${cell.column.id === 'task' ? 'flex-1' : ''} ${stickyColumnClass(cell.column.id, false)}`}
+                      className={`flex min-h-11 items-center shrink-0 overflow-hidden md:min-h-0 ${cell.column.id === 'task' ? 'flex-1' : ''}`}
                       style={{ width: cell.column.id === 'task' ? undefined : cell.column.getSize() }}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
