@@ -114,9 +114,10 @@ export const AddProjectGroupModal: FC<AddProjectGroupModalProps> = ({
       <DialogContent
         className="surface-panel sm:max-w-[36rem] rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-0"
         showCloseButton={!isSubmitting}
+        mobileFullScreen
       >
-        <form onSubmit={handleSubmit}>
-          <DialogHeader className="border-b border-[var(--border-subtle)] px-5 py-4 sm:px-6">
+        <form onSubmit={handleSubmit} className="max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col">
+          <DialogHeader className="shrink-0 border-b border-[var(--border-subtle)] px-5 py-4 pr-12 sm:px-6">
             <DialogTitle className="text-lg font-bold text-[var(--text-primary)]">
               {group ? "Editar grupo de projetos" : "Novo grupo de projetos"}
             </DialogTitle>
@@ -139,7 +140,7 @@ export const AddProjectGroupModal: FC<AddProjectGroupModalProps> = ({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 px-5 py-5 sm:px-6">
+          <div className="space-y-4 px-5 py-5 max-sm:min-h-0 max-sm:flex-1 max-sm:overflow-y-auto max-sm:overscroll-contain sm:px-6">
             {/* Nome do grupo */}
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-[var(--text-secondary)]">Nome do grupo *</Label>
@@ -149,7 +150,6 @@ export const AddProjectGroupModal: FC<AddProjectGroupModalProps> = ({
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ex: Trabalho, Pessoal, Clientes..."
                 className="field h-10 px-3 text-base md:text-sm"
-                autoFocus
                 required
               />
             </div>
@@ -168,7 +168,7 @@ export const AddProjectGroupModal: FC<AddProjectGroupModalProps> = ({
                       onClick={() => setIcon(item.id)}
                       title={item.label}
                       aria-label={`Ícone: ${item.label}`}
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition-all ${
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border transition-all sm:h-9 sm:w-9 ${
                         isSelected
                           ? "border-[var(--brand)] bg-[var(--brand)] text-white shadow-sm ring-2 ring-[var(--brand-soft)]"
                           : "border-[var(--border-subtle)] bg-[var(--bg-soft)] text-[var(--text-muted)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]"
@@ -190,7 +190,7 @@ export const AddProjectGroupModal: FC<AddProjectGroupModalProps> = ({
                     key={c}
                     type="button"
                     onClick={() => setColor(c)}
-                    className={`h-7 w-7 rounded-lg border transition-all ${
+                    className={`h-9 w-9 rounded-lg border transition-all sm:h-7 sm:w-7 ${
                       color === c
                         ? "scale-110 border-[var(--text-primary)] ring-2 ring-[var(--border-strong)]"
                         : "border-[var(--border-subtle)] hover:scale-105"
@@ -203,7 +203,7 @@ export const AddProjectGroupModal: FC<AddProjectGroupModalProps> = ({
             </div>
           </div>
 
-          <DialogFooter className="mx-0 mb-0 rounded-b-2xl border-t border-[var(--border-subtle)] bg-[var(--bg-panel)] px-5 py-3.5 sm:px-6">
+          <DialogFooter className="mx-0 mb-0 shrink-0 rounded-b-2xl border-t border-[var(--border-subtle)] bg-[var(--bg-panel)] px-5 py-3.5 max-sm:flex-row max-sm:gap-2 max-sm:rounded-none max-sm:pb-[max(0.875rem,env(safe-area-inset-bottom))] max-sm:[&>*]:flex-1 sm:px-6">
             <Button
               type="button"
               variant="outline"

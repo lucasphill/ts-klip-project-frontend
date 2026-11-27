@@ -6,6 +6,8 @@ import { Dialog as DialogPrimitive } from "radix-ui"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { XIcon } from "lucide-react"
+import { useMediaQuery } from "@/hooks/useMediaQuery"
+import { useKeyboardViewport } from "@/hooks/useKeyboardViewport"
 
 function Dialog({
   ...props
@@ -47,14 +49,27 @@ function DialogOverlay({
   )
 }
 
+// Mesmo ponto de corte do `sm:` do Tailwind (640px).
+const MOBILE_FULLSCREEN_QUERY = "(max-width: 639px)"
+
 function DialogContent({
   className,
   children,
   showCloseButton = true,
+  mobileFullScreen = false,
+  style,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
+  /**
+   * No celular, ocupa a tela toda (cabeçalho e rodapé fixos, corpo rolável) e acompanha a
+   * área visível quando o teclado abre. Em telas maiores continua um diálogo centralizado.
+   */
+  mobileFullScreen?: boolean
 }) {
+  const isNarrow = useMediaQuery(MOBILE_FULLSCREEN_QUERY)
+  const keyboard = useKeyboardViewport(mobileFullScreen && isNarrow)
+
   return (
     <DialogPortal>
       <DialogOverlay />
@@ -62,9 +77,23 @@ function DialogContent({
         data-slot="dialog-content"
         className={cn(
           "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-background p-4 text-sm ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          mobileFullScreen &&
+            "max-sm:inset-0 max-sm:flex max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:flex-col max-sm:gap-0 max-sm:!rounded-none max-sm:ring-0",
           className
         )}
+        style={
+          mobileFullScreen && keyboard
+            ? { ...style, top: keyboard.top, bottom: "auto", height: keyboard.height }
+            : style
+        }
         {...props}
+        onOpenAutoFocus={(event) => {
+          // No toque, focar o primeiro campo abriria o teclado e cobriria o formulário.
+          if (mobileFullScreen && window.matchMedia("(hover: none)").matches) {
+            event.preventDefault()
+          }
+          props.onOpenAutoFocus?.(event)
+        }}
       >
         {children}
         {showCloseButton && (
