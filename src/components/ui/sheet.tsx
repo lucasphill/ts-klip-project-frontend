@@ -4,6 +4,7 @@ import { Dialog as SheetPrimitive } from "radix-ui"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { XIcon } from "lucide-react"
+import { useKeyboardViewport } from "@/hooks/useKeyboardViewport"
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
@@ -53,6 +54,18 @@ function SheetContent({
   side?: "top" | "right" | "bottom" | "left"
   showCloseButton?: boolean
 }) {
+  // Drawers laterais ocupam a tela toda: com o teclado aberto, encolhemos para a área visível.
+  const keyboard = useKeyboardViewport(side === "left" || side === "right")
+
+  React.useEffect(() => {
+    if (!keyboard) return
+    // O teclado acabou de abrir: garante que o campo focado fique à vista.
+    const active = document.activeElement
+    if (active instanceof HTMLElement && active.closest('[data-slot="sheet-content"]')) {
+      active.scrollIntoView({ block: "nearest" })
+    }
+  }, [keyboard?.height]) // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <SheetPortal>
       <SheetOverlay />
@@ -64,6 +77,11 @@ function SheetContent({
           className
         )}
         {...props}
+        style={
+          keyboard
+            ? { ...props.style, top: keyboard.top, bottom: "auto", height: keyboard.height }
+            : props.style
+        }
       >
         {children}
         {showCloseButton && (
