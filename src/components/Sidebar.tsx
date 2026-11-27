@@ -1,30 +1,19 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   Archive,
-  Bookmark,
-  Box,
-  Briefcase,
   CalendarDays,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Code,
-  Folder,
   FolderPlus,
-  Heart,
   Home,
-  Layout,
   Pencil,
   Plus,
   Search,
   Settings,
-  Sparkles,
-  Star,
-  Tag,
   Trash2,
-  Users,
   X,
 } from "lucide-react";
 import type {
@@ -37,7 +26,9 @@ import type {
 import { projectsApi, projectsTasksApi, tasksApi } from "../services/api";
 import { useTasksContext } from "../contexts/TasksContext";
 import { useProjectsContext } from "../contexts/ProjectsContext";
+import { getColorDotProps, getGroupIconComponent } from "../lib/projectVisuals";
 import NavItem from "./NavItem";
+import MobileProjectsSheet from "./MobileProjectsSheet";
 import AddTaskModal from "./AddTaskModal";
 import AddProjectModal from "./AddProjectModal";
 import AddProjectGroupModal from "./AddProjectGroupModal";
@@ -51,40 +42,9 @@ type SidebarProps = {
   isMobileOpen: boolean;
   onToggleDesktop: () => void;
   onCloseMobile: () => void;
-};
-
-const getColorDotProps = (color?: string): { className: string; style?: CSSProperties } | null => {
-  if (!color) return null;
-  if (color.startsWith("bg-")) return { className: color };
-  return { className: "", style: { backgroundColor: color } };
-};
-
-const getGroupIconComponent = (iconName?: string) => {
-  switch (iconName) {
-    case "briefcase":
-      return Briefcase;
-    case "users":
-      return Users;
-    case "star":
-      return Star;
-    case "sparkles":
-      return Sparkles;
-    case "heart":
-      return Heart;
-    case "tag":
-      return Tag;
-    case "bookmark":
-      return Bookmark;
-    case "code":
-      return Code;
-    case "layout":
-      return Layout;
-    case "box":
-      return Box;
-    case "folder":
-    default:
-      return Folder;
-  }
+  /** Folha de projetos do mobile (aberta pela barra inferior). */
+  isMobileProjectsOpen: boolean;
+  onCloseMobileProjects: () => void;
 };
 
 const SidebarDotsLoading = ({ isExpanded }: { isExpanded: boolean }) => {
@@ -113,7 +73,14 @@ const SidebarDotsLoading = ({ isExpanded }: { isExpanded: boolean }) => {
   );
 };
 
-const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobile }: SidebarProps) => {
+const Sidebar = ({
+  isDesktopExpanded,
+  isMobileOpen,
+  onToggleDesktop,
+  onCloseMobile,
+  isMobileProjectsOpen,
+  onCloseMobileProjects,
+}: SidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { appendTask } = useTasksContext();
@@ -277,14 +244,14 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
     }
   };
 
-  const handleEditGroup = (group: GetProjectGroupDto, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleEditGroup = (group: GetProjectGroupDto, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setGroupToEdit(group);
     setShowNewGroupModal(true);
   };
 
-  const handleDeleteGroup = async (group: GetProjectGroupDto, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDeleteGroup = async (group: GetProjectGroupDto, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     if (!confirm(`Excluir a pasta "${group.name}"? Os projetos contidos nela serão movidos para a raiz com segurança.`)) {
       return;
     }
@@ -296,8 +263,8 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
     }
   };
 
-  const handleAddProjectToGroup = (groupId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleAddProjectToGroup = (groupId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setTargetGroupIdForNewProject(groupId);
     setProjectToEdit(null);
     setShowNewProjectModal(true);
@@ -1001,6 +968,53 @@ const Sidebar = ({ isDesktopExpanded, isMobileOpen, onToggleDesktop, onCloseMobi
         </div>
       </aside>
 
+      <MobileProjectsSheet
+        isOpen={isMobileProjectsOpen}
+        onClose={onCloseMobileProjects}
+        isLoading={isInitialLoading}
+        projects={projects}
+        projectGroups={projectGroups}
+        activeProjectId={activeProjectId}
+        collapsedGroupIds={collapsedGroupIds}
+        onToggleGroup={(groupId) => toggleGroupCollapse(groupId)}
+        onSelectProject={(project) => {
+          navigate(`/project/${project.id}`);
+          onCloseMobileProjects();
+        }}
+        onNewProject={() => {
+          onCloseMobileProjects();
+          setTargetGroupIdForNewProject(null);
+          setProjectToEdit(null);
+          setShowNewProjectModal(true);
+        }}
+        onNewGroup={() => {
+          onCloseMobileProjects();
+          setGroupToEdit(null);
+          setShowNewGroupModal(true);
+        }}
+        onAddProjectToGroup={(groupId) => {
+          onCloseMobileProjects();
+          handleAddProjectToGroup(groupId);
+        }}
+        onEditProject={(project) => {
+          onCloseMobileProjects();
+          handleEditProject(project);
+        }}
+        onArchiveProject={handleArchiveProject}
+        onDeleteProject={(project) => {
+          onCloseMobileProjects();
+          handleDeleteProjectClick(project);
+        }}
+        onEditGroup={(group) => {
+          onCloseMobileProjects();
+          handleEditGroup(group);
+        }}
+        onDeleteGroup={handleDeleteGroup}
+        onOpenArchived={() => {
+          onCloseMobileProjects();
+          setShowArchivedModal(true);
+        }}
+      />
       <AddTaskModal
         isOpen={showNewTaskModal}
         onClose={() => setShowNewTaskModal(false)}

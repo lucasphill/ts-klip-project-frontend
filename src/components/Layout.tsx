@@ -18,6 +18,7 @@ const Layout: FC<{ children: ReactNode }> = ({ children }) => {
     }
   });
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isMobileProjectsOpen, setIsMobileProjectsOpen] = useState(false);
   const { theme } = useTheme();
 
   const handleToggleDesktopSidebar = () => {
@@ -35,13 +36,20 @@ const Layout: FC<{ children: ReactNode }> = ({ children }) => {
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden bg-[var(--bg-canvas)] text-[var(--text-primary)]">
       <Toaster position="top-center" richColors theme={theme} />
-      <Navbar onOpenSidebar={() => setIsMobileSidebarOpen(true)} />
+      <Navbar
+        onOpenSidebar={() => {
+          setIsMobileProjectsOpen(false);
+          setIsMobileSidebarOpen(true);
+        }}
+      />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <Sidebar
           isDesktopExpanded={isDesktopSidebarExpanded}
           isMobileOpen={isMobileSidebarOpen}
           onToggleDesktop={handleToggleDesktopSidebar}
           onCloseMobile={() => setIsMobileSidebarOpen(false)}
+          isMobileProjectsOpen={isMobileProjectsOpen}
+          onCloseMobileProjects={() => setIsMobileProjectsOpen(false)}
         />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden pb-16 md:pb-0 [@media(max-height:600px)]:pb-16">
           <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--bg-panel)]">
@@ -53,9 +61,12 @@ const Layout: FC<{ children: ReactNode }> = ({ children }) => {
         </div>
       </div>
       <BottomNavigation
-        onOpenSidebar={() => setIsMobileSidebarOpen(true)}
-        isSidebarOpen={isMobileSidebarOpen}
-        onCloseSidebar={() => setIsMobileSidebarOpen(false)}
+        onOpenProjects={() => {
+          setIsMobileSidebarOpen(false);
+          setIsMobileProjectsOpen(true);
+        }}
+        isProjectsOpen={isMobileProjectsOpen}
+        onCloseProjects={() => setIsMobileProjectsOpen(false)}
       />
     </div>
   );

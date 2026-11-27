@@ -474,6 +474,21 @@ body {
   }
 }
 
+.projects-sheet-enter {
+  animation: projectsSheetUp 0.24s ease;
+}
+
+@keyframes projectsSheetUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation: none !important;
