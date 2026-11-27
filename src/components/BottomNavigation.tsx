@@ -2,16 +2,16 @@ import { Home, CalendarDays, Folder, Settings } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 type BottomNavigationProps = {
-  onOpenSidebar: () => void;
-  onCloseSidebar?: () => void;
-  isSidebarOpen?: boolean;
+  onOpenProjects: () => void;
+  onCloseProjects?: () => void;
+  isProjectsOpen?: boolean;
 };
 
-const BottomNavigation = ({ onOpenSidebar, onCloseSidebar, isSidebarOpen = false }: BottomNavigationProps) => {
+const BottomNavigation = ({ onOpenProjects, onCloseProjects, isProjectsOpen = false }: BottomNavigationProps) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const activeTab = isSidebarOpen
+  const activeTab = isProjectsOpen
     ? "projects"
     : location.pathname === "/"
       ? "home"
@@ -24,15 +24,15 @@ const BottomNavigation = ({ onOpenSidebar, onCloseSidebar, isSidebarOpen = false
             : "";
 
   const handleNavigate = (path: string) => {
-    onCloseSidebar?.();
+    onCloseProjects?.();
     navigate(path);
   };
 
   const handleToggleProjects = () => {
-    if (isSidebarOpen) {
-      onCloseSidebar?.();
+    if (isProjectsOpen) {
+      onCloseProjects?.();
     } else {
-      onOpenSidebar();
+      onOpenProjects();
     }
   };
 
@@ -68,7 +68,8 @@ const BottomNavigation = ({ onOpenSidebar, onCloseSidebar, isSidebarOpen = false
         {/* Projetos */}
         <button
           onClick={handleToggleProjects}
-          aria-expanded={isSidebarOpen}
+          aria-expanded={isProjectsOpen}
+          aria-haspopup="dialog"
           className={`flex flex-col items-center justify-center gap-1 w-16 h-full transition-colors ${
             activeTab === "projects"
               ? "text-[var(--brand)] font-semibold"
