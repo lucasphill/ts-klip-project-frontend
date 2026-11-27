@@ -142,7 +142,7 @@ const AddTaskModal: FC<AddTaskModalProps> = ({
       <SheetContent
         side="right"
         showCloseButton={!isSubmitting && !isDeleting}
-        className="h-full w-full max-w-none rounded-none border-l border-[var(--border-subtle)] bg-[var(--bg-panel)] p-0 sm:max-w-2xl"
+        className="h-full w-full max-w-none max-sm:data-[side=right]:w-full rounded-none border-l border-[var(--border-subtle)] bg-[var(--bg-panel)] p-0 sm:max-w-2xl"
       >
         <form onSubmit={handleSubmit} className="flex h-full flex-col">
           <SheetHeader className="border-b border-[var(--border-subtle)] px-5 py-4 sm:px-6">
