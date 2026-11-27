@@ -101,9 +101,10 @@ export const AddProjectModal: FC<AddProjectModalProps> = ({
       <DialogContent
         className="surface-panel sm:max-w-[38rem] rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] p-0"
         showCloseButton={!isSubmitting}
+        mobileFullScreen
       >
-        <form onSubmit={handleSubmit}>
-          <DialogHeader className="border-b border-[var(--border-subtle)] px-5 py-4 sm:px-6">
+        <form onSubmit={handleSubmit} className="max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col">
+          <DialogHeader className="shrink-0 border-b border-[var(--border-subtle)] px-5 py-4 pr-12 sm:px-6">
             <DialogTitle className="text-xl font-bold text-[var(--text-primary)]">
               {project ? "Editar projeto" : "Novo projeto"}
             </DialogTitle>
@@ -126,7 +127,7 @@ export const AddProjectModal: FC<AddProjectModalProps> = ({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 px-5 py-5 sm:px-6">
+          <div className="space-y-4 px-5 py-5 max-sm:min-h-0 max-sm:flex-1 max-sm:overflow-y-auto max-sm:overscroll-contain sm:px-6">
             {/* Nome do Projeto */}
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-[var(--text-secondary)]">Nome do projeto *</Label>
@@ -136,7 +137,6 @@ export const AddProjectModal: FC<AddProjectModalProps> = ({
                 onChange={(event) => setFormData({ ...formData, name: event.target.value })}
                 placeholder="Ex: Roadmap Produto 2026"
                 className="field h-10 px-3 text-base md:text-sm"
-                autoFocus
                 required
               />
             </div>
@@ -182,7 +182,7 @@ export const AddProjectModal: FC<AddProjectModalProps> = ({
                     key={color}
                     type="button"
                     onClick={() => setFormData({ ...formData, color })}
-                    className={`h-8 w-8 rounded-lg border transition-all ${
+                    className={`h-9 w-9 rounded-lg border transition-all sm:h-8 sm:w-8 ${
                       formData.color === color
                         ? "scale-110 border-[var(--text-primary)] ring-2 ring-[var(--border-strong)]"
                         : "border-[var(--border-subtle)] hover:scale-105"
@@ -195,7 +195,7 @@ export const AddProjectModal: FC<AddProjectModalProps> = ({
             </div>
           </div>
 
-          <DialogFooter className="mx-0 mb-0 rounded-b-2xl border-t border-[var(--border-subtle)] bg-[var(--bg-panel)] px-5 py-3.5 sm:px-6">
+          <DialogFooter className="mx-0 mb-0 shrink-0 rounded-b-2xl border-t border-[var(--border-subtle)] bg-[var(--bg-panel)] px-5 py-3.5 max-sm:flex-row max-sm:gap-2 max-sm:rounded-none max-sm:pb-[max(0.875rem,env(safe-area-inset-bottom))] max-sm:[&>*]:flex-1 sm:px-6">
             <Button
               type="button"
               variant="outline"
