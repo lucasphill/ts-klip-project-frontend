@@ -554,6 +554,8 @@ const TaskTable = ({
     );
   };
 
+  const isNarrowScreen = useMediaQuery(NARROW_SCREEN_QUERY);
+
   const columnHelper = createColumnHelper<TaskTableTreeNode>();
 
   const columns = useMemo(() => {
@@ -589,7 +591,7 @@ const TaskTable = ({
         id: "task",
         header: "Tarefa",
         enableHiding: false,
-        size: 280,
+        size: isNarrowScreen ? 200 : 280,
         filterFn: 'includesString',
         cell: (info) => {
           const task = info.row.original;
@@ -598,8 +600,11 @@ const TaskTable = ({
           const isExpanded = info.row.getIsExpanded();
 
           return (
-            <div className="flex h-full w-full items-center gap-2 px-3" style={{ paddingLeft: `${Math.max(12, depth * 24 + 12)}px` }}>
-              <div className="flex shrink-0 items-center justify-center h-8 w-6">
+            <div
+              className="flex h-full w-full items-center gap-1 pr-3 pl-[calc(var(--indent)+4px)] md:gap-2 md:pl-[calc(var(--indent)+12px)]"
+              style={{ "--indent": `${depth * 24}px` } as CSSProperties}
+            >
+              <div className="flex shrink-0 items-center justify-center h-8 w-5 md:w-6">
                 {hasChildren ? (
                   <button
                     type="button"
@@ -853,6 +858,7 @@ const TaskTable = ({
     // Every prop and state the cells read: a missing one makes cells keep stale closures.
   }, [
     activeView,
+    isNarrowScreen,
     projects,
     safeCustomFields,
     getTaskProjects,
@@ -877,7 +883,6 @@ const TaskTable = ({
     [sorting]
   );
 
-  const isNarrowScreen = useMediaQuery(NARROW_SCREEN_QUERY);
 
   const hiddenColumns = useMemo(() => {
     if (storedHiddenColumns) return storedHiddenColumns;
@@ -1176,11 +1181,11 @@ const TaskTable = ({
       {!hideAddTaskButton && (
         <button
           onClick={() => addTask()}
-          className="fixed bottom-20 right-6 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--brand)] text-white shadow-lg shadow-black/20 hover:bg-[var(--brand-strong)] active:scale-95 transition-all duration-150 focus:outline-none md:hidden [@media(max-height:600px)]:flex"
+          className="fixed bottom-[4.75rem] right-4 z-20 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--brand)] text-white shadow-lg shadow-black/20 hover:bg-[var(--brand-strong)] active:scale-95 transition-all duration-150 focus:outline-none md:hidden [@media(max-height:600px)]:flex"
           title="Adicionar tarefa"
           aria-label="Adicionar tarefa"
         >
-          <Plus className="h-6 w-6" />
+          <Plus className="h-5 w-5" />
         </button>
       )}
     </div>
