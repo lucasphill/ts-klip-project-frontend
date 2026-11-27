@@ -1141,7 +1141,7 @@ const TaskTable = ({
               {table.getRowModel().rows.map((row) => (
                 <div
                   key={row.id}
-                  className={`flex border-b border-[var(--border-subtle)] transition-colors group group/task-row hover:bg-[var(--bg-soft)]`}
+                  className={`flex border-b border-[var(--border-subtle)] transition-colors group group/task-row even:bg-[var(--bg-soft)] hover:bg-[var(--bg-soft-strong)]`}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <div
